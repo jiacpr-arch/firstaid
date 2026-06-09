@@ -38,7 +38,7 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest,
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),

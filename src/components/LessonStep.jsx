@@ -1,11 +1,30 @@
 import QuizQuestion from './QuizQuestion'
 
+function LessonImage({ src, alt, caption }) {
+  if (!src) return null
+  return (
+    <figure className="lesson-image">
+      <img src={src} alt={alt || caption || ''} loading="lazy" />
+      {caption && <figcaption className="text-caption">{caption}</figcaption>}
+    </figure>
+  )
+}
+
 export default function LessonStep({ step, onQuizAnswered }) {
   if (step.type === 'read') {
     return (
       <div className="card">
         {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
-        <div className="text-body" style={{ whiteSpace: 'pre-wrap' }}>{step.body}</div>
+        {step.body && <div className="text-body" style={{ whiteSpace: 'pre-wrap' }}>{step.body}</div>}
+        {step.image && <LessonImage {...step.image} />}
+      </div>
+    )
+  }
+  if (step.type === 'image') {
+    return (
+      <div className="card">
+        {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
+        <LessonImage src={step.src} alt={step.alt} caption={step.caption} />
       </div>
     )
   }

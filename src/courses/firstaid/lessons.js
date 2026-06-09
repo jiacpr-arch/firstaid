@@ -1,6 +1,19 @@
 // บทเรียนปฐมพยาบาลเบื้องต้นสำหรับประชาชนทั่วไป
 // ดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป โดย หมอเจี่ย (Jia1669.com)
-// Step types: 'read' (heading+body), 'callout' (warning), 'quiz' (Q+choices)
+// Step types:
+//   'read'    — { heading, body }  (ใส่ image: { src, alt, caption } เพิ่มได้ เพื่อแสดงรูปใต้ข้อความ)
+//   'callout' — { tone: 'danger'|'warning'|'info', heading, body }
+//   'quiz'    — { question, choices, correctId, explanation }
+//   'image'   — { heading?, src, alt, caption? }  (step รูปภาพล้วน)
+//
+// วิธีใส่รูป: วางไฟล์รูปไว้ใน public/lesson-images/ แล้วอ้างอิงด้วย path '/lesson-images/<ชื่อไฟล์>'
+//   ตัวอย่าง step รูปล้วน:
+//     { type: 'image', src: '/lesson-images/cpr-hand-position.jpg',
+//       alt: 'ตำแหน่งวางมือสำหรับ CPR', caption: 'วางส้นมือกลางหน้าอก' }
+//   ตัวอย่างรูปประกอบข้อความ:
+//     { type: 'read', heading: '...', body: '...',
+//       image: { src: '/lesson-images/recovery-position.jpg', alt: 'ท่า Recovery' } }
+//
 // Lessons จัดกลุ่มเป็น 4 บทตามต้นฉบับ
 
 export const chapters = [
