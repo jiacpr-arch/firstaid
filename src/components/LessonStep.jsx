@@ -10,6 +10,36 @@ function LessonImage({ src, alt, caption }) {
   )
 }
 
+function LessonVideo({ src, youtube, poster, caption, title }) {
+  if (youtube) {
+    return (
+      <figure className="lesson-video">
+        <div className="lesson-video-frame">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${youtube}`}
+            title={title || caption || 'วิดีโอบทเรียน'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        </div>
+        {caption && <figcaption className="text-caption">{caption}</figcaption>}
+      </figure>
+    )
+  }
+  if (src) {
+    return (
+      <figure className="lesson-video">
+        <video controls preload="metadata" poster={poster} playsInline>
+          <source src={src} />
+        </video>
+        {caption && <figcaption className="text-caption">{caption}</figcaption>}
+      </figure>
+    )
+  }
+  return null
+}
+
 export default function LessonStep({ step, onQuizAnswered }) {
   if (step.type === 'read') {
     return (
@@ -17,6 +47,7 @@ export default function LessonStep({ step, onQuizAnswered }) {
         {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
         {step.body && <div className="text-body" style={{ whiteSpace: 'pre-wrap' }}>{step.body}</div>}
         {step.image && <LessonImage {...step.image} />}
+        {step.video && <LessonVideo {...step.video} />}
       </div>
     )
   }
@@ -25,6 +56,20 @@ export default function LessonStep({ step, onQuizAnswered }) {
       <div className="card">
         {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
         <LessonImage src={step.src} alt={step.alt} caption={step.caption} />
+      </div>
+    )
+  }
+  if (step.type === 'video') {
+    return (
+      <div className="card">
+        {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
+        <LessonVideo
+          src={step.src}
+          youtube={step.youtube}
+          poster={step.poster}
+          caption={step.caption}
+          title={step.alt || step.heading}
+        />
       </div>
     )
   }

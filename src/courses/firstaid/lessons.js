@@ -1,10 +1,11 @@
 // บทเรียนปฐมพยาบาลเบื้องต้นสำหรับประชาชนทั่วไป
 // ดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป โดย หมอเจี่ย (Jia1669.com)
 // Step types:
-//   'read'    — { heading, body }  (ใส่ image: { src, alt, caption } เพิ่มได้ เพื่อแสดงรูปใต้ข้อความ)
+//   'read'    — { heading, body }  (ใส่ image / video เพิ่มได้ เพื่อแสดงสื่อใต้ข้อความ)
 //   'callout' — { tone: 'danger'|'warning'|'info', heading, body }
 //   'quiz'    — { question, choices, correctId, explanation }
 //   'image'   — { heading?, src, alt, caption? }  (step รูปภาพล้วน)
+//   'video'   — { heading?, youtube? | src?, poster?, caption? }  (step วิดีโอล้วน)
 //
 // วิธีใส่รูป: วางไฟล์รูปไว้ใน public/lesson-images/ แล้วอ้างอิงด้วย path '/lesson-images/<ชื่อไฟล์>'
 //   ตัวอย่าง step รูปล้วน:
@@ -13,6 +14,14 @@
 //   ตัวอย่างรูปประกอบข้อความ:
 //     { type: 'read', heading: '...', body: '...',
 //       image: { src: '/lesson-images/recovery-position.jpg', alt: 'ท่า Recovery' } }
+//
+// วิธีใส่วิดีโอ: เลือกได้ 2 แบบ
+//   1) ฝัง YouTube — ใส่เฉพาะรหัสวิดีโอ (ส่วนหลัง v= ใน URL)
+//        { type: 'video', youtube: 'dQw4w9WgXcQ', caption: 'วิธีทำ CPR' }
+//   2) ไฟล์วิดีโอที่อัปเอง — วางไฟล์ .mp4 ใน public/lesson-videos/ แล้วอ้างด้วย path '/lesson-videos/<ชื่อไฟล์>'
+//        { type: 'video', src: '/lesson-videos/cpr.mp4',
+//          poster: '/lesson-images/cpr-hand-position.svg', caption: 'วิธีทำ CPR' }
+//   ใส่วิดีโอใต้ข้อความก็ได้: { type: 'read', ..., video: { youtube: '...' } }
 //
 // Lessons จัดกลุ่มเป็น 4 บทตามต้นฉบับ
 
