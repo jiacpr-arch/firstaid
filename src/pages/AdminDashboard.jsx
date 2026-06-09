@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
-import { Users, Calendar, Award, LogOut } from 'lucide-react'
+import { Users, Calendar, Award, Image, LogOut } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 
 const QUICK = [
   { to: '/admin/cohorts', label: 'กลุ่มผู้เรียน (Cohorts)', desc: 'สร้างกลุ่ม / ดูความก้าวหน้า', icon: Users, color: '#16A34A' },
   { to: '/admin/sessions', label: 'คลาสภาคปฏิบัติ', desc: 'เปิด session + เช็คชื่อ + อนุมัติ', icon: Calendar, color: '#2563EB' },
   { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ค้นหา / ออกใหม่ / เพิกถอน', icon: Award, color: '#D97706' },
+  { to: '/admin/media', label: 'อัปโหลดสื่อบทเรียน', desc: 'อัปรูป/วิดีโอ แล้วได้ URL ไปใส่ในบท', icon: Image, color: '#7C3AED' },
 ]
 
 export default function AdminDashboard() {

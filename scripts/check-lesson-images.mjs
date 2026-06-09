@@ -26,6 +26,7 @@ const errors = []
 const used = new Set()
 
 for (const { src, lessonId, kind } of refs) {
+  if (/^https?:\/\//.test(src)) continue // URL ภายนอก (เช่นอัปจากหน้า admin → Supabase) ไม่ตรวจไฟล์
   if (!src.startsWith('/')) {
     errors.push(`บท "${lessonId}": ${kind} src ต้องขึ้นต้นด้วย "/" (พบ "${src}")`)
     continue
