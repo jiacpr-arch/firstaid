@@ -245,6 +245,98 @@ export const scenarios = [
       },
     ],
   },
+  {
+    id: 'workplace-heart-attack',
+    title: 'เพื่อนร่วมงานแน่นหน้าอก',
+    summary: 'พนักงานชาย 55 ปี กำลังประชุม จู่ๆ ก็ยกมือกุมหน้าอก เหงื่อแตก',
+    minutes: 4,
+    icon: 'HeartPulse',
+    color: '#DC2626',
+    steps: [
+      {
+        id: 's1',
+        prompt: 'เพื่อนร่วมงานบ่นแน่นหน้าอก ร้าวไปแขนซ้าย เหงื่อท่วม แต่ปฏิเสธว่า "ไม่เป็นไร เดี๋ยวก็หาย" คุณ?',
+        choices: [
+          { id: 'a', text: 'เชื่อเขา ปล่อยให้พักห้อง', correct: false,
+            feedback: 'อันตราย — ผู้ป่วยหัวใจขาดเลือดมักปฏิเสธ อย่าเชื่อ', nextStepId: 's2' },
+          { id: 'b', text: 'โทร 1669 ทันที + ส่งคนไปเอา AED + กล่องปฐมพยาบาล', correct: true,
+            feedback: 'ถูกต้อง — อาการคลาสสิคของ heart attack ต้องเรียกฉุกเฉินแม้ผู้ป่วยปฏิเสธ', nextStepId: 's2' },
+          { id: 'c', text: 'ขับรถพาไป รพ. เอง', correct: false,
+            feedback: 'รถกู้ชีพมีอุปกรณ์ + AED + ให้ออกซิเจนได้ระหว่างทาง — เร็วและปลอดภัยกว่า', nextStepId: 's2' },
+        ],
+      },
+      {
+        id: 's2',
+        prompt: 'เขาบอกว่า "เคยกิน Aspirin ได้ ไม่เป็นโรคกระเพาะ" — กล่องปฐมพยาบาลมี Aspirin คุณ?',
+        choices: [
+          { id: 'a', text: 'ให้เคี้ยว Aspirin 1 เม็ดทันที', correct: true,
+            feedback: 'ถูก — ตรวจสอบแล้วไม่แพ้/ไม่มีโรคกระเพาะ/ไม่มีโรคเลือด → ให้เคี้ยว 1 เม็ด', nextStepId: 's3' },
+          { id: 'b', text: 'รอ รพ. ปลอดภัยกว่า', correct: false,
+            feedback: 'Aspirin เคี้ยวทันทีช่วยลดอัตราตายจาก heart attack — ถ้าไม่ห้าม ให้เลย', nextStepId: 's3' },
+          { id: 'c', text: 'ให้กิน Paracetamol แทน', correct: false,
+            feedback: 'Paracetamol ไม่ช่วยอะไรในกรณีนี้ — Aspirin มี mechanism ป้องกันเลือดแข็งตัวที่อุดเส้นเลือด', nextStepId: 's3' },
+        ],
+      },
+      {
+        id: 's3',
+        prompt: 'จู่ๆ เขาหมดสติ ไม่หายใจ คุณ?',
+        choices: [
+          { id: 'a', text: 'เริ่ม CPR ทันที + ติด AED', correct: true,
+            feedback: 'ใช่ — กดหน้าอกกลางอก 100-120 ครั้ง/นาที + ติด AED เมื่อมาถึง', nextStepId: 'end' },
+          { id: 'b', text: 'เรียกชื่อ ตบหน้าให้ฟื้น', correct: false,
+            feedback: 'ไม่ช่วย — ทุกวินาทีของ CPR ที่ล่าช้า ลดโอกาสรอด 10%', nextStepId: 'end' },
+          { id: 'c', text: 'ยกขาขึ้นสูง', correct: false,
+            feedback: 'ไม่ใช่กรณีเป็นลม — ต้องเริ่ม CPR เลย', nextStepId: 'end' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'chemical-splash',
+    title: 'สารเคมีกระเด็นเข้าตา',
+    summary: 'พนักงานล้างถังเคมีในโรงงาน กระเด็นเข้าตา',
+    minutes: 4,
+    icon: 'Skull',
+    color: '#7C3AED',
+    steps: [
+      {
+        id: 's1',
+        prompt: 'พนักงานวิ่งมาบอกว่าโดน "น้ำยาล้าง" กระเด็นเข้าตา ตอนนี้แสบมาก คุณ?',
+        choices: [
+          { id: 'a', text: 'รีบพาไปฝักบัวล้างพิษ — ล้างต่อเนื่อง 20 นาที+', correct: true,
+            feedback: 'ถูก — เวลาเป็นเรื่องสำคัญ ล้างทันทีที่เกิดเหตุ', nextStepId: 's2' },
+          { id: 'b', text: 'หยอดยาหยอดตาก่อน', correct: false,
+            feedback: 'อันตราย — ต้องล้างน้ำปริมาณมากออกก่อน ยาหยอดตาทำให้พิษค้าง', nextStepId: 's2' },
+          { id: 'c', text: 'ขยี้ตาแรงๆ ให้น้ำตาออก', correct: false,
+            feedback: 'ห้ามขยี้ — ทำให้พิษซึมเข้าเนื้อเยื่อมากขึ้น', nextStepId: 's2' },
+        ],
+      },
+      {
+        id: 's2',
+        prompt: 'ระหว่างล้างตา คุณควรระวังอะไร?',
+        choices: [
+          { id: 'a', text: 'ให้ผู้ป่วยหลับตาให้แน่น', correct: false,
+            feedback: 'ต้องลืมตาขณะล้าง + มองซ้าย-ขวา-บน-ล่าง ให้น้ำเข้าทั่วถึง', nextStepId: 's3' },
+          { id: 'b', text: 'น้ำที่ล้างต้องไม่ไหลเข้าตาข้างที่ไม่ถูกพิษ', correct: true,
+            feedback: 'ถูก — จัดท่าให้น้ำไหลออกข้างที่โดน ไม่ปนเข้าตาอีกข้าง', nextStepId: 's3' },
+          { id: 'c', text: 'ใช้น้ำเดือดเพื่อฆ่าสารเคมี', correct: false,
+            feedback: 'อันตรายมาก — ใช้น้ำสะอาดอุณหภูมิห้องเท่านั้น', nextStepId: 's3' },
+        ],
+      },
+      {
+        id: 's3',
+        prompt: 'ขณะที่ส่งไป รพ. — ทีมฉุกเฉินขอข้อมูล คุณบอกอะไร?',
+        choices: [
+          { id: 'a', text: '"น้ำยาล้าง" ก็พอแล้ว', correct: false,
+            feedback: 'ไม่พอ — ต้องระบุชื่อสาร เปิด MSDS แจ้งทีม', nextStepId: 'end' },
+          { id: 'b', text: 'ชื่อสารเคมี (จาก MSDS) + ปริมาณ + เวลาที่เกิดเหตุ + อาการ', correct: true,
+            feedback: 'ถูก — ข้อมูลครบช่วยให้แพทย์เลือกการรักษาที่ถูกต้อง', nextStepId: 'end' },
+          { id: 'c', text: 'ปล่อยให้แพทย์ตรวจเอง', correct: false,
+            feedback: 'การวิเคราะห์สารเคมีใช้เวลานาน — ข้อมูลที่คุณมีช่วยให้รักษาเร็วขึ้นมาก', nextStepId: 'end' },
+        ],
+      },
+    ],
+  },
 ]
 
 export const scenariosById = Object.fromEntries(scenarios.map(s => [s.id, s]))
