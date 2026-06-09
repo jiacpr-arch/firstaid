@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import { BookOpen, CheckCircle2, ClipboardCheck, FileText } from 'lucide-react'
-import { lessons } from '../courses/firstaid/lessons'
+import { lessons, lessonsByChapter } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
@@ -44,33 +44,58 @@ export default function Learn() {
         </div>
       </div>
 
-      <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {lessons.map((l) => {
-          const isRead = readSet.has(l.id)
-          return (
-            <Link
-              key={l.id}
-              to={`/learn/${l.id}`}
-              className="card"
-              style={{ display: 'flex', alignItems: 'center', gap: 12 }}
-            >
-              <div style={{
-                width: 38, height: 38, borderRadius: 10,
-                background: isRead ? '#D1FAE5' : 'var(--color-bg-tertiary)',
-                color: isRead ? '#065F46' : 'var(--color-text-secondary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700,
-              }}>
-                {isRead ? <CheckCircle2 size={20} /> : <BookOpen size={18} />}
+      {lessonsByChapter.map((ch) => {
+        const chTotal = ch.lessons.length
+        const chDone = ch.lessons.filter((l) => readSet.has(l.id)).length
+        return (
+          <div key={ch.id} style={{ marginTop: 20 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 4px',
+            }}>
+              <div>
+                <div className="text-caption" style={{ color: ch.color, fontWeight: 600 }}>
+                  บทที่ {ch.id}
+                </div>
+                <div className="text-body-strong">{ch.title}</div>
               </div>
-              <div style={{ flex: 1 }}>
-                <div className="text-body-strong">{l.order}. {l.title}</div>
-                <div className="text-caption">{l.summary} • {l.minutes} นาที</div>
-              </div>
-              {isRead && <span className="badge badge-success">เรียนแล้ว</span>}
-            </Link>
-          )
-        })}
+              <span className="text-caption">{chDone}/{chTotal}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {ch.lessons.map((l) => {
+                const isRead = readSet.has(l.id)
+                return (
+                  <Link
+                    key={l.id}
+                    to={`/learn/${l.id}`}
+                    className="card"
+                    style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10,
+                      background: isRead ? '#D1FAE5' : 'var(--color-bg-tertiary)',
+                      color: isRead ? '#065F46' : 'var(--color-text-secondary)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700,
+                    }}>
+                      {isRead ? <CheckCircle2 size={20} /> : <BookOpen size={18} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="text-body-strong">{l.order}. {l.title}</div>
+                      <div className="text-caption">{l.summary} • {l.minutes} นาที</div>
+                    </div>
+                    {isRead && <span className="badge badge-success">เรียนแล้ว</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+
+      <div style={{ marginTop: 24, padding: 12, fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+        เนื้อหาดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป<br />
+        โดย หมอเจี่ย (Jia1669.com)
       </div>
 
       <CallEmergencyButton />
