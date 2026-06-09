@@ -28,6 +28,7 @@ const AdminSessionDetail = lazy(() => import('./pages/AdminSessionDetail'))
 const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
 const AdminCertificates = lazy(() => import('./pages/AdminCertificates'))
 const AdminMedia = lazy(() => import('./pages/AdminMedia'))
+const AdminLessonMedia = lazy(() => import('./pages/AdminLessonMedia'))
 
 const AdminFallback = () => (
   <div className="page-container py-12 text-center text-caption">กำลังโหลด admin…</div>
@@ -99,6 +100,9 @@ export default function App() {
         } />
         <Route path="/admin/media" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminMedia /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/lesson-media" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLessonMedia /></RequireAdmin></Suspense>
         } />
       </Routes>
       {!isAdmin && <BottomTabBar />}
