@@ -4,6 +4,8 @@ import { ArrowLeft, Upload, Trash2, Image as ImageIcon, Film, Plus } from 'lucid
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { lessons } from '../courses/firstaid/lessons'
 import { uploadMedia, parseYouTubeId } from '../utils/mediaUpload'
+import { mediaRowToStep } from '../utils/lessonMediaSteps'
+import LessonStep from '../components/LessonStep'
 
 async function fetchRows(lessonId) {
   if (!isSupabaseConfigured || !lessonId) return []
@@ -151,31 +153,24 @@ export default function AdminLessonMedia() {
 
       <div style={{ marginTop: 16 }}>
         <div className="text-headline" style={{ marginBottom: 8 }}>สื่อในบทนี้ ({rows.length})</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {rows.map((r) => {
-            const thumb = r.kind === 'image' ? r.url
-              : r.youtube ? `https://img.youtube.com/vi/${r.youtube}/default.jpg` : null
-            return (
-              <div key={r.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {thumb
-                  ? <img src={thumb} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }} />
-                  : <div style={{ width: 56, height: 56, borderRadius: 8, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Film size={22} color="#fff" /></div>}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="text-body-strong" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {r.kind === 'image' ? <ImageIcon size={14} /> : <Film size={14} />}
-                    {r.kind === 'image' ? 'รูป' : r.youtube ? 'YouTube' : 'วิดีโอ'}
-                    <span className="badge badge-muted" style={{ marginLeft: 4 }}>{posLabel(r.after_step)}</span>
-                  </div>
-                  <div className="text-caption" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.caption || r.url || r.youtube}
-                  </div>
-                </div>
+        <div className="text-caption" style={{ marginBottom: 8 }}>แสดงตัวอย่างเหมือนที่ผู้เรียนจะเห็นในบทเรียนจริง</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {rows.map((r) => (
+            <div key={r.id} className="card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                {r.kind === 'image' ? <ImageIcon size={14} /> : <Film size={14} />}
+                <span className="text-body-strong">
+                  {r.kind === 'image' ? 'รูป' : r.youtube ? 'YouTube' : 'วิดีโอ'}
+                </span>
+                <span className="badge badge-muted">{posLabel(r.after_step)}</span>
+                <div style={{ flex: 1 }} />
                 <button type="button" className="btn btn-ghost" onClick={() => onDelete(r)} title="ลบ">
                   <Trash2 size={16} color="#DC2626" />
                 </button>
               </div>
-            )
-          })}
+              <LessonStep step={mediaRowToStep(r)} />
+            </div>
+          ))}
           {isSupabaseConfigured && !rows.length && (
             <div className="text-caption" style={{ textAlign: 'center', padding: 12 }}>ยังไม่มีสื่อในบทนี้</div>
           )}
