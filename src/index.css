@@ -136,6 +136,56 @@ a { color: inherit; text-decoration: none; }
 .callout-danger { border-left-color: var(--color-danger); background: #FEF2F2; }
 .callout-info { border-left-color: var(--color-info); background: #EFF6FF; }
 
+.lesson-image {
+  margin: 12px 0 0;
+}
+.lesson-image:first-child { margin-top: 0; }
+.lesson-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+}
+.lesson-image figcaption {
+  margin-top: 6px;
+  text-align: center;
+}
+
+.lesson-video {
+  margin: 12px 0 0;
+}
+.lesson-video:first-child { margin-top: 0; }
+.lesson-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: #000;
+}
+.lesson-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.lesson-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: #000;
+}
+.lesson-video figcaption {
+  margin-top: 6px;
+  text-align: center;
+}
+
 .progress-track {
   width: 100%;
   height: 6px;

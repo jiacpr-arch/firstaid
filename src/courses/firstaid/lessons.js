@@ -1,6 +1,28 @@
 // บทเรียนปฐมพยาบาลเบื้องต้นสำหรับประชาชนทั่วไป
 // ดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป โดย หมอเจี่ย (Jia1669.com)
-// Step types: 'read' (heading+body), 'callout' (warning), 'quiz' (Q+choices)
+// Step types:
+//   'read'    — { heading, body }  (ใส่ image / video เพิ่มได้ เพื่อแสดงสื่อใต้ข้อความ)
+//   'callout' — { tone: 'danger'|'warning'|'info', heading, body }
+//   'quiz'    — { question, choices, correctId, explanation }
+//   'image'   — { heading?, src, alt, caption? }  (step รูปภาพล้วน)
+//   'video'   — { heading?, youtube? | src?, poster?, caption? }  (step วิดีโอล้วน)
+//
+// วิธีใส่รูป: วางไฟล์รูปไว้ใน public/lesson-images/ แล้วอ้างอิงด้วย path '/lesson-images/<ชื่อไฟล์>'
+//   ตัวอย่าง step รูปล้วน:
+//     { type: 'image', src: '/lesson-images/cpr-hand-position.jpg',
+//       alt: 'ตำแหน่งวางมือสำหรับ CPR', caption: 'วางส้นมือกลางหน้าอก' }
+//   ตัวอย่างรูปประกอบข้อความ:
+//     { type: 'read', heading: '...', body: '...',
+//       image: { src: '/lesson-images/recovery-position.jpg', alt: 'ท่า Recovery' } }
+//
+// วิธีใส่วิดีโอ: เลือกได้ 2 แบบ
+//   1) ฝัง YouTube — ใส่เฉพาะรหัสวิดีโอ (ส่วนหลัง v= ใน URL)
+//        { type: 'video', youtube: 'dQw4w9WgXcQ', caption: 'วิธีทำ CPR' }
+//   2) ไฟล์วิดีโอที่อัปเอง — วางไฟล์ .mp4 ใน public/lesson-videos/ แล้วอ้างด้วย path '/lesson-videos/<ชื่อไฟล์>'
+//        { type: 'video', src: '/lesson-videos/cpr.mp4',
+//          poster: '/lesson-images/cpr-hand-position.svg', caption: 'วิธีทำ CPR' }
+//   ใส่วิดีโอใต้ข้อความก็ได้: { type: 'read', ..., video: { youtube: '...' } }
+//
 // Lessons จัดกลุ่มเป็น 4 บทตามต้นฉบับ
 
 export const chapters = [
@@ -122,6 +144,10 @@ export const lessons = [
         body: '1. ตรวจสถานการณ์รอบข้างว่าปลอดภัย\n2. ตบบ่าผู้ประสบภัย ถามว่า "คุณๆ ตื่นๆ"\n3a. ถ้าตอบได้ → แนะนำตัว ขออนุญาตช่วย แล้วปฐมพยาบาล\n3b. ถ้าตอบไม่ได้ มีเสียงกรน หายใจพะงาบ → ตะโกนขอความช่วยเหลือ + โทร 1669 + หยิบ AED\n4. ตรวจการหายใจ — ถ้าไม่หายใจ ให้ปั๊มหัวใจทันที (CPR)\n5. ถ้าหายใจดี — ตรวจหาเลือดออก กระดูกหัก แผลไหม้ ฯลฯ' },
       { type: 'callout', tone: 'warning', heading: 'หากไม่เป็น CPR',
         body: 'ถ้าปั๊มหัวใจไม่เป็น ให้กดหน้าอกอย่างเดียวไปก่อน (Hands-only CPR) แล้วติดเครื่อง AED ทันทีที่มาถึง' },
+      { type: 'image', heading: 'ตำแหน่งวางมือกดหน้าอก',
+        src: '/lesson-images/cpr-hand-position.svg',
+        alt: 'แผนผังร่างกายแสดงตำแหน่งกดหน้าอกสำหรับ CPR ที่กึ่งกลางหน้าอก',
+        caption: 'กดที่กึ่งกลางหน้าอก ลึกประมาณ 5 ซม. เร็ว 100-120 ครั้ง/นาที' },
       { type: 'read', heading: 'ค้นหาข้อมูลผู้ประสบภัย',
         body: 'ค้นหากระเป๋าสตางค์ เครื่องประดับ ป้ายชื่อ เพื่อทราบ:\n• ชื่อ-นามสกุล\n• โรคประจำตัว\n• ยาที่กำลังใช้\n• เบอร์ติดต่อญาติ\n\nช่วยให้ส่งต่อสถานพยาบาลได้อย่างมีประสิทธิภาพ' },
       { type: 'callout', tone: 'info', heading: 'ท่า Recovery',

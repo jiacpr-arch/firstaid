@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { lessonsById, lessons } from '../courses/firstaid/lessons'
 import LessonStep from '../components/LessonStep'
@@ -7,6 +7,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { markLessonRead, saveQuizAttempt } from '../db/database'
+import { fetchLessonMedia, mergeSteps } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 
 export default function LessonReader() {
@@ -22,6 +23,7 @@ export default function LessonReader() {
   const [correctCount, setCorrectCount] = useState(0)
   const [quizCount, setQuizCount] = useState(0)
   const [completed, setCompleted] = useState(false)
+  const [extraMedia, setExtraMedia] = useState([])
 
   // Reset state when lessonId changes — set-during-render pattern
   if (prevLessonId !== lessonId) {
@@ -31,6 +33,18 @@ export default function LessonReader() {
     setQuizCount(0)
     setCompleted(false)
   }
+
+  // โหลดสื่อที่แอดมินผูกไว้กับบทนี้ (รูป/วิดีโอจาก Supabase) แล้วแทรกเป็น step
+  useEffect(() => {
+    let cancelled = false
+    fetchLessonMedia(lessonId).then((rows) => { if (!cancelled) setExtraMedia(rows) })
+    return () => { cancelled = true }
+  }, [lessonId])
+
+  const steps = useMemo(
+    () => mergeSteps(lesson?.steps || [], extraMedia),
+    [lesson, extraMedia],
+  )
 
   if (!lesson) {
     return (
@@ -43,8 +57,8 @@ export default function LessonReader() {
     )
   }
 
-  const step = lesson.steps[stepIdx]
-  const isLast = stepIdx === lesson.steps.length - 1
+  const step = steps[stepIdx]
+  const isLast = stepIdx === steps.length - 1
   const idx = lesson.order - 1
   const nextLesson = lessons[idx + 1]
 
@@ -117,9 +131,9 @@ export default function LessonReader() {
         <div className="text-title">{lesson.title}</div>
       </div>
       <div style={{ marginTop: 12, marginBottom: 12 }}>
-        <ProgressBar value={stepIdx + 1} max={lesson.steps.length} />
+        <ProgressBar value={stepIdx + 1} max={steps.length} />
         <div className="text-caption" style={{ marginTop: 4 }}>
-          ขั้นที่ {stepIdx + 1} / {lesson.steps.length}
+          ขั้นที่ {stepIdx + 1} / {steps.length}
         </div>
       </div>
 

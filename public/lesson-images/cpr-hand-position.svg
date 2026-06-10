@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="ตำแหน่งวางมือกดหน้าอกสำหรับ CPR คือกึ่งกลางหน้าอก">
+  <rect width="600" height="400" fill="#F4F6FA"/>
+
+  <!-- torso (front view) -->
+  <g stroke="#1F2937" stroke-width="3" fill="#FFFFFF" stroke-linejoin="round">
+    <!-- neck -->
+    <path d="M270 70 h60 v34 h-60 z"/>
+    <!-- shoulders + trunk -->
+    <path d="M210 104
+             q-46 6 -54 44
+             l-10 70
+             q24 8 40 4
+             l8 122
+             q66 18 132 0
+             l8 -122
+             q16 4 40 -4
+             l-10 -70
+             q-8 -38 -54 -44
+             q-50 14 -100 0 z"/>
+  </g>
+
+  <!-- nipple line reference -->
+  <line x1="232" y1="206" x2="368" y2="206" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="248" cy="206" r="5" fill="#9CA3AF"/>
+  <circle cx="352" cy="206" r="5" fill="#9CA3AF"/>
+
+  <!-- center-of-chest target (compression point) -->
+  <circle cx="300" cy="218" r="34" fill="#DC2626" fill-opacity="0.14" stroke="#DC2626" stroke-width="3"/>
+  <line x1="300" y1="190" x2="300" y2="246" stroke="#DC2626" stroke-width="3"/>
+  <line x1="272" y1="218" x2="328" y2="218" stroke="#DC2626" stroke-width="3"/>
+
+  <!-- label -->
+  <line x1="334" y1="218" x2="430" y2="170" stroke="#DC2626" stroke-width="2"/>
+  <rect x="392" y="138" width="180" height="40" rx="8" fill="#DC2626"/>
+  <text x="482" y="163" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">กึ่งกลางหน้าอก</text>
+
+  <text x="300" y="372" text-anchor="middle" font-family="sans-serif" font-size="17" fill="#374151">วางส้นมือกึ่งกลางหน้าอก แล้วประสานมืออีกข้างทับ</text>
+</svg>

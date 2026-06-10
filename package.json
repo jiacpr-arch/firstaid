@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --test 'api/**/*.test.js'",
+    "check:images": "node scripts/check-lesson-images.mjs",
     "seed:demo": "node scripts/seed-demo.js"
   },
   "dependencies": {
