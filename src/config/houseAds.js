@@ -113,4 +113,11 @@ export const houseAds = [
     url: 'https://www.jia1669.com',
     color: '#2563EB',
   },
+  {
+    id: 'jiatraining',
+    name: 'อบรม CPR & AED ภาคปฏิบัติ',
+    tagline: 'เรียนกับหุ่นจริง มีใบรับรอง — ทักไลน์ @jiacpr กับ Jia Training Center',
+    url: 'https://line.me/R/ti/p/@jiacpr',
+    color: '#059669',
+  },
 ]
