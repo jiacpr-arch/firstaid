@@ -7,6 +7,7 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
+import HouseAdBanner from '../components/HouseAdBanner'
 
 export default function Learn() {
   useEnsureLearner()
@@ -92,6 +93,8 @@ export default function Learn() {
           </div>
         )
       })}
+
+      <HouseAdBanner />
 
       <div style={{ marginTop: 24, padding: 12, fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
         เนื้อหาดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป<br />
