@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
+import MetaPixel from './components/MetaPixel'
 import BottomTabBar from './components/BottomTabBar'
 import RequireAdmin from './components/RequireAdmin'
 
@@ -107,6 +108,7 @@ export default function App() {
       </Routes>
       {!isAdmin && <BottomTabBar />}
       <Analytics />
+      <MetaPixel />
     </div>
   )
 }
