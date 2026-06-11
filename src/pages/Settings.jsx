@@ -1,4 +1,5 @@
 import { useSettingsStore } from '../stores/settingsStore'
+import { HouseAdList } from '../components/HouseAdBanner'
 
 export default function Settings() {
   const theme = useSettingsStore((s) => s.theme)
@@ -26,6 +27,8 @@ export default function Settings() {
           ))}
         </div>
       </div>
+
+      <HouseAdList />
     </div>
   )
 }
