@@ -21,6 +21,7 @@ import EmergencyCall from './pages/EmergencyCall'
 import CheckIn from './pages/CheckIn'
 import CheckInScan from './pages/CheckInScan'
 import Settings from './pages/Settings'
+import News from './pages/News'
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/checkin/scan" element={<CheckInScan />} />
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/news" element={<News />} />
 
         <Route path="/admin/login" element={
           <Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>
