@@ -15,6 +15,7 @@ import {
   generateCertCode,
 } from '../courses/firstaid/cert'
 import CertificatePreview from '../components/CertificatePreview'
+import CertUpsellCard from '../components/CertUpsellCard'
 import { downloadCertPdf } from '../utils/certPdf'
 
 function fmtDate(iso) {
@@ -196,6 +197,9 @@ export default function Certification() {
           </>
         )}
       </div>
+
+      {/* ชวนต่อยอดไปอบรมภาคปฏิบัติ — แสดงเมื่อได้ใบประกาศแล้ว */}
+      {(theoryCert || practicalCert) && <CertUpsellCard />}
     </div>
   )
 }
