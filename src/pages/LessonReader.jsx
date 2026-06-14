@@ -41,22 +41,30 @@ export default function LessonReader() {
     return () => { cancelled = true }
   }, [lessonId])
 
-  const steps = lesson?.steps || []
+  const steps = useMemo(() => lesson?.steps || [], [lesson])
 
-  // จัดกลุ่มสื่อให้แสดง "ใต้เนื้อหาในสไลด์เดียวกัน" ตามขั้นที่ผูกไว้
-  // after_step (1-based) = แสดงในขั้นนั้น; 0/ก่อนเริ่ม = ขั้นแรก; ว่าง/เกิน = ขั้นสุดท้าย
+  // จัดกลุ่มสื่อตามขั้น: after_step 1..len = ในขั้นนั้น; 0/ก่อนเริ่ม = หน้าปก; ว่าง/เกิน = ขั้นสุดท้าย
   const mediaByStep = useMemo(() => {
     const len = steps.length
     const map = new Map()
     for (const row of extraMedia) {
       let n = row.after_step
       if (n == null || n > len) n = len
-      else if (n < 1) n = 1
+      else if (n < 0) n = 0
       if (!map.has(n)) map.set(n, [])
       map.get(n).push(row)
     }
     return map
   }, [steps.length, extraMedia])
+
+  // ลำดับสไลด์: หน้าปก (ถ้ามีรูป after_step=0) ก่อน แล้วตามด้วยแต่ละขั้นเนื้อหา
+  const slides = useMemo(() => {
+    const out = []
+    const cover = mediaByStep.get(0)
+    if (cover?.length) out.push({ kind: 'cover', media: cover })
+    steps.forEach((s, i) => out.push({ kind: 'step', step: s, media: mediaByStep.get(i + 1) }))
+    return out
+  }, [steps, mediaByStep])
 
   if (!lesson) {
     return (
@@ -69,8 +77,8 @@ export default function LessonReader() {
     )
   }
 
-  const step = steps[stepIdx]
-  const isLast = stepIdx === steps.length - 1
+  const slide = slides[stepIdx]
+  const isLast = stepIdx === slides.length - 1
   const idx = lesson.order - 1
   const nextLesson = lessons[idx + 1]
 
@@ -143,20 +151,30 @@ export default function LessonReader() {
         <div className="text-title">{lesson.title}</div>
       </div>
       <div style={{ marginTop: 12, marginBottom: 12 }}>
-        <ProgressBar value={stepIdx + 1} max={steps.length} />
+        <ProgressBar value={stepIdx + 1} max={slides.length} />
         <div className="text-caption" style={{ marginTop: 4 }}>
-          ขั้นที่ {stepIdx + 1} / {steps.length}
+          {slide?.kind === 'cover' ? 'หน้าปก' : `ขั้นที่ ${stepIdx + 1} / ${slides.length}`}
         </div>
       </div>
 
-      <LessonStep step={step} onQuizAnswered={onAnswered} />
-
-      {/* รูป/วิดีโอที่แอดมินผูกกับขั้นนี้ — แสดงใต้เนื้อหาในสไลด์เดียวกัน */}
-      {mediaByStep.get(stepIdx + 1)?.map((row) => (
-        <div key={row.id} style={{ marginTop: 12 }}>
-          <LessonStep step={mediaRowToStep(row)} />
-        </div>
-      ))}
+      {slide?.kind === 'cover' ? (
+        // สไลด์หน้าปก — แสดงเฉพาะรูป/วิดีโอ ก่อนเข้าเนื้อหา
+        slide.media.map((row) => (
+          <div key={row.id} style={{ marginBottom: 12 }}>
+            <LessonStep step={mediaRowToStep(row)} />
+          </div>
+        ))
+      ) : (
+        <>
+          <LessonStep step={slide.step} onQuizAnswered={onAnswered} />
+          {/* รูป/วิดีโอที่ผูกกับขั้นนี้ — แสดงใต้เนื้อหาในสไลด์เดียวกัน */}
+          {slide.media?.map((row) => (
+            <div key={row.id} style={{ marginTop: 12 }}>
+              <LessonStep step={mediaRowToStep(row)} />
+            </div>
+          ))}
+        </>
+      )}
 
       <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance}>
         {isLast ? 'จบบทเรียน' : 'ต่อไป'} <ChevronRight size={16} />
