@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
 import { ChevronRight, Phone, AlertTriangle, CheckCircle2, ArrowRightCircle } from 'lucide-react'
+import { groupMediaByStep } from '../utils/lessonMediaSteps'
+import { MediaRow } from './Media'
 
 function StepIcon({ kind, tone }) {
   if (kind === 'call') return <Phone size={18} />
@@ -15,11 +17,12 @@ function toneToColor(tone) {
   return { bg: '#F0FDF4', border: '#86EFAC', fg: '#166534' }
 }
 
-export default function AlgorithmFlowchart({ algorithm }) {
+export default function AlgorithmFlowchart({ algorithm, media = [] }) {
   const stepsById = useMemo(
     () => Object.fromEntries(algorithm.steps.map((s) => [s.id, s])),
     [algorithm],
   )
+  const mediaByStep = useMemo(() => groupMediaByStep(media), [media])
   const [path, setPath] = useState([algorithm.steps[0].id])
   const currentStep = stepsById[path[path.length - 1]]
 
@@ -52,6 +55,8 @@ export default function AlgorithmFlowchart({ algorithm }) {
                 {step.detail && <div className="text-caption" style={{ marginTop: 4 }}>{step.detail}</div>}
               </div>
             </div>
+
+            {mediaByStep.get(id)?.map((row) => <MediaRow key={row.id} row={row} />)}
 
             {isLast && step.kind === 'check' && (
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

@@ -1,12 +1,22 @@
 import { useParams, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { algorithmsById } from '../courses/firstaid/algorithms'
 import AlgorithmFlowchart from '../components/AlgorithmFlowchart'
 import CallEmergencyButton from '../components/CallEmergencyButton'
+import { fetchContentMedia } from '../utils/lessonMediaSteps'
 
 export default function AlgorithmDetail() {
   const { topic } = useParams()
   const algorithm = algorithmsById[topic]
+  const [media, setMedia] = useState([])
+
+  // โหลดสื่อที่แอดมินผูกไว้กับผังนี้
+  useEffect(() => {
+    let cancelled = false
+    fetchContentMedia('algorithm', topic).then((rows) => { if (!cancelled) setMedia(rows) })
+    return () => { cancelled = true }
+  }, [topic])
 
   if (!algorithm) {
     return (
@@ -29,7 +39,7 @@ export default function AlgorithmDetail() {
         <div className="text-title" style={{ color: algorithm.color }}>{algorithm.title}</div>
       </div>
       <div style={{ marginTop: 16 }}>
-        <AlgorithmFlowchart algorithm={algorithm} />
+        <AlgorithmFlowchart algorithm={algorithm} media={media} />
       </div>
       <CallEmergencyButton />
     </div>
