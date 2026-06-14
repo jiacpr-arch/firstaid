@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { OPEN_ADMIN } from '../config/adminAccess'
 
 // ถ้าตั้ง VITE_ADMIN_EMAIL ไว้ → โหมด "รหัสเดียว": ผู้ใช้กรอกแค่รหัสผ่าน
 // email จะถูก fix ไว้เบื้องหลัง (ใช้ล็อกอิน Supabase เพื่อให้ RLS/อัปโหลดทำงานได้)
@@ -14,6 +15,9 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+
+  // โหมดไม่มีรหัส: ไม่ต้องโชว์หน้า login เลย เด้งกลับเข้า admin
+  if (OPEN_ADMIN) return <Navigate to="/admin" replace />
 
   const submit = async (e) => {
     e.preventDefault()

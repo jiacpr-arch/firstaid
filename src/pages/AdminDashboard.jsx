@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Users, Calendar, Award, Image, Film, LogOut } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { OPEN_ADMIN } from '../config/adminAccess'
 
 const QUICK = [
   { to: '/admin/lesson-media', label: 'ใส่รูป/วิดีโอในเนื้อหา', desc: 'บทเรียน / สถานการณ์ / ผัง → แนบสื่อ → แสดงทันที', icon: Film, color: '#DB2777' },
@@ -22,9 +23,11 @@ export default function AdminDashboard() {
           <div className="text-caption">ครูผู้สอน</div>
           <div className="text-title">หน้าควบคุม</div>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={logout}>
-          <LogOut size={16} /> ออก
-        </button>
+        {!OPEN_ADMIN && (
+          <button type="button" className="btn btn-ghost" onClick={logout}>
+            <LogOut size={16} /> ออก
+          </button>
+        )}
       </div>
 
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -1,10 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
-
-// โหมด "ไม่มีรหัส": ตั้ง env VITE_ADMIN_OPEN=true → เข้าหน้า admin ได้เลยไม่ต้องล็อกอิน
-// (ใช้ชั่วคราวตอนเริ่มต้น — ต้องเปิด RLS ให้ anon เขียนด้วย ดู supabase/open-admin-writes.sql)
-const OPEN_ADMIN = (import.meta.env.VITE_ADMIN_OPEN || '').trim().toLowerCase() === 'true'
+import { OPEN_ADMIN } from '../config/adminAccess'
 
 export default function RequireAdmin({ children }) {
   const [status, setStatus] = useState(() => {
