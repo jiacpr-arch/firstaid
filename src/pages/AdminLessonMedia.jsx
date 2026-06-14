@@ -157,10 +157,6 @@ function AddSlotButton({ label, onClick, disabled }) {
   )
 }
 
-function Divider() {
-  return <div style={{ borderTop: '1px solid var(--color-border)', margin: '2px 0' }} />
-}
-
 // การ์ดสื่อที่ผูกไว้ + ปุ่มลบ
 function MediaCard({ row, onDelete }) {
   return (
@@ -241,17 +237,21 @@ export default function AdminLessonMedia() {
     reload()
   }
 
-  // จัดกลุ่มสื่อสำหรับ บทเรียน (by after_step: 0|1|2...|'end')
+  // จัดกลุ่มสื่อบทเรียนตาม "ขั้น" ที่จะแสดง (ใต้เนื้อหาในสไลด์เดียวกัน)
+  // ให้ตรงกับ LessonReader: after_step 1..len = ขั้นนั้น; 0/ก่อนเริ่ม = ขั้นแรก; ว่าง/เกิน = ขั้นสุดท้าย
   const rowsByAfterStep = useMemo(() => {
     if (!isLesson) return new Map()
+    const len = steps.length
     const map = new Map()
     for (const r of rows) {
-      const key = r.after_step ?? 'end'
-      if (!map.has(key)) map.set(key, [])
-      map.get(key).push(r)
+      let n = r.after_step
+      if (n == null || n > len) n = len
+      else if (n < 1) n = 1
+      if (!map.has(n)) map.set(n, [])
+      map.get(n).push(r)
     }
     return map
-  }, [rows, isLesson])
+  }, [rows, isLesson, steps.length])
 
   // จัดกลุ่มสื่อสำหรับ สถานการณ์/ผัง (by step_id)
   const rowsByStepId = useMemo(() => {
@@ -348,62 +348,26 @@ export default function AdminLessonMedia() {
           <div className="text-caption" style={{ textAlign: 'center', padding: 16 }}>ไม่พบข้อมูลเนื้อหา</div>
         )}
 
-        {isLesson && steps.length > 0 && (
-          <>
-            {/* ก่อนขั้นแรก */}
-            {renderMediaGroup(rowsByAfterStep.get(0))}
-            {renderSlot({ afterStep: 0 }, 'ใส่รูปก่อนเริ่มบท')}
-            <Divider />
-
-            {steps.map((step, idx) => (
-              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {/* preview ขั้นนั้น */}
-                <div style={{ position: 'relative' }}>
-                  <div className="text-caption" style={{ marginBottom: 4, paddingLeft: 2, color: 'var(--color-text-secondary)' }}>
-                    ขั้นที่ {idx + 1} / {steps.length}
-                  </div>
-                  <StepPreview contentType="lesson" step={step} index={idx} />
-                </div>
-
-                {/* สื่อที่ผูกหลังขั้นนี้ + ปุ่มเพิ่ม */}
-                {renderMediaGroup(rowsByAfterStep.get(idx + 1))}
-                {renderSlot(
-                  { afterStep: idx + 1 },
-                  idx === steps.length - 1 ? 'ใส่รูปท้ายบท' : 'ใส่รูปหลังขั้นนี้',
-                )}
-                {idx < steps.length - 1 && <Divider />}
-              </div>
-            ))}
-
-            {/* ท้ายบท (after_step = null) */}
-            {rowsByAfterStep.get('end')?.length > 0 && (
-              <>
-                <Divider />
-                {renderMediaGroup(rowsByAfterStep.get('end'))}
-              </>
-            )}
-          </>
+        {steps.length > 0 && (
+          <div className="text-caption" style={{ marginBottom: 2 }}>
+            รูปจะแสดง <b>ใต้เนื้อหาในสไลด์เดียวกัน</b> ของขั้นที่เลือก
+          </div>
         )}
 
-        {!isLesson && steps.length > 0 && (
-          <>
-            {steps.map((step, idx) => (
-              <div key={step.id || idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {/* preview step */}
-                <div className="text-caption" style={{ marginBottom: 2, color: 'var(--color-text-secondary)' }}>
-                  ขั้น {idx + 1} / {steps.length}
-                </div>
-                <StepPreview contentType={contentType} step={step} index={idx} />
-
-                {/* สื่อที่ผูกกับ step นี้ */}
-                {renderMediaGroup(rowsByStepId.get(step.id))}
-
-                {/* ปุ่มเพิ่มสื่อ */}
-                {renderSlot({ stepId: step.id }, 'ใส่รูปในขั้นนี้')}
+        {steps.length > 0 && steps.map((step, idx) => {
+          const media = isLesson ? rowsByAfterStep.get(idx + 1) : rowsByStepId.get(step.id)
+          const slot = isLesson ? { afterStep: idx + 1 } : { stepId: step.id }
+          return (
+            <div key={step.id || idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="text-caption" style={{ marginBottom: 2, color: 'var(--color-text-secondary)' }}>
+                ขั้นที่ {idx + 1} / {steps.length}
               </div>
-            ))}
-          </>
-        )}
+              <StepPreview contentType={contentType} step={step} index={idx} />
+              {renderMediaGroup(media)}
+              {renderSlot(slot, 'ใส่รูปในขั้นนี้')}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
