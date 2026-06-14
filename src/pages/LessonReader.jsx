@@ -7,7 +7,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { markLessonRead, saveQuizAttempt } from '../db/database'
-import { fetchLessonMedia, mergeSteps } from '../utils/lessonMediaSteps'
+import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 
 export default function LessonReader() {
@@ -34,17 +34,29 @@ export default function LessonReader() {
     setCompleted(false)
   }
 
-  // โหลดสื่อที่แอดมินผูกไว้กับบทนี้ (รูป/วิดีโอจาก Supabase) แล้วแทรกเป็น step
+  // โหลดสื่อที่แอดมินผูกไว้กับบทนี้ (รูป/วิดีโอจาก Supabase)
   useEffect(() => {
     let cancelled = false
     fetchLessonMedia(lessonId).then((rows) => { if (!cancelled) setExtraMedia(rows) })
     return () => { cancelled = true }
   }, [lessonId])
 
-  const steps = useMemo(
-    () => mergeSteps(lesson?.steps || [], extraMedia),
-    [lesson, extraMedia],
-  )
+  const steps = lesson?.steps || []
+
+  // จัดกลุ่มสื่อให้แสดง "ใต้เนื้อหาในสไลด์เดียวกัน" ตามขั้นที่ผูกไว้
+  // after_step (1-based) = แสดงในขั้นนั้น; 0/ก่อนเริ่ม = ขั้นแรก; ว่าง/เกิน = ขั้นสุดท้าย
+  const mediaByStep = useMemo(() => {
+    const len = steps.length
+    const map = new Map()
+    for (const row of extraMedia) {
+      let n = row.after_step
+      if (n == null || n > len) n = len
+      else if (n < 1) n = 1
+      if (!map.has(n)) map.set(n, [])
+      map.get(n).push(row)
+    }
+    return map
+  }, [steps.length, extraMedia])
 
   if (!lesson) {
     return (
@@ -138,6 +150,13 @@ export default function LessonReader() {
       </div>
 
       <LessonStep step={step} onQuizAnswered={onAnswered} />
+
+      {/* รูป/วิดีโอที่แอดมินผูกกับขั้นนี้ — แสดงใต้เนื้อหาในสไลด์เดียวกัน */}
+      {mediaByStep.get(stepIdx + 1)?.map((row) => (
+        <div key={row.id} style={{ marginTop: 12 }}>
+          <LessonStep step={mediaRowToStep(row)} />
+        </div>
+      ))}
 
       <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance}>
         {isLast ? 'จบบทเรียน' : 'ต่อไป'} <ChevronRight size={16} />
