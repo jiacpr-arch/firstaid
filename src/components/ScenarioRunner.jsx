@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle2, XCircle, ChevronRight } from 'lucide-react'
+import { groupMediaByStep } from '../utils/lessonMediaSteps'
+import { MediaRow } from './Media'
 
-export default function ScenarioRunner({ scenario, onFinish }) {
+export default function ScenarioRunner({ scenario, onFinish, media = [] }) {
   const stepsById = useMemo(
     () => Object.fromEntries(scenario.steps.map((s) => [s.id, s])),
     [scenario],
   )
+  const mediaByStep = useMemo(() => groupMediaByStep(media), [media])
   const [currentId, setCurrentId] = useState(scenario.steps[0].id)
   const [history, setHistory] = useState([]) // { stepId, choiceId, correct }
   const [selectedChoice, setSelectedChoice] = useState(null)
@@ -42,6 +45,7 @@ export default function ScenarioRunner({ scenario, onFinish }) {
       <div className="text-caption" style={{ marginBottom: 6 }}>
         ข้อ {history.length + 1} / {scenario.steps.length}
       </div>
+      {mediaByStep.get(currentId)?.map((row) => <MediaRow key={row.id} row={row} />)}
       <div className="text-headline" style={{ marginBottom: 14, whiteSpace: 'pre-wrap' }}>{step.prompt}</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

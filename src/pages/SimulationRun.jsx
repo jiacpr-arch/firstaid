@@ -1,11 +1,12 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { scenariosById } from '../courses/firstaid/scenarios'
 import ScenarioRunner from '../components/ScenarioRunner'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { saveSimulationRun } from '../db/database'
+import { fetchContentMedia } from '../utils/lessonMediaSteps'
 
 export default function SimulationRun() {
   useEnsureLearner()
@@ -14,6 +15,14 @@ export default function SimulationRun() {
   const scenario = scenariosById[scenarioId]
   const learner = useLearnerStore((s) => s.learner)
   const [result, setResult] = useState(null)
+  const [media, setMedia] = useState([])
+
+  // โหลดสื่อที่แอดมินผูกไว้กับสถานการณ์นี้
+  useEffect(() => {
+    let cancelled = false
+    fetchContentMedia('scenario', scenarioId).then((rows) => { if (!cancelled) setMedia(rows) })
+    return () => { cancelled = true }
+  }, [scenarioId])
 
   if (!scenario) {
     return (
@@ -75,7 +84,7 @@ export default function SimulationRun() {
         <div className="text-title" style={{ color: scenario.color }}>{scenario.title}</div>
       </div>
       <div style={{ marginTop: 16 }}>
-        <ScenarioRunner scenario={scenario} onFinish={onFinish} />
+        <ScenarioRunner scenario={scenario} onFinish={onFinish} media={media} />
       </div>
     </div>
   )

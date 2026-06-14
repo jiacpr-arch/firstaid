@@ -1,44 +1,5 @@
 import QuizQuestion from './QuizQuestion'
-
-function LessonImage({ src, alt, caption }) {
-  if (!src) return null
-  return (
-    <figure className="lesson-image">
-      <img src={src} alt={alt || caption || ''} loading="lazy" />
-      {caption && <figcaption className="text-caption">{caption}</figcaption>}
-    </figure>
-  )
-}
-
-function LessonVideo({ src, youtube, poster, caption, title }) {
-  if (youtube) {
-    return (
-      <figure className="lesson-video">
-        <div className="lesson-video-frame">
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${youtube}`}
-            title={title || caption || 'วิดีโอบทเรียน'}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
-        </div>
-        {caption && <figcaption className="text-caption">{caption}</figcaption>}
-      </figure>
-    )
-  }
-  if (src) {
-    return (
-      <figure className="lesson-video">
-        <video controls preload="metadata" poster={poster} playsInline>
-          <source src={src} />
-        </video>
-        {caption && <figcaption className="text-caption">{caption}</figcaption>}
-      </figure>
-    )
-  }
-  return null
-}
+import { LessonImage, LessonVideo } from './Media'
 
 export default function LessonStep({ step, onQuizAnswered }) {
   if (step.type === 'read') {
