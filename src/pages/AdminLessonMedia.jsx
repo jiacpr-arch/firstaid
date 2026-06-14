@@ -237,8 +237,8 @@ export default function AdminLessonMedia() {
     reload()
   }
 
-  // จัดกลุ่มสื่อบทเรียนตาม "ขั้น" ที่จะแสดง (ใต้เนื้อหาในสไลด์เดียวกัน)
-  // ให้ตรงกับ LessonReader: after_step 1..len = ขั้นนั้น; 0/ก่อนเริ่ม = ขั้นแรก; ว่าง/เกิน = ขั้นสุดท้าย
+  // จัดกลุ่มสื่อบทเรียนตามที่จะแสดง (ให้ตรงกับ LessonReader)
+  // after_step 1..len = ในขั้นนั้น; 0/ก่อนเริ่ม = หน้าปก; ว่าง/เกิน = ขั้นสุดท้าย
   const rowsByAfterStep = useMemo(() => {
     if (!isLesson) return new Map()
     const len = steps.length
@@ -246,7 +246,7 @@ export default function AdminLessonMedia() {
     for (const r of rows) {
       let n = r.after_step
       if (n == null || n > len) n = len
-      else if (n < 1) n = 1
+      else if (n < 0) n = 0
       if (!map.has(n)) map.set(n, [])
       map.get(n).push(r)
     }
@@ -351,6 +351,15 @@ export default function AdminLessonMedia() {
         {steps.length > 0 && (
           <div className="text-caption" style={{ marginBottom: 2 }}>
             รูปจะแสดง <b>ใต้เนื้อหาในสไลด์เดียวกัน</b> ของขั้นที่เลือก
+          </div>
+        )}
+
+        {/* หน้าปก (เฉพาะบทเรียน) — รูปที่แสดงเป็นสไลด์แรกก่อนเข้าเนื้อหา */}
+        {isLesson && steps.length > 0 && (
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8, borderStyle: 'dashed' }}>
+            <div className="text-body-strong">🖼️ หน้าปก <span className="text-caption">(แสดงเป็นสไลด์แรก ก่อนเข้าเนื้อหา)</span></div>
+            {renderMediaGroup(rowsByAfterStep.get(0))}
+            {renderSlot({ afterStep: 0 }, 'ใส่รูปหน้าปก')}
           </div>
         )}
 
