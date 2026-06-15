@@ -6,6 +6,7 @@ import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
 import MetaPixel from './components/MetaPixel'
 import BottomTabBar from './components/BottomTabBar'
+import { HouseAdStrip } from './components/HouseAdBanner'
 import RequireAdmin from './components/RequireAdmin'
 
 import Home from './pages/Home'
@@ -108,6 +109,7 @@ export default function App() {
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLessonMedia /></RequireAdmin></Suspense>
         } />
       </Routes>
+      {!isAdmin && <HouseAdStrip />}
       {!isAdmin && <BottomTabBar />}
       <Analytics />
       <MetaPixel />
