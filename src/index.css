@@ -222,6 +222,58 @@ a { color: inherit; text-decoration: none; }
 }
 .bottom-bar-item.active { color: var(--color-brand); font-weight: 700; }
 
+/* แถบโฆษณาเว็บในเครือแบบติดถาวร เหนือเมนูล่าง */
+.house-ad-strip {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -2px 8px rgba(15, 26, 46, 0.06);
+  z-index: 45;
+}
+.house-ad-strip-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.house-ad-strip-icon {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.house-ad-strip-text { flex: 1; min-width: 0; }
+.house-ad-strip-name {
+  font-size: 14px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.house-ad-strip-tagline {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.house-ad-strip-close {
+  flex-shrink: 0;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; padding: 0;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.house-ad-strip-close:hover { background: var(--color-bg-primary); }
+
+/* เมื่อแถบโชว์: ดันปุ่มฉุกเฉินขึ้น และเผื่อ padding ท้ายหน้า */
+body.has-house-strip .fab-emergency {
+  bottom: calc(132px + env(safe-area-inset-bottom));
+}
+body.has-house-strip .page-container { padding-bottom: 152px; }
+
 .fab-emergency {
   position: fixed;
   right: 16px;

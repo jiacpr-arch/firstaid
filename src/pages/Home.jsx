@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { BookOpen, Map, Activity, Phone, Award, UserCheck } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
-import HouseAdBanner from '../components/HouseAdBanner'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -75,8 +74,6 @@ export default function Home() {
       </div>
 
       <JiaAedNewsFeed />
-
-      <HouseAdBanner />
 
       <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)' }}>
         {learner?.name ? `กำลังเรียนในชื่อ ${learner.name}` : 'ยังไม่ได้ตั้งชื่อ — แตะ "ใบประกาศของฉัน" เพื่อกรอกชื่อ'}
