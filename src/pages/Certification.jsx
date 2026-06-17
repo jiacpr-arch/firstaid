@@ -69,6 +69,8 @@ export default function Certification() {
 
   const theoryCert = certs.find((c) => c.kind === 'theory')
   const practicalCert = certs.find((c) => c.kind === 'practical')
+  // Once a certificate is issued the name on it is fixed, so lock the input too.
+  const nameLocked = !!theoryCert
 
   const theoryEval = evaluateTheoryEligibility({ postTestAttempt: postAttempt })
   const practicalEval = evaluatePracticalEligibility({
@@ -90,6 +92,9 @@ export default function Certification() {
       kind: 'theory',
       code,
       issuedAt: new Date().toISOString(),
+      // Snapshot the name as it was when issued — the certificate must not change
+      // if the learner later edits their profile name.
+      learnerName: learner.name.trim(),
     }
     await saveCertificate(cert)
     setCerts((c) => [...c.filter((x) => x.kind !== 'theory'), cert])
@@ -97,13 +102,17 @@ export default function Certification() {
   }
 
   const downloadPdf = (cert) => {
+    // Use the name captured at issuance, not the live (editable) profile name.
     downloadCertPdf({
       kind: cert.kind,
-      learnerName: learner?.name || '',
+      learnerName: cert.learnerName || learner?.name || '',
       dateStr: fmtDate(cert.issuedAt),
       code: cert.code,
       instructorName: cert.instructorName,
       location: cert.location,
+    }).catch((err) => {
+      console.error('download cert pdf failed', err)
+      alert('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
     })
   }
 
@@ -117,7 +126,13 @@ export default function Certification() {
       <div className="card" style={{ marginTop: 12 }}>
         <div className="text-body-strong" style={{ marginBottom: 8 }}>ข้อมูลผู้เรียน</div>
         <label className="label">ชื่อ-นามสกุล</label>
-        <input className="input" value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="ชื่อสำหรับใบประกาศ" />
+        <input className="input" value={nameInput} onChange={(e) => setNameInput(e.target.value)}
+          placeholder="ชื่อสำหรับใบประกาศ" disabled={nameLocked} />
+        {nameLocked && (
+          <div className="text-caption" style={{ marginTop: 6 }}>
+            ชื่อถูกล็อกหลังออกใบประกาศแล้ว หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่
+          </div>
+        )}
         <label className="label" style={{ marginTop: 10 }}>เบอร์โทร (เลือกใส่)</label>
         <input className="input" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} inputMode="tel" placeholder="0XX-XXX-XXXX" />
         <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={saveProfile}>
@@ -151,7 +166,7 @@ export default function Certification() {
             <div style={{ marginTop: 14 }}>
               <CertificatePreview
                 kind="theory"
-                learnerName={learner?.name || ''}
+                learnerName={theoryCert.learnerName || learner?.name || ''}
                 dateStr={fmtDate(theoryCert.issuedAt)}
                 code={theoryCert.code}
               />
@@ -183,7 +198,7 @@ export default function Certification() {
             <div style={{ marginTop: 14 }}>
               <CertificatePreview
                 kind="practical"
-                learnerName={learner?.name || ''}
+                learnerName={practicalCert.learnerName || learner?.name || ''}
                 dateStr={fmtDate(practicalCert.issuedAt)}
                 code={practicalCert.code}
                 instructorName={practicalCert.instructorName}

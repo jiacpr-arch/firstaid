@@ -106,7 +106,7 @@ export async function saveAttendance(attendance) {
 
 // ===== Certificates =====
 export async function saveCertificate(cert) {
-  // cert: { id, learnerId, kind, code, issuedAt }
+  // cert: { id, learnerId, kind, code, issuedAt, learnerName }
   await db.certificates.put(cert)
   return cert
 }
