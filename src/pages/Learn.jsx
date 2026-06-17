@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import { useEffect } from 'react'
-import { BookOpen, CheckCircle2, ClipboardCheck, FileText } from 'lucide-react'
+import { BookOpen, CheckCircle2, ClipboardCheck, FileText, Lock } from 'lucide-react'
 import { lessons, lessonsByChapter } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
+import { useEnsureProgress } from '../hooks/useProgress'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 
@@ -12,14 +12,22 @@ export default function Learn() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
   const readSet = useProgressStore((s) => s.readLessonIds)
-  const refresh = useProgressStore((s) => s.refresh)
+  const preTestDone = useProgressStore((s) => s.preTestDone)
 
-  useEffect(() => {
-    if (learner?.id) refresh(learner.id)
-  }, [learner?.id, refresh])
+  useEnsureProgress(learner?.id)
 
   const total = lessons.length
   const done = lessons.filter((l) => readSet.has(l.id)).length
+  const lessonsLocked = !preTestDone
+  const allLessonsDone = total > 0 && done === total
+  const postLocked = !allLessonsDone
+
+  // ข้อความบอกขั้นตอนถัดไป — บังคับลำดับ Pre-test → เรียน → Post-test
+  const flowHint = lessonsLocked
+    ? 'ทำ Pre-test ก่อน เพื่อปลดล็อกบทเรียน'
+    : postLocked
+      ? `เรียนให้ครบทุกบท (เหลืออีก ${total - done} บท) เพื่อปลดล็อก Post-test`
+      : 'เรียนครบแล้ว — พร้อมทำ Post-test เพื่อรับใบประกาศ'
 
   return (
     <div className="page-container">
@@ -37,10 +45,25 @@ export default function Learn() {
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <Link to="/pre-test" className="btn btn-secondary" style={{ flex: 1 }}>
             <ClipboardCheck size={16} /> Pre-test
+            {preTestDone && <CheckCircle2 size={14} style={{ marginLeft: 4 }} />}
           </Link>
-          <Link to="/post-test" className="btn btn-primary" style={{ flex: 1 }}>
-            <FileText size={16} /> Post-test
-          </Link>
+          {postLocked ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ flex: 1, opacity: 0.45, cursor: 'not-allowed' }}
+              disabled
+            >
+              <Lock size={16} /> Post-test
+            </button>
+          ) : (
+            <Link to="/post-test" className="btn btn-primary" style={{ flex: 1 }}>
+              <FileText size={16} /> Post-test
+            </Link>
+          )}
+        </div>
+        <div className="text-caption" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {(lessonsLocked || postLocked) && <Lock size={13} />} {flowHint}
         </div>
       </div>
 
@@ -64,6 +87,42 @@ export default function Learn() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {ch.lessons.map((l) => {
                 const isRead = readSet.has(l.id)
+                const inner = (
+                  <>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10,
+                      background: lessonsLocked
+                        ? 'var(--color-bg-tertiary)'
+                        : isRead ? '#D1FAE5' : 'var(--color-bg-tertiary)',
+                      color: lessonsLocked
+                        ? 'var(--color-text-secondary)'
+                        : isRead ? '#065F46' : 'var(--color-text-secondary)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700,
+                    }}>
+                      {lessonsLocked
+                        ? <Lock size={18} />
+                        : isRead ? <CheckCircle2 size={20} /> : <BookOpen size={18} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="text-body-strong">{l.order}. {l.title}</div>
+                      <div className="text-caption">{l.summary} • {l.minutes} นาที</div>
+                    </div>
+                    {!lessonsLocked && isRead && <span className="badge badge-success">เรียนแล้ว</span>}
+                  </>
+                )
+                if (lessonsLocked) {
+                  return (
+                    <div
+                      key={l.id}
+                      className="card"
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 0.55, cursor: 'not-allowed' }}
+                      aria-disabled="true"
+                    >
+                      {inner}
+                    </div>
+                  )
+                }
                 return (
                   <Link
                     key={l.id}
@@ -71,20 +130,7 @@ export default function Learn() {
                     className="card"
                     style={{ display: 'flex', alignItems: 'center', gap: 12 }}
                   >
-                    <div style={{
-                      width: 38, height: 38, borderRadius: 10,
-                      background: isRead ? '#D1FAE5' : 'var(--color-bg-tertiary)',
-                      color: isRead ? '#065F46' : 'var(--color-text-secondary)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700,
-                    }}>
-                      {isRead ? <CheckCircle2 size={20} /> : <BookOpen size={18} />}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="text-body-strong">{l.order}. {l.title}</div>
-                      <div className="text-caption">{l.summary} • {l.minutes} นาที</div>
-                    </div>
-                    {isRead && <span className="badge badge-success">เรียนแล้ว</span>}
+                    {inner}
                   </Link>
                 )
               })}
