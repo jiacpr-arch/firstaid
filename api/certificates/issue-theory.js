@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
-import { notifyAdminLine } from '../_lib/lineNotify.js'
+import { notifyCertIssued } from '../_lib/certNotify.js'
 
 const PASSING = 80
 
@@ -96,24 +96,18 @@ export default async function handler(req, res) {
   }
 
   // A fresh theory cert means a real lead just finished the course — alert the
-  // admin on LINE. Awaited (so the push completes before the function freezes)
-  // but never allowed to fail issuance: notifyAdminLine swallows its own errors.
-  const issuedAt = new Date(data.issued_at).toLocaleString('th-TH', {
-    timeZone: 'Asia/Bangkok',
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  // admin on LINE with the running tally for the day. Awaited (so the push
+  // completes before the function freezes) but never allowed to fail issuance:
+  // notifyCertIssued swallows its own errors.
+  await notifyCertIssued(admin, {
+    kind: 'theory',
+    learnerName,
+    learnerPhone,
+    learnerEmail,
+    score: best.score,
+    code: data.code,
+    issuedAt: data.issued_at,
   })
-  await notifyAdminLine(
-    [
-      '🎓 มีคนรับใบเซอร์ทฤษฎีใหม่!',
-      `👤 ${learnerName}`,
-      `📞 ${learnerPhone}`,
-      `✉️ ${learnerEmail}`,
-      `📊 post-test ${best.score}/100`,
-      `🔖 รหัส ${data.code}`,
-      `🕐 ${issuedAt}`,
-    ].join('\n'),
-  )
 
   res.status(200).json({ certificate: data })
 }

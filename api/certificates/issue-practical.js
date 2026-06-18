@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
+import { notifyCertIssued } from '../_lib/certNotify.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
@@ -58,6 +59,31 @@ export default async function handler(req, res) {
     location: session?.location || null,
   }
   const { data, error } = await admin.from('certificates').insert(cert).select().single()
-  if (error) { res.status(500).json({ error: error.message }); return }
+  if (error) {
+    // Lost a race with a concurrent issue — return the row that won, no double ping.
+    if (error.code === '23505') {
+      const { data: winner } = await admin
+        .from('certificates')
+        .select('*')
+        .eq('learner_id', att.learner_id)
+        .eq('kind', 'practical')
+        .maybeSingle()
+      if (winner) { res.status(200).json({ certificate: winner }); return }
+    }
+    res.status(500).json({ error: error.message })
+    return
+  }
+
+  // A genuinely new practical cert means the learner just finished the in-person
+  // session — alert the admin on LINE with the running tally for the day. Never
+  // allowed to fail issuance: notifyCertIssued swallows its own errors.
+  await notifyCertIssued(admin, {
+    kind: 'practical',
+    learnerName: data.learner_name,
+    location: data.location,
+    code: data.code,
+    issuedAt: data.issued_at,
+  })
+
   res.status(200).json({ certificate: data })
 }
