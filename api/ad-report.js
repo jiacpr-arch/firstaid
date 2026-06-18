@@ -2,6 +2,8 @@
 // ต้องตั้ง env: META_ACCESS_TOKEN (สิทธิ์ ads_read), LINE_CHANNEL_ACCESS_TOKEN,
 // LINE_USER_ID และแนะนำ CRON_SECRET เพื่อกันคนนอกยิง endpoint นี้เอง
 
+import { pushLineOrThrow } from './_lib/lineNotify.js'
+
 const AD_ACCOUNT = 'act_10153192786713173'
 const AD_IDS = ['52556568346197', '52556568357197']
 const AD_LABELS = { 52556568346197: 'Ad A (4 นาที)', 52556568357197: 'Ad B (เรียนฟรี)' }
@@ -61,15 +63,6 @@ function buildMessage(yesterday, total) {
   return lines.join('\n')
 }
 
-async function pushLine(channelToken, userId, text) {
-  const res = await fetch('https://api.line.me/v2/bot/message/push', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${channelToken}` },
-    body: JSON.stringify({ to: userId, messages: [{ type: 'text', text }] }),
-  })
-  if (!res.ok) throw new Error(`LINE API ${res.status}: ${await res.text()}`)
-}
-
 export default async function handler(req, res) {
   const { CRON_SECRET, META_ACCESS_TOKEN, LINE_CHANNEL_ACCESS_TOKEN, LINE_USER_ID } = process.env
 
@@ -92,7 +85,7 @@ export default async function handler(req, res) {
       }),
     ])
     const text = buildMessage(yesterday, total)
-    await pushLine(LINE_CHANNEL_ACCESS_TOKEN, LINE_USER_ID, text)
+    await pushLineOrThrow(text, { channelToken: LINE_CHANNEL_ACCESS_TOKEN, userId: LINE_USER_ID })
     return res.status(200).json({ ok: true, sent: text })
   } catch (err) {
     return res.status(500).json({ ok: false, error: String(err.message || err) })

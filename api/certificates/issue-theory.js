@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
+import { notifyCertIssued } from '../_lib/certNotify.js'
 
 const PASSING = 80
 
@@ -93,5 +94,13 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error.message })
     return
   }
+  // New issuance only (existing/race-winner paths above return early), so the
+  // instructor gets exactly one real-time ping per learner who finishes.
+  await notifyCertIssued(admin, {
+    kind: 'theory',
+    learnerName,
+    learnerPhone,
+    score: best.score,
+  })
   res.status(200).json({ certificate: data })
 }

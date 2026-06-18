@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
+import { notifyCertIssued } from '../_lib/certNotify.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
@@ -59,5 +60,11 @@ export default async function handler(req, res) {
   }
   const { data, error } = await admin.from('certificates').insert(cert).select().single()
   if (error) { res.status(500).json({ error: error.message }); return }
+  // New issuance only (the idempotent check above returns early) — one ping per learner.
+  await notifyCertIssued(admin, {
+    kind: 'practical',
+    learnerName: att.learner_name,
+    location: session?.location || null,
+  })
   res.status(200).json({ certificate: data })
 }
