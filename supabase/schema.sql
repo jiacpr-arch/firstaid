@@ -123,6 +123,15 @@ alter table practical_sessions enable row level security;
 alter table attendance enable row level security;
 alter table certificates enable row level security;
 
+-- Learner-data tables: written via service-role API (bypasses RLS) or local Dexie,
+-- never by the public anon client. RLS on with no policy = service-role-only access,
+-- which blocks anon read/write (protects enrollments PII + exam_attempts integrity).
+alter table enrollments enable row level security;
+alter table lesson_progress enable row level security;
+alter table quiz_attempts enable row level security;
+alter table exam_attempts enable row level security;
+alter table simulation_runs enable row level security;
+
 create policy "instructor own cohorts" on cohorts
   for all using (instructor_id = auth.uid()) with check (instructor_id = auth.uid());
 
