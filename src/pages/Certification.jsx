@@ -2,20 +2,11 @@ import { useEffect, useState } from 'react'
 import { Award, Download } from 'lucide-react'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
-import {
-  getBestExam,
-  getCertificates,
-  saveCertificate,
-  upsertLearner,
-} from '../db/database'
-import {
-  CERT_KINDS,
-  evaluateTheoryEligibility,
-  evaluatePracticalEligibility,
-  generateCertCode,
-} from '../courses/firstaid/cert'
+import { getBestExam, getCertificates } from '../db/database'
+import { CERT_KINDS, evaluatePracticalEligibility } from '../courses/firstaid/cert'
 import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
+import TheoryCertCard from '../components/TheoryCertCard'
 import { downloadCertPdf } from '../utils/certPdf'
 
 function fmtDate(iso) {
@@ -27,24 +18,9 @@ function fmtDate(iso) {
 export default function Certification() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
-  const updateLearner = useLearnerStore((s) => s.updateLearner)
 
-  const [nameInput, setNameInput] = useState(learner?.name || '')
-  const [phoneInput, setPhoneInput] = useState(learner?.phone || '')
   const [postAttempt, setPostAttempt] = useState(null)
   const [certs, setCerts] = useState([])
-  const [busy, setBusy] = useState(false)
-
-  // Sync local form when learner profile changes elsewhere — set-during-render pattern
-  const [prevLearnerKey, setPrevLearnerKey] = useState(
-    `${learner?.id || ''}|${learner?.name || ''}|${learner?.phone || ''}`,
-  )
-  const learnerKey = `${learner?.id || ''}|${learner?.name || ''}|${learner?.phone || ''}`
-  if (prevLearnerKey !== learnerKey) {
-    setPrevLearnerKey(learnerKey)
-    setNameInput(learner?.name || '')
-    setPhoneInput(learner?.phone || '')
-  }
 
   useEffect(() => {
     if (!learner?.id) return
@@ -60,49 +36,19 @@ export default function Certification() {
     return () => { cancelled = true }
   }, [learner?.id])
 
-  const saveProfile = async () => {
-    if (!nameInput.trim()) return
-    const patch = { name: nameInput.trim(), phone: phoneInput.trim() }
-    updateLearner(patch)
-    await upsertLearner({ ...learner, ...patch })
-  }
-
   const theoryCert = certs.find((c) => c.kind === 'theory')
   const practicalCert = certs.find((c) => c.kind === 'practical')
-  // Once a certificate is issued the name on it is fixed, so lock the input too.
-  const nameLocked = !!theoryCert
 
-  const theoryEval = evaluateTheoryEligibility({ postTestAttempt: postAttempt })
   const practicalEval = evaluatePracticalEligibility({
     hasTheory: !!theoryCert,
     approvedAttendance: practicalCert?.fromApproval || false,
   })
 
-  const issueTheory = async () => {
-    if (!learner?.name?.trim()) {
-      alert('กรุณาตั้งชื่อก่อน')
-      return
-    }
-    if (!theoryEval.eligible) return
-    setBusy(true)
-    const code = generateCertCode()
-    const cert = {
-      id: `theory-${learner.id}`,
-      learnerId: learner.id,
-      kind: 'theory',
-      code,
-      issuedAt: new Date().toISOString(),
-      // Snapshot the name as it was when issued — the certificate must not change
-      // if the learner later edits their profile name.
-      learnerName: learner.name.trim(),
-    }
-    await saveCertificate(cert)
+  const onTheoryIssued = (cert) => {
     setCerts((c) => [...c.filter((x) => x.kind !== 'theory'), cert])
-    setBusy(false)
   }
 
   const downloadPdf = (cert) => {
-    // Use the name captured at issuance, not the live (editable) profile name.
     downloadCertPdf({
       kind: cert.kind,
       learnerName: cert.learnerName || learner?.name || '',
@@ -123,61 +69,8 @@ export default function Certification() {
         <div className="text-title">ทฤษฎี + ปฏิบัติ</div>
       </div>
 
-      <div className="card" style={{ marginTop: 12 }}>
-        <div className="text-body-strong" style={{ marginBottom: 8 }}>ข้อมูลผู้เรียน</div>
-        <label className="label">ชื่อ-นามสกุล</label>
-        <input className="input" value={nameInput} onChange={(e) => setNameInput(e.target.value)}
-          placeholder="ชื่อสำหรับใบประกาศ" disabled={nameLocked} />
-        {nameLocked && (
-          <div className="text-caption" style={{ marginTop: 6 }}>
-            ชื่อถูกล็อกหลังออกใบประกาศแล้ว หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่
-          </div>
-        )}
-        <label className="label" style={{ marginTop: 10 }}>เบอร์โทร (เลือกใส่)</label>
-        <input className="input" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} inputMode="tel" placeholder="0XX-XXX-XXXX" />
-        <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={saveProfile}>
-          บันทึก
-        </button>
-      </div>
-
-      {/* Theory */}
-      <div className="card" style={{ marginTop: 16, borderTop: `4px solid ${CERT_KINDS.theory.accent}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Award size={22} color={CERT_KINDS.theory.accent} />
-          <div style={{ flex: 1 }}>
-            <div className="text-body-strong">ใบประกาศภาคทฤษฎี</div>
-            <div className="text-caption">ออกอัตโนมัติเมื่อผ่าน Post-test ≥ 80%</div>
-          </div>
-          {theoryCert ? <span className="badge badge-success">ได้รับแล้ว</span> :
-            theoryEval.eligible ? <span className="badge badge-brand">พร้อมออก</span> :
-            <span className="badge badge-muted">ยังไม่พร้อม</span>}
-        </div>
-        {!theoryCert && !theoryEval.eligible && (
-          <div className="text-caption" style={{ marginTop: 8 }}>{theoryEval.reason}</div>
-        )}
-        {!theoryCert && theoryEval.eligible && (
-          <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }}
-            disabled={busy} onClick={issueTheory}>
-            ออกใบประกาศ
-          </button>
-        )}
-        {theoryCert && (
-          <>
-            <div style={{ marginTop: 14 }}>
-              <CertificatePreview
-                kind="theory"
-                learnerName={theoryCert.learnerName || learner?.name || ''}
-                dateStr={fmtDate(theoryCert.issuedAt)}
-                code={theoryCert.code}
-              />
-            </div>
-            <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 10 }}
-              onClick={() => downloadPdf(theoryCert)}>
-              <Download size={16} /> ดาวน์โหลด PDF
-            </button>
-          </>
-        )}
-      </div>
+      {/* Theory — self-service issuance (name + phone + email + PDPA consent) */}
+      <TheoryCertCard postAttempt={postAttempt} onIssued={onTheoryIssued} />
 
       {/* Practical */}
       <div className="card" style={{ marginTop: 16, borderTop: `4px solid ${CERT_KINDS.practical.accent}` }}>

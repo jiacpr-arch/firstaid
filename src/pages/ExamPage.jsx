@@ -9,6 +9,7 @@ import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { saveExamAttempt } from '../db/database'
 import ProgressBar from '../components/ProgressBar'
+import TheoryCertCard from '../components/TheoryCertCard'
 
 export default function ExamPage({ kind }) {
   useEnsureLearner()
@@ -98,11 +99,13 @@ export default function ExamPage({ kind }) {
           {kind === 'post' && (
             <div className="text-body" style={{ marginTop: 10 }}>
               {done.passed
-                ? 'ยินดีด้วย — ผ่านแบบทดสอบหลังเรียนแล้ว ระบบจะออกใบประกาศภาคทฤษฎีให้คุณ'
+                ? 'ยินดีด้วย — ผ่านแบบทดสอบหลังเรียนแล้ว กรอกข้อมูลด้านล่างเพื่อรับใบประกาศภาคทฤษฎี'
                 : `ยังไม่ผ่าน (ต้องได้ ≥ ${exam.passingScore}%) ลองทบทวนบทเรียนแล้วทำใหม่ได้`}
             </div>
           )}
         </div>
+
+        {passedTheory && <TheoryCertCard postAttempt={done} />}
 
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {exam.questions.map((qq, i) => {

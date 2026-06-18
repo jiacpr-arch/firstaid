@@ -102,12 +102,20 @@ create table if not exists certificates (
   code         text not null unique,
   issued_at    timestamptz not null default now(),
   learner_name text,
+  learner_phone text,
+  learner_email text,
+  pdpa_consent_at timestamptz,
   location     text,
   source_ref   uuid,
   pdf_url      text,
   revoked_at   timestamptz,
   unique (learner_id, kind)
 );
+
+-- Contact fields for self-service theory issuance (idempotent for existing deployments).
+alter table if exists certificates add column if not exists learner_phone text;
+alter table if exists certificates add column if not exists learner_email text;
+alter table if exists certificates add column if not exists pdpa_consent_at timestamptz;
 
 -- RLS: instructors only see their own cohorts / sessions
 alter table cohorts enable row level security;
