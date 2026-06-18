@@ -5,7 +5,7 @@ import { persist } from 'zustand/middleware'
 export const useLearnerStore = create(
   persist(
     (set) => ({
-      learner: null, // { id, name, phone?, cohortCode? }
+      learner: null, // { id, name, phone?, email?, cohortCode? }
       setLearner: (learner) => set({ learner }),
       updateLearner: (patch) =>
         set((s) => ({ learner: s.learner ? { ...s.learner, ...patch } : null })),
