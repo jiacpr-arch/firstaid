@@ -16,6 +16,7 @@ import {
 } from '../courses/firstaid/cert'
 import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
+import LineGateCard from '../components/LineGateCard'
 import { downloadCertPdf } from '../utils/certPdf'
 
 function fmtDate(iso) {
@@ -96,6 +97,15 @@ export default function Certification() {
     setBusy(false)
   }
 
+  // ยืนยันว่าแอด LINE @jiacpr แล้ว → ปลดล็อกใบประกาศ และออกเซอร์ให้เลยถ้าพร้อม
+  const confirmLineAndUnlock = async () => {
+    updateLearner({ lineAdded: true })
+    await upsertLearner({ ...learner, lineAdded: true })
+    if (theoryEval.eligible && !theoryCert && learner?.name?.trim()) {
+      await issueTheory()
+    }
+  }
+
   const downloadPdf = (cert) => {
     downloadCertPdf({
       kind: cert.kind,
@@ -134,19 +144,23 @@ export default function Certification() {
             <div className="text-caption">ออกอัตโนมัติเมื่อผ่าน Post-test ≥ 80%</div>
           </div>
           {theoryCert ? <span className="badge badge-success">ได้รับแล้ว</span> :
-            theoryEval.eligible ? <span className="badge badge-brand">พร้อมออก</span> :
+            theoryEval.eligible ? <span className="badge badge-brand">{learner?.lineAdded ? 'พร้อมออก' : 'อีกขั้นเดียว'}</span> :
             <span className="badge badge-muted">ยังไม่พร้อม</span>}
         </div>
         {!theoryCert && !theoryEval.eligible && (
           <div className="text-caption" style={{ marginTop: 8 }}>{theoryEval.reason}</div>
         )}
-        {!theoryCert && theoryEval.eligible && (
+        {/* ผ่านแล้ว (หรือมีเซอร์เดิม) แต่ยังไม่แอด LINE → ต้องผ่านด่านแอด LINE ก่อน */}
+        {(theoryEval.eligible || theoryCert) && !learner?.lineAdded && (
+          <LineGateCard onConfirm={confirmLineAndUnlock} />
+        )}
+        {learner?.lineAdded && !theoryCert && theoryEval.eligible && (
           <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }}
             disabled={busy} onClick={issueTheory}>
             ออกใบประกาศ
           </button>
         )}
-        {theoryCert && (
+        {learner?.lineAdded && theoryCert && (
           <>
             <div style={{ marginTop: 14 }}>
               <CertificatePreview
