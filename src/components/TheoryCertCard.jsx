@@ -5,6 +5,7 @@ import { getCertificates, upsertLearner } from '../db/database'
 import { CERT_KINDS, evaluateTheoryEligibility } from '../courses/firstaid/cert'
 import { issueTheoryCertificate } from '../utils/certIssue'
 import CertificatePreview from './CertificatePreview'
+import LineGateCard from './LineGateCard'
 import { downloadCertPdf } from '../utils/certPdf'
 
 function fmtDate(iso) {
@@ -53,6 +54,12 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
 
   const accent = CERT_KINDS.theory.accent
   const theoryEval = evaluateTheoryEligibility({ postTestAttempt: postAttempt })
+  const lineAdded = !!learner?.lineAdded
+
+  const confirmLine = async () => {
+    updateLearner({ lineAdded: true })
+    await upsertLearner({ ...learner, lineAdded: true })
+  }
 
   const nameOk = name.trim().length > 0
   const phoneOk = phoneDigits(phone).length >= 9
@@ -105,6 +112,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
           <div className="text-caption">ออกเมื่อผ่าน Post-test ≥ 80%</div>
         </div>
         {cert ? <span className="badge badge-success">ได้รับแล้ว</span> :
+          theoryEval.eligible && !lineAdded ? <span className="badge badge-brand">อีกขั้นเดียว</span> :
           theoryEval.eligible ? <span className="badge badge-brand">พร้อมออก</span> :
           <span className="badge badge-muted">ยังไม่พร้อม</span>}
       </div>
@@ -135,8 +143,12 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
         <div className="text-caption" style={{ marginTop: 8 }}>{theoryEval.reason}</div>
       )}
 
-      {/* Eligible & not issued — collect details then issue */}
-      {loaded && !cert && theoryEval.eligible && (
+      {/* Eligible & not issued — LINE gate first, then form */}
+      {loaded && !cert && theoryEval.eligible && !lineAdded && (
+        <LineGateCard onConfirm={confirmLine} />
+      )}
+
+      {loaded && !cert && theoryEval.eligible && lineAdded && (
         <div style={{ marginTop: 12 }}>
           <label className="label">ชื่อ-นามสกุล</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)}
