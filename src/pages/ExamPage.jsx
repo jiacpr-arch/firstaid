@@ -1,17 +1,28 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, CheckCircle2, XCircle } from 'lucide-react'
+import { ArrowLeft, ChevronRight, CheckCircle2, XCircle, Lock } from 'lucide-react'
 import { preTest, postTest } from '../courses/firstaid/exams'
+import { lessons } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
+import { useProgressStore } from '../stores/progressStore'
+import { useEnsureProgress } from '../hooks/useProgress'
 import { saveExamAttempt } from '../db/database'
 import ProgressBar from '../components/ProgressBar'
+import TheoryCertCard from '../components/TheoryCertCard'
 
 export default function ExamPage({ kind }) {
   useEnsureLearner()
   const exam = kind === 'pre' ? preTest : postTest
   const navigate = useNavigate()
   const learner = useLearnerStore((s) => s.learner)
+  const readSet = useProgressStore((s) => s.readLessonIds)
+  const progressLoaded = useProgressStore((s) => s.loaded)
+  const markPreTestDone = useProgressStore((s) => s.markPreTestDone)
+  const markPostTestDone = useProgressStore((s) => s.markPostTestDone)
+  useEnsureProgress(learner?.id)
+
+  const allLessonsDone = lessons.length > 0 && lessons.every((l) => readSet.has(l.id))
 
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState({})
@@ -42,7 +53,33 @@ export default function ExamPage({ kind }) {
       passed,
     }
     await saveExamAttempt(result)
+    if (kind === 'pre') markPreTestDone()
+    else markPostTestDone()
     setDone(result)
+  }
+
+  // Post-test: รอโหลดสถานะความก้าวหน้าก่อน เพื่อไม่ให้โผล่ข้อสอบแวบ ๆ ตอนเปิด URL ตรง
+  if (kind === 'post' && !progressLoaded && !done) {
+    return <div className="page-container py-12 text-center text-caption">กำลังโหลด…</div>
+  }
+
+  // กัน Post-test ตรง ๆ ผ่าน URL ก่อนเรียนครบ — รอโหลดสถานะก่อนค่อยตัดสิน
+  if (kind === 'post' && progressLoaded && !allLessonsDone && !done) {
+    const remaining = lessons.length - lessons.filter((l) => readSet.has(l.id)).length
+    return (
+      <div className="page-container">
+        <div className="card" style={{ textAlign: 'center', padding: 28 }}>
+          <Lock size={44} color="var(--color-text-secondary)" style={{ margin: '0 auto' }} />
+          <div className="text-title" style={{ marginTop: 12 }}>ยังทำ Post-test ไม่ได้</div>
+          <div className="text-body" style={{ marginTop: 8 }}>
+            ต้องเรียนให้ครบทุกบทก่อน (เหลืออีก {remaining} บท) จึงจะทำแบบทดสอบหลังเรียนได้
+          </div>
+        </div>
+        <Link to="/learn" className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
+          <ArrowLeft size={16} /> ไปเรียนต่อ
+        </Link>
+      </div>
+    )
   }
 
   if (done) {
@@ -62,11 +99,13 @@ export default function ExamPage({ kind }) {
           {kind === 'post' && (
             <div className="text-body" style={{ marginTop: 10 }}>
               {done.passed
-                ? 'ยินดีด้วย — ผ่านแบบทดสอบหลังเรียนแล้ว ระบบจะออกใบประกาศภาคทฤษฎีให้คุณ'
+                ? 'ยินดีด้วย — ผ่านแบบทดสอบหลังเรียนแล้ว กรอกข้อมูลด้านล่างเพื่อรับใบประกาศภาคทฤษฎี'
                 : `ยังไม่ผ่าน (ต้องได้ ≥ ${exam.passingScore}%) ลองทบทวนบทเรียนแล้วทำใหม่ได้`}
             </div>
           )}
         </div>
+
+        {passedTheory && <TheoryCertCard postAttempt={done} />}
 
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {exam.questions.map((qq, i) => {
@@ -99,18 +138,32 @@ export default function ExamPage({ kind }) {
         </div>
 
         <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-          <Link to="/learn" className="btn btn-secondary" style={{ flex: 1 }}>
-            กลับไปบทเรียน
-          </Link>
-          {passedTheory ? (
-            <Link to="/certificate" className="btn btn-primary" style={{ flex: 1 }}>
-              ดูใบประกาศ
-            </Link>
+          {kind === 'pre' ? (
+            <>
+              <button type="button" className="btn btn-secondary" style={{ flex: 1 }}
+                onClick={() => { setIdx(0); setAnswers({}); setDone(null) }}>
+                ทำใหม่
+              </button>
+              <Link to="/learn" className="btn btn-primary" style={{ flex: 1 }}>
+                เริ่มเรียน <ChevronRight size={16} />
+              </Link>
+            </>
           ) : (
-            <button type="button" className="btn btn-primary" style={{ flex: 1 }}
-              onClick={() => { setIdx(0); setAnswers({}); setDone(null) }}>
-              ทำใหม่
-            </button>
+            <>
+              <Link to="/learn" className="btn btn-secondary" style={{ flex: 1 }}>
+                กลับไปบทเรียน
+              </Link>
+              {passedTheory ? (
+                <Link to="/certificate" className="btn btn-primary" style={{ flex: 1 }}>
+                  ดูใบประกาศ
+                </Link>
+              ) : (
+                <button type="button" className="btn btn-primary" style={{ flex: 1 }}
+                  onClick={() => { setIdx(0); setAnswers({}); setDone(null) }}>
+                  ทำใหม่
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

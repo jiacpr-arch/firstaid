@@ -1,56 +1,61 @@
 import { jsPDF } from 'jspdf'
+import { CERT_KINDS } from '../courses/firstaid/cert'
 
-// Note: jsPDF cannot embed Thai fonts without adding TTF + vfs. For v1 we render
-// landscape A4 with Helvetica + transliterated labels — the cert template can be
-// upgraded later by registering a Sarabun TTF. The PDF is still printable and
-// matches the on-screen preview for now.
-
-export function makeCertPdf({ kind, learnerName, dateStr, code, instructorName, location }) {
+// Renders a landscape A4 certificate with the embedded Sarabun font so Thai text
+// (learner name, dates, body copy) shows correctly instead of garbled glyphs.
+// The font module is imported lazily so its ~235KB of base64 stays out of the
+// main bundle and only ships when someone actually downloads a PDF.
+export async function makeCertPdf({ kind, learnerName, dateStr, code, instructorName, location }) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
-  const pageW = doc.internal.pageSize.getWidth()
+  const { registerSarabunFont } = await import('./sarabunFont.js')
+  registerSarabunFont(doc)
+  doc.setFont('Sarabun', 'normal')
 
-  const accent = kind === 'theory' ? '#16A34A' : '#2563EB'
+  const pageW = doc.internal.pageSize.getWidth()
+  const tmpl = CERT_KINDS[kind] || CERT_KINDS.theory
+  const accent = tmpl.accent
+
   doc.setDrawColor(accent)
   doc.setLineWidth(2)
   doc.rect(10, 10, pageW - 20, 200)
 
+  doc.setFont('Sarabun', 'bold')
   doc.setFontSize(28)
   doc.setTextColor(accent)
-  doc.text(kind === 'theory' ? 'Certificate of Completion (Theory)' : 'Certificate of Completion (Practical)',
-    pageW / 2, 40, { align: 'center' })
+  doc.text(tmpl.title, pageW / 2, 40, { align: 'center' })
 
+  doc.setFont('Sarabun', 'normal')
   doc.setFontSize(14)
   doc.setTextColor('#0F1A2E')
-  doc.text('Basic First Aid for Laypersons', pageW / 2, 55, { align: 'center' })
+  doc.text(tmpl.subtitle, pageW / 2, 55, { align: 'center' })
   doc.text('TH-FirstAid-Layperson-2026', pageW / 2, 65, { align: 'center' })
 
   doc.setFontSize(16)
-  doc.text('This is to certify that', pageW / 2, 90, { align: 'center' })
+  doc.text('มอบให้แก่', pageW / 2, 90, { align: 'center' })
 
+  doc.setFont('Sarabun', 'bold')
   doc.setFontSize(26)
   doc.setTextColor(accent)
-  doc.text(learnerName || '(name)', pageW / 2, 110, { align: 'center' })
+  doc.text(learnerName || '—', pageW / 2, 110, { align: 'center' })
 
+  doc.setFont('Sarabun', 'normal')
   doc.setFontSize(13)
   doc.setTextColor('#0F1A2E')
-  const bodyText = kind === 'theory'
-    ? 'has successfully completed the online theory training and passed the post-test (>= 80%).'
-    : 'has successfully completed the practical hands-on training under supervision.'
-  doc.text(bodyText, pageW / 2, 130, { align: 'center', maxWidth: 240 })
+  doc.text(tmpl.description, pageW / 2, 130, { align: 'center', maxWidth: 240 })
 
   if (kind === 'practical') {
-    if (instructorName) doc.text(`Instructor: ${instructorName}`, pageW / 2, 145, { align: 'center' })
-    if (location) doc.text(`Location: ${location}`, pageW / 2, 155, { align: 'center' })
+    if (instructorName) doc.text(`ครูผู้สอน: ${instructorName}`, pageW / 2, 145, { align: 'center' })
+    if (location) doc.text(`สถานที่: ${location}`, pageW / 2, 155, { align: 'center' })
   }
 
   doc.setFontSize(12)
-  doc.text(`Issued: ${dateStr}`, 30, 195)
-  doc.text(`Code: ${code}`, pageW - 30, 195, { align: 'right' })
+  doc.text(`ออกเมื่อ ${dateStr}`, 30, 195)
+  doc.text(`รหัส ${code}`, pageW - 30, 195, { align: 'right' })
 
   return doc
 }
 
-export function downloadCertPdf(args) {
-  const doc = makeCertPdf(args)
+export async function downloadCertPdf(args) {
+  const doc = await makeCertPdf(args)
   doc.save(`firstaid-${args.kind}-${args.code}.pdf`)
 }

@@ -102,6 +102,9 @@ create table if not exists certificates (
   code         text not null unique,
   issued_at    timestamptz not null default now(),
   learner_name text,
+  learner_phone text,
+  learner_email text,
+  pdpa_consent_at timestamptz,
   location     text,
   source_ref   uuid,
   pdf_url      text,
@@ -109,11 +112,25 @@ create table if not exists certificates (
   unique (learner_id, kind)
 );
 
+-- Contact fields for self-service theory issuance (idempotent for existing deployments).
+alter table if exists certificates add column if not exists learner_phone text;
+alter table if exists certificates add column if not exists learner_email text;
+alter table if exists certificates add column if not exists pdpa_consent_at timestamptz;
+
 -- RLS: instructors only see their own cohorts / sessions
 alter table cohorts enable row level security;
 alter table practical_sessions enable row level security;
 alter table attendance enable row level security;
 alter table certificates enable row level security;
+
+-- Learner-data tables: written via service-role API (bypasses RLS) or local Dexie,
+-- never by the public anon client. RLS on with no policy = service-role-only access,
+-- which blocks anon read/write (protects enrollments PII + exam_attempts integrity).
+alter table enrollments enable row level security;
+alter table lesson_progress enable row level security;
+alter table quiz_attempts enable row level security;
+alter table exam_attempts enable row level security;
+alter table simulation_runs enable row level security;
 
 create policy "instructor own cohorts" on cohorts
   for all using (instructor_id = auth.uid()) with check (instructor_id = auth.uid());

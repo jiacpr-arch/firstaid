@@ -1,11 +1,12 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
-import { ArrowLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, ChevronRight, CheckCircle2, Lock } from 'lucide-react'
 import { lessonsById, lessons } from '../courses/firstaid/lessons'
 import LessonStep from '../components/LessonStep'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
+import { useEnsureProgress } from '../hooks/useProgress'
 import { markLessonRead, saveQuizAttempt } from '../db/database'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
@@ -16,6 +17,9 @@ export default function LessonReader() {
   const navigate = useNavigate()
   const learner = useLearnerStore((s) => s.learner)
   const markReadStore = useProgressStore((s) => s.markRead)
+  const preTestDone = useProgressStore((s) => s.preTestDone)
+  const progressLoaded = useProgressStore((s) => s.loaded)
+  useEnsureProgress(learner?.id)
 
   const lesson = lessonsById[lessonId]
   const [prevLessonId, setPrevLessonId] = useState(lessonId)
@@ -73,6 +77,29 @@ export default function LessonReader() {
         <Link to="/learn" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
           กลับไปหน้าบทเรียน
         </Link>
+      </div>
+    )
+  }
+
+  // กันเข้าบทเรียนตรง ๆ ผ่าน URL ก่อนทำ Pre-test — รอโหลดสถานะก่อนค่อยตัดสิน
+  if (progressLoaded && !preTestDone) {
+    return (
+      <div className="page-container">
+        <div className="card" style={{ textAlign: 'center', padding: 28 }}>
+          <Lock size={44} color="var(--color-text-secondary)" style={{ margin: '0 auto' }} />
+          <div className="text-title" style={{ marginTop: 12 }}>ยังเข้าบทเรียนไม่ได้</div>
+          <div className="text-body" style={{ marginTop: 8 }}>
+            กรุณาทำแบบทดสอบก่อนเรียน (Pre-test) ก่อน จึงจะเริ่มเรียนได้
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <Link to="/learn" className="btn btn-secondary" style={{ flex: 1 }}>
+            <ArrowLeft size={16} /> รายการบท
+          </Link>
+          <Link to="/pre-test" className="btn btn-primary" style={{ flex: 1 }}>
+            ไปทำ Pre-test <ChevronRight size={16} />
+          </Link>
+        </div>
       </div>
     )
   }
