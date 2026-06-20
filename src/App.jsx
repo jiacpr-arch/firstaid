@@ -4,6 +4,14 @@ import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
 import { useEnsureLearner } from './hooks/useLearner'
+import { useAuthSession } from './hooks/useAuthSession'
+import { initAuthListener } from './stores/authStore'
+import { isSupabaseConfigured } from './config/supabaseClient'
+import { isLineLoginConfigured } from './utils/lineAuth'
+
+// ใช้ด่านล็อกอินจริงเมื่อพร้อมทั้ง Supabase Auth และ LINE Login channel เท่านั้น
+// ไม่งั้น fallback เป็นด่าน honor-system เดิม (กันผู้ใช้ติดหน้าล็อกอินที่ยังตั้งค่าไม่เสร็จ)
+const LINE_LOGIN_READY = isSupabaseConfigured && isLineLoginConfigured
 import { lessons } from './courses/firstaid/lessons'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
@@ -30,6 +38,7 @@ import CheckIn from './pages/CheckIn'
 import CheckInScan from './pages/CheckInScan'
 import Settings from './pages/Settings'
 import News from './pages/News'
+import LineCallback from './pages/LineCallback'
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -48,9 +57,13 @@ export default function App() {
   const theme = useSettingsStore((s) => s.theme)
   const location = useLocation()
 
-  // มี learner ภายในเสมอ (anonymous) เพื่อเก็บสถานะ lineAdded
+  // มี learner ภายในเสมอ (anonymous) เพื่อเก็บโปรไฟล์/ความก้าวหน้า
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
+  const { session, loading: authLoading } = useAuthSession()
+
+  // เริ่มฟังสถานะ session ของผู้เรียน (Supabase Auth) ครั้งเดียว
+  useEffect(() => initAuthListener(), [])
 
   useEffect(() => { initPostHog() }, [])
 
@@ -76,11 +89,26 @@ export default function App() {
   }, [])
 
   const isAdmin = location.pathname.startsWith('/admin')
-  // Onboarding: บังคับเรียนบทแรกก่อนเสมอจนกว่าจะแอด LINE (จบบทแรกแล้วป๊อบอัพแอด LINE)
+  // Onboarding: บังคับเรียนบทแรกก่อนเสมอจนกว่าจะล็อกอินด้วย LINE (จบบทแรกแล้วเด้งหน้าล็อกอิน)
   // ยกเว้นฝั่ง admin และหน้าโทรฉุกเฉิน /call (โทร 1669 ต้องเข้าได้เสมอ)
-  const onboarding = !isAdmin && (!learner || !learner.lineAdded)
+  // ถ้า LINE login ยังไม่พร้อม → fallback ไปด่าน honor-system เดิม (lineAdded)
+  const onboarding = !isAdmin && (LINE_LOGIN_READY ? !session : (!learner || !learner.lineAdded))
 
-  if (onboarding && location.pathname !== FIRST_LESSON_PATH && location.pathname !== '/call') {
+  // กัน flash: รอเช็ค session ให้เสร็จก่อน ไม่งั้นผู้ใช้ที่ล็อกอินแล้วจะถูกเด้งกลับบทแรกชั่วขณะ
+  if (LINE_LOGIN_READY && authLoading && !isAdmin) {
+    return (
+      <div className="page-container py-12 text-center text-caption" style={{ minHeight: '100vh' }}>
+        กำลังตรวจสอบสิทธิ์…
+      </div>
+    )
+  }
+
+  if (
+    onboarding &&
+    location.pathname !== FIRST_LESSON_PATH &&
+    location.pathname !== '/call' &&
+    location.pathname !== '/auth/line/callback'
+  ) {
     return <Navigate to={FIRST_LESSON_PATH} replace />
   }
 
@@ -107,6 +135,7 @@ export default function App() {
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/news" element={<News />} />
+        <Route path="/auth/line/callback" element={<LineCallback />} />
 
         <Route path="/admin/login" element={
           <Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>
