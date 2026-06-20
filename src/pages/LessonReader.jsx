@@ -7,15 +7,17 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
-import { markLessonRead, saveQuizAttempt } from '../db/database'
+import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
+import LinePopup from '../components/LinePopup'
 
 export default function LessonReader() {
   useEnsureLearner()
   const { lessonId } = useParams()
   const navigate = useNavigate()
   const learner = useLearnerStore((s) => s.learner)
+  const updateLearner = useLearnerStore((s) => s.updateLearner)
   const markReadStore = useProgressStore((s) => s.markRead)
   const preTestDone = useProgressStore((s) => s.preTestDone)
   const progressLoaded = useProgressStore((s) => s.loaded)
@@ -82,7 +84,8 @@ export default function LessonReader() {
   }
 
   // กันเข้าบทเรียนตรง ๆ ผ่าน URL ก่อนทำ Pre-test — รอโหลดสถานะก่อนค่อยตัดสิน
-  if (progressLoaded && !preTestDone) {
+  // ยกเว้นบทแรก (order 1) ที่บังคับให้เรียนก่อนเสมอเป็นตัวดึงดูด — ข้าม Pre-test ได้
+  if (progressLoaded && !preTestDone && lesson.order !== 1) {
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
@@ -132,6 +135,19 @@ export default function LessonReader() {
     if (correct) setCorrectCount((c) => c + 1)
   }
 
+  // จบบทแรกแล้วต้องแอด LINE ก่อน (honor system) จึงจะเรียนต่อ/ใช้งานส่วนอื่นได้
+  const needLineGate = completed && lesson.order === 1 && !learner?.lineAdded
+  const confirmLine = async () => {
+    updateLearner({ lineAdded: true })
+    if (learner?.id) {
+      try {
+        await upsertLearner({ ...learner, lineAdded: true })
+      } catch {
+        /* sync ล้มเหลวไม่เป็นไร — สถานะ local พอให้เรียนต่อได้ */
+      }
+    }
+  }
+
   const advance = () => {
     if (!isLast) setStepIdx((i) => i + 1)
     else finishLesson()
@@ -164,6 +180,7 @@ export default function LessonReader() {
             </Link>
           )}
         </div>
+        {needLineGate && <LinePopup onConfirm={confirmLine} />}
       </div>
     )
   }

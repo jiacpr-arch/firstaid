@@ -1,13 +1,19 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
+import { useLearnerStore } from './stores/learnerStore'
+import { useEnsureLearner } from './hooks/useLearner'
+import { lessons } from './courses/firstaid/lessons'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
 import MetaPixel from './components/MetaPixel'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
+import CallEmergencyButton from './components/CallEmergencyButton'
 import RequireAdmin from './components/RequireAdmin'
+
+const FIRST_LESSON_PATH = `/learn/${lessons[0].id}`
 
 import Home from './pages/Home'
 import Learn from './pages/Learn'
@@ -41,6 +47,10 @@ export default function App() {
   const theme = useSettingsStore((s) => s.theme)
   const location = useLocation()
 
+  // มี learner ภายในเสมอ (anonymous) เพื่อเก็บสถานะ lineAdded
+  useEnsureLearner()
+  const learner = useLearnerStore((s) => s.learner)
+
   useEffect(() => {
     const root = document.documentElement
     const apply = (isDark) => root.classList.toggle('dark', isDark)
@@ -59,6 +69,13 @@ export default function App() {
   }, [])
 
   const isAdmin = location.pathname.startsWith('/admin')
+  // Onboarding: บังคับเรียนบทแรกก่อนเสมอจนกว่าจะแอด LINE (จบบทแรกแล้วป๊อบอัพแอด LINE)
+  // ยกเว้นฝั่ง admin และหน้าโทรฉุกเฉิน /call (โทร 1669 ต้องเข้าได้เสมอ)
+  const onboarding = !isAdmin && (!learner || !learner.lineAdded)
+
+  if (onboarding && location.pathname !== FIRST_LESSON_PATH && location.pathname !== '/call') {
+    return <Navigate to={FIRST_LESSON_PATH} replace />
+  }
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -109,8 +126,10 @@ export default function App() {
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLessonMedia /></RequireAdmin></Suspense>
         } />
       </Routes>
-      {!isAdmin && <HouseAdStrip />}
-      {!isAdmin && <BottomTabBar />}
+      {!isAdmin && !onboarding && <HouseAdStrip />}
+      {!isAdmin && !onboarding && <BottomTabBar />}
+      {/* ระหว่าง onboarding ซ่อนแท็บบาร์เพื่อบังคับเรียนบทแรก แต่คงปุ่มโทร 1669 ไว้เสมอ */}
+      {onboarding && <CallEmergencyButton />}
       <Analytics />
       <MetaPixel />
     </div>
