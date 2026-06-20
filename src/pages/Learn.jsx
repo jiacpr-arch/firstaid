@@ -7,12 +7,14 @@ import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
+import { computeBadges } from '../utils/badges'
 
 export default function Learn() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
   const readSet = useProgressStore((s) => s.readLessonIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
+  const postTestDone = useProgressStore((s) => s.postTestDone)
 
   useEnsureProgress(learner?.id)
 
@@ -21,6 +23,7 @@ export default function Learn() {
   const lessonsLocked = !preTestDone
   const allLessonsDone = total > 0 && done === total
   const postLocked = !allLessonsDone
+  const earnedBadges = computeBadges({ readLessonIds: readSet, postTestDone })
 
   // ข้อความบอกขั้นตอนถัดไป — บังคับลำดับ Pre-test → เรียน → Post-test
   const flowHint = lessonsLocked
@@ -65,6 +68,15 @@ export default function Learn() {
         <div className="text-caption" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
           {(lessonsLocked || postLocked) && <Lock size={13} />} {flowHint}
         </div>
+        {earnedBadges.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+            {earnedBadges.map((b) => (
+              <span key={b.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: '#92400E' }}>
+                {b.emoji} {b.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {lessonsByChapter.map((ch) => {
