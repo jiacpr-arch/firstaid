@@ -7,11 +7,30 @@
 
 const AUTHORIZE_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const SS_KEY = 'firstaid.lineAuth'
+// อายุสั้น ๆ พอสำหรับรอบล็อกอินเดียว (10 นาที)
+const COOKIE_MAX_AGE = 600
 
 export const LINE_CHANNEL_ID = import.meta.env.VITE_LINE_LOGIN_CHANNEL_ID || ''
 export const isLineLoginConfigured = !!LINE_CHANNEL_ID
 
 export const lineCallbackUri = () => `${window.location.origin}/auth/line/callback`
+
+// เก็บ state/nonce ใน cookie ด้วย (ไม่ใช่แค่ sessionStorage) เพราะใน LINE in-app browser
+// การ redirect กลับจาก access.line.me มักสร้าง browsing context ใหม่ทำให้ sessionStorage หาย
+// cookie อยู่รอดข้าม context บน domain เดียวกัน; SameSite=Lax อ่านได้บน top-level GET redirect
+function setCookie(name, value, maxAgeSec) {
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSec}; SameSite=Lax${secure}`
+}
+
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`
+}
 
 function randomToken() {
   const arr = new Uint8Array(16)
@@ -25,7 +44,9 @@ export function startLineLogin(learnerId) {
   const state = randomToken()
   const nonce = randomToken()
   const redirectUri = lineCallbackUri()
-  sessionStorage.setItem(SS_KEY, JSON.stringify({ state, nonce, learnerId, redirectUri }))
+  const payload = JSON.stringify({ state, nonce, learnerId, redirectUri })
+  sessionStorage.setItem(SS_KEY, payload)
+  setCookie(SS_KEY, payload, COOKIE_MAX_AGE)
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -42,7 +63,8 @@ export function startLineLogin(learnerId) {
 
 export function readLineAuthState() {
   try {
-    return JSON.parse(sessionStorage.getItem(SS_KEY) || 'null')
+    // cookie ก่อน (รอดใน IAB), ถ้าไม่มี fallback ไป sessionStorage
+    return JSON.parse(getCookie(SS_KEY) || sessionStorage.getItem(SS_KEY) || 'null')
   } catch {
     return null
   }
@@ -50,4 +72,5 @@ export function readLineAuthState() {
 
 export function clearLineAuthState() {
   sessionStorage.removeItem(SS_KEY)
+  deleteCookie(SS_KEY)
 }
