@@ -159,6 +159,12 @@ export default function LessonReader() {
   const needLoginGate = completed && lesson.order === 1 && !learner?.lineAdded
   const confirmLine = async () => {
     updateLearner({ lineAdded: true })
+    // แจ้ง admin LINE ว่ามีคนสนใจ (fire-and-forget — ไม่บล็อก UX ถ้า notify ล้มเหลว)
+    fetch('/api/notify/line-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ learnerId: learner?.id }),
+    }).catch(() => {})
     if (learner?.id) {
       try {
         await upsertLearner({ ...learner, lineAdded: true })
