@@ -7,6 +7,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { saveSimulationRun } from '../db/database'
 import { fetchContentMedia } from '../utils/lessonMediaSteps'
+import { track } from '../utils/analytics'
 
 export default function SimulationRun() {
   useEnsureLearner()
@@ -45,6 +46,7 @@ export default function SimulationRun() {
         history,
       })
     }
+    track('simulation_complete', { scenarioId, score, total, passed })
     setResult({ score, total, passed })
   }
 
