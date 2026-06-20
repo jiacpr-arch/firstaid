@@ -7,6 +7,11 @@ import { useEnsureLearner } from './hooks/useLearner'
 import { useAuthSession } from './hooks/useAuthSession'
 import { initAuthListener } from './stores/authStore'
 import { isSupabaseConfigured } from './config/supabaseClient'
+import { isLineLoginConfigured } from './utils/lineAuth'
+
+// ใช้ด่านล็อกอินจริงเมื่อพร้อมทั้ง Supabase Auth และ LINE Login channel เท่านั้น
+// ไม่งั้น fallback เป็นด่าน honor-system เดิม (กันผู้ใช้ติดหน้าล็อกอินที่ยังตั้งค่าไม่เสร็จ)
+const LINE_LOGIN_READY = isSupabaseConfigured && isLineLoginConfigured
 import { lessons } from './courses/firstaid/lessons'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
@@ -86,11 +91,11 @@ export default function App() {
   const isAdmin = location.pathname.startsWith('/admin')
   // Onboarding: บังคับเรียนบทแรกก่อนเสมอจนกว่าจะล็อกอินด้วย LINE (จบบทแรกแล้วเด้งหน้าล็อกอิน)
   // ยกเว้นฝั่ง admin และหน้าโทรฉุกเฉิน /call (โทร 1669 ต้องเข้าได้เสมอ)
-  // ถ้า Supabase ไม่ได้ตั้งค่า (dev/local) → fallback ไปด่าน honor-system เดิม (lineAdded)
-  const onboarding = !isAdmin && (isSupabaseConfigured ? !session : (!learner || !learner.lineAdded))
+  // ถ้า LINE login ยังไม่พร้อม → fallback ไปด่าน honor-system เดิม (lineAdded)
+  const onboarding = !isAdmin && (LINE_LOGIN_READY ? !session : (!learner || !learner.lineAdded))
 
   // กัน flash: รอเช็ค session ให้เสร็จก่อน ไม่งั้นผู้ใช้ที่ล็อกอินแล้วจะถูกเด้งกลับบทแรกชั่วขณะ
-  if (isSupabaseConfigured && authLoading && !isAdmin) {
+  if (LINE_LOGIN_READY && authLoading && !isAdmin) {
     return (
       <div className="page-container py-12 text-center text-caption" style={{ minHeight: '100vh' }}>
         กำลังตรวจสอบสิทธิ์…

@@ -14,9 +14,13 @@ import LinePopup from '../components/LinePopup'
 import LineLoginGate from '../components/LineLoginGate'
 import { useAuthSession } from '../hooks/useAuthSession'
 import { isSupabaseConfigured } from '../config/supabaseClient'
+import { isLineLoginConfigured } from '../utils/lineAuth'
 import { getNewBadge } from '../utils/badges'
 import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
+
+// ใช้ด่านล็อกอินจริงเมื่อพร้อมทั้ง Supabase Auth และ LINE Login channel เท่านั้น
+const LINE_LOGIN_READY = isSupabaseConfigured && isLineLoginConfigured
 
 export default function LessonReader() {
   useEnsureLearner()
@@ -161,9 +165,9 @@ export default function LessonReader() {
   }
 
   // จบบทแรกแล้วต้องล็อกอินด้วย LINE ก่อน จึงจะเรียนต่อ/ใช้งานส่วนอื่นได้
-  // โหมดปกติ: เช็คจาก Supabase session. โหมด degraded (ไม่มี Supabase): honor-system เดิม
+  // โหมดปกติ: เช็คจาก Supabase session. โหมด degraded (LINE login ยังไม่พร้อม): honor-system เดิม
   const needLoginGate =
-    completed && lesson.order === 1 && (isSupabaseConfigured ? !session : !learner?.lineAdded)
+    completed && lesson.order === 1 && (LINE_LOGIN_READY ? !session : !learner?.lineAdded)
   const confirmLine = async () => {
     updateLearner({ lineAdded: true })
     if (learner?.id) {
@@ -217,7 +221,7 @@ export default function LessonReader() {
         {/* เรียนครบทุกบทแล้ว — ชวนมาอบรมปฏิบัติจริง */}
         {!nextLesson && <CertUpsellCard source="lesson_complete_all" />}
         {needLoginGate && (
-          isSupabaseConfigured
+          LINE_LOGIN_READY
             ? <LineLoginGate />
             : <LinePopup onConfirm={confirmLine} />
         )}
