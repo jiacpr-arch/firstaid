@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Map, Activity, Phone, Award, UserCheck, MessageCircle } from 'lucide-react'
+import { BookOpen, Map, Activity, Phone, Award, UserCheck, MessageCircle, ChevronRight } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
+import { useProgressStore } from '../stores/progressStore'
+import { useEnsureProgress } from '../hooks/useProgress'
+import { lessons } from '../courses/firstaid/lessons'
 
 const LINE_URL = 'https://line.me/R/ti/p/@jiacpr'
 const LINE_ID = '@jiacpr'
@@ -28,6 +31,12 @@ const QUICK = [
 export default function Home() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
+  const readLessonIds = useProgressStore((s) => s.readLessonIds)
+  const preTestDone = useProgressStore((s) => s.preTestDone)
+  useEnsureProgress(learner?.id)
+
+  const nextLesson = preTestDone ? lessons.find((l) => !readLessonIds.has(l.id)) : null
+  const studiedToday = localStorage.getItem('lastStudyDate') === new Date().toISOString().slice(0, 10)
 
   return (
     <div className="page-container">
@@ -62,6 +71,27 @@ export default function Home() {
           <div className="text-caption" style={{ color: '#7F1D1D' }}>กดเพื่อโทรทันที</div>
         </div>
       </a>
+
+      {nextLesson && (
+        <Link
+          to={`/learn/${nextLesson.id}`}
+          className="card"
+          style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, background: '#EFF6FF', border: '1.5px solid #BFDBFE', textDecoration: 'none' }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#2563EB20', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BookOpen size={22} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="text-headline" style={{ color: '#1D4ED8' }}>
+              เรียนต่อ — บทที่ {nextLesson.order}
+            </div>
+            <div className="text-caption">
+              {nextLesson.title}{studiedToday ? ' · 🔥 เรียนวันนี้แล้ว' : ''}
+            </div>
+          </div>
+          <ChevronRight size={18} color="#2563EB" />
+        </Link>
+      )}
 
       <div style={{ display: 'grid', gap: 10 }}>
         {QUICK.map(({ to, label, desc, icon: Icon, color }) => (
