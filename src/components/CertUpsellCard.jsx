@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
-import { Phone, MessageCircle, Sparkles, Users, Award } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Phone, MessageCircle, Sparkles, Users, Award, ClipboardList } from 'lucide-react'
+import PracticalInterestForm from './PracticalInterestForm'
 
 const PHONE_NUMBER = '0909791212'
 const PHONE_DISPLAY = '090-979-1212'
@@ -16,12 +17,12 @@ function fbqTrack(...args) {
   }
 }
 
-// การ์ดชวนต่อยอด แสดงหลังผู้เรียนได้ใบประกาศแล้ว — ชวนไปอบรม CPR & AED
-// ภาคปฏิบัติกับหุ่นจริงกับ Jia Training Center
-export default function CertUpsellCard() {
+export default function CertUpsellCard({ source = 'cert_page' }) {
+  const [showForm, setShowForm] = useState(false)
+
   useEffect(() => {
-    fbqTrack('trackCustom', 'CertificateUpsellView')
-  }, [])
+    fbqTrack('trackCustom', 'CertificateUpsellView', { source })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onCtaClick = (channel) => {
     fbqTrack('track', 'Lead', {
@@ -118,6 +119,28 @@ export default function CertUpsellCard() {
             <MessageCircle size={15} /> LINE {LINE_DISPLAY}
           </a>
         </div>
+
+        <button
+          type="button"
+          onClick={() => { setShowForm((v) => !v); if (!showForm) onCtaClick('interest_form') }}
+          style={{
+            marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '11px 12px', borderRadius: 10,
+            background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.35)',
+            color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          }}
+        >
+          <ClipboardList size={15} /> {showForm ? 'ซ่อนฟอร์ม' : 'ฝากชื่อสนใจ — รับแจ้งรอบอบรม'}
+        </button>
+
+        {showForm && (
+          <div style={{ marginTop: 8, background: 'rgba(255,255,255,0.95)', borderRadius: 12, padding: '12px 14px' }}>
+            <div className="text-caption" style={{ color: '#166534', marginBottom: 6, fontWeight: 700 }}>
+              กรอกข้อมูลเพื่อให้ทีมงานติดต่อกลับ
+            </div>
+            <PracticalInterestForm source={source} />
+          </div>
+        )}
       </div>
     </div>
   )

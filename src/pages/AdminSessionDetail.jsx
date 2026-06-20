@@ -1,8 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { ArrowLeft, Check, X, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Check, X, RefreshCw, Download } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+
+function exportCsv(rows, filename) {
+  const header = ['ชื่อ', 'เบอร์โทร', 'เวลาเช็คชื่อ', 'สถานะ']
+  const lines = [
+    header.join(','),
+    ...rows.map((r) => [
+      `"${(r.learner_name || '').replace(/"/g, '""')}"`,
+      `"${(r.learner_phone || '').replace(/"/g, '""')}"`,
+      `"${new Date(r.checked_in_at).toLocaleString('th-TH')}"`,
+      r.status,
+    ].join(',')),
+  ]
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 export default function AdminSessionDetail() {
   const { id } = useParams()
@@ -124,8 +144,20 @@ export default function AdminSessionDetail() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        <div className="text-body-strong" style={{ marginBottom: 8 }}>
-          รายชื่อ check-in ({attendance.length})
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+          <div className="text-body-strong" style={{ flex: 1 }}>
+            รายชื่อ check-in ({attendance.length})
+          </div>
+          {attendance.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: 13 }}
+              onClick={() => exportCsv(attendance, `checkin-${session?.qr_token || 'export'}.csv`)}
+            >
+              <Download size={14} /> Export CSV
+            </button>
+          )}
         </div>
         {loading && <div className="card text-caption">กำลังโหลด…</div>}
         {!loading && attendance.length === 0 && (

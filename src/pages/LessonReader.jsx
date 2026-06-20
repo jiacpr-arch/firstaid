@@ -11,6 +11,9 @@ import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
+import { getNewBadge } from '../utils/badges'
+import CertUpsellCard from '../components/CertUpsellCard'
+import { track } from '../utils/analytics'
 
 export default function LessonReader() {
   useEnsureLearner()
@@ -19,7 +22,9 @@ export default function LessonReader() {
   const learner = useLearnerStore((s) => s.learner)
   const updateLearner = useLearnerStore((s) => s.updateLearner)
   const markReadStore = useProgressStore((s) => s.markRead)
+  const readLessonIds = useProgressStore((s) => s.readLessonIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
+  const postTestDone = useProgressStore((s) => s.postTestDone)
   const progressLoaded = useProgressStore((s) => s.loaded)
   useEnsureProgress(learner?.id)
 
@@ -29,6 +34,7 @@ export default function LessonReader() {
   const [correctCount, setCorrectCount] = useState(0)
   const [quizCount, setQuizCount] = useState(0)
   const [completed, setCompleted] = useState(false)
+  const [earnedBadge, setEarnedBadge] = useState(null)
   const [extraMedia, setExtraMedia] = useState([])
 
   // Reset state when lessonId changes — set-during-render pattern
@@ -38,7 +44,12 @@ export default function LessonReader() {
     setCorrectCount(0)
     setQuizCount(0)
     setCompleted(false)
+    setEarnedBadge(null)
   }
+
+  useEffect(() => {
+    if (lesson) track('lesson_start', { lessonId: lesson.id, lessonOrder: lesson.order, lessonTitle: lesson.title })
+  }, [lessonId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // โหลดสื่อที่แอดมินผูกไว้กับบทนี้ (รูป/วิดีโอจาก Supabase)
   useEffect(() => {
@@ -114,19 +125,29 @@ export default function LessonReader() {
 
   const finishLesson = async () => {
     if (!learner?.id) return
+    const newBadge = getNewBadge({ readLessonIds, postTestDone, lessonId: lesson.id })
     await markLessonRead(learner.id, lesson.id)
     markReadStore(lesson.id)
+    localStorage.setItem('lastStudyDate', new Date().toISOString().slice(0, 10))
+    if (newBadge) track('badge_earned', { badgeId: newBadge.id, lessonId: lesson.id })
+    const quizScore = quizCount > 0 ? Math.round((correctCount / quizCount) * 100) : null
     if (quizCount > 0) {
-      const score = Math.round((correctCount / quizCount) * 100)
       await saveQuizAttempt({
         learnerId: learner.id,
         lessonId: lesson.id,
-        score,
+        score: quizScore,
         correctCount,
         totalQuestions: quizCount,
-        passed: score >= 70,
+        passed: quizScore >= 70,
       })
     }
+    setEarnedBadge(newBadge)
+    track('lesson_complete', {
+      lessonId: lesson.id,
+      lessonOrder: lesson.order,
+      lessonTitle: lesson.title,
+      ...(quizScore !== null ? { quizScore, quizCorrect: correctCount, quizTotal: quizCount } : {}),
+    })
     setCompleted(true)
   }
 
@@ -166,6 +187,13 @@ export default function LessonReader() {
             </div>
           )}
         </div>
+        {earnedBadge && (
+          <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 20, background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
+            <div style={{ fontSize: 40 }}>{earnedBadge.emoji}</div>
+            <div className="text-body-strong" style={{ marginTop: 8 }}>ปลดล็อกแล้ว: {earnedBadge.label}</div>
+            <div className="text-caption" style={{ marginTop: 4 }}>{earnedBadge.desc}</div>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <Link to="/learn" className="btn btn-secondary" style={{ flex: 1 }}>
             <ArrowLeft size={16} /> รายการบท
@@ -180,6 +208,8 @@ export default function LessonReader() {
             </Link>
           )}
         </div>
+        {/* เรียนครบทุกบทแล้ว — ชวนมาอบรมปฏิบัติจริง */}
+        {!nextLesson && <CertUpsellCard source="lesson_complete_all" />}
         {needLineGate && <LinePopup onConfirm={confirmLine} />}
       </div>
     )

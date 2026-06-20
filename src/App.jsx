@@ -12,6 +12,7 @@ import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
 import CallEmergencyButton from './components/CallEmergencyButton'
 import RequireAdmin from './components/RequireAdmin'
+import { initPostHog, identifyLearner } from './lib/posthog'
 
 const FIRST_LESSON_PATH = `/learn/${lessons[0].id}`
 
@@ -50,6 +51,12 @@ export default function App() {
   // มี learner ภายในเสมอ (anonymous) เพื่อเก็บสถานะ lineAdded
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
+
+  useEffect(() => { initPostHog() }, [])
+
+  useEffect(() => {
+    if (learner?.id) identifyLearner({ learnerId: learner.id, lineUserId: learner.lineUserId, displayName: learner.name })
+  }, [learner?.id, learner?.lineUserId, learner?.name])
 
   useEffect(() => {
     const root = document.documentElement
