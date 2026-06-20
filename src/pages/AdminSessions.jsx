@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Plus, ArrowLeft } from 'lucide-react'
+import { Calendar, Plus, ArrowLeft, Store } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 
 function makeSessionCode() {
@@ -14,7 +14,7 @@ export default function AdminSessions() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ title: '', location: '' })
+  const [form, setForm] = useState({ title: '', location: '', kind: 'session' })
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -41,13 +41,14 @@ export default function AdminSessions() {
       title: form.title.trim(),
       location: form.location.trim(),
       qr_token: code,
+      kind: form.kind,
       starts_at: new Date().toISOString(),
     }
     const { data, error } = await supabase.from('practical_sessions').insert(row).select().single()
     if (error) { alert(error.message); return }
     setSessions((s) => [data, ...s])
     setCreating(false)
-    setForm({ title: '', location: '' })
+    setForm({ title: '', location: '', kind: 'session' })
   }
 
   return (
@@ -67,8 +68,27 @@ export default function AdminSessions() {
 
       {creating && (
         <div className="card" style={{ marginTop: 12 }}>
-          <label className="label">ชื่อคลาส</label>
-          <input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="เช่น รุ่นที่ 7 / 5 มิ.ย. 68" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            {[['session', 'คลาสปฏิบัติ'], ['booth', 'บูธ / งาน']].map(([val, label]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setForm({ ...form, kind: val })}
+                style={{
+                  padding: '10px', borderRadius: 10, fontWeight: 700, fontSize: 13,
+                  border: `2px solid ${form.kind === val ? 'var(--color-brand)' : 'var(--color-border)'}`,
+                  background: form.kind === val ? 'var(--color-brand-soft)' : 'var(--color-bg-secondary)',
+                  color: form.kind === val ? 'var(--color-brand)' : 'var(--color-text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                {val === 'booth' ? <Store size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> : <Calendar size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />}
+                {label}
+              </button>
+            ))}
+          </div>
+          <label className="label">ชื่อ{form.kind === 'booth' ? 'บูธ/งาน' : 'คลาส'}</label>
+          <input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={form.kind === 'booth' ? 'เช่น Health Expo 2025' : 'เช่น รุ่นที่ 7 / 5 มิ.ย. 68'} />
           <label className="label" style={{ marginTop: 10 }}>สถานที่</label>
           <input className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="เช่น ห้องประชุม รพ.ABC" />
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -93,14 +113,19 @@ export default function AdminSessions() {
         )}
         {sessions.map((s) => (
           <Link key={s.id} to={`/admin/sessions/${s.id}`} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Calendar size={22} color="#2563EB" />
+            {s.kind === 'booth'
+              ? <Store size={22} color="#7C3AED" />
+              : <Calendar size={22} color="#2563EB" />}
             <div style={{ flex: 1 }}>
               <div className="text-body-strong">{s.title}</div>
               <div className="text-caption">{s.location || 'ไม่ระบุสถานที่'} • รหัส {s.qr_token}</div>
             </div>
-            {s.closed_at
-              ? <span className="badge badge-muted">ปิดแล้ว</span>
-              : <span className="badge badge-success">เปิดอยู่</span>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+              {s.kind === 'booth' && <span className="badge" style={{ background: '#EDE9FE', color: '#5B21B6' }}>บูธ</span>}
+              {s.closed_at
+                ? <span className="badge badge-muted">ปิดแล้ว</span>
+                : <span className="badge badge-success">เปิดอยู่</span>}
+            </div>
           </Link>
         ))}
       </div>
