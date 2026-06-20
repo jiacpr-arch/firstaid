@@ -7,9 +7,10 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { lessons } from '../courses/firstaid/lessons'
+import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 
-const LINE_URL = 'https://line.me/R/ti/p/@jiacpr'
-const LINE_ID = '@jiacpr'
+// กดแล้วเปิดแชตพร้อมข้อความ "สนใจเรียน + มาจากหน้าแรกแอป" พิมพ์ไว้ให้ ลูกค้าแค่กดส่ง
+const LINE_URL = lineInterestUrl('กดจากหน้าแรกแอป')
 
 // ยิง event อย่างปลอดภัย — fbq อาจยังไม่โหลด/ถูก ad blocker ปิด ห้ามพังแอป
 function fbqTrack(...args) {
@@ -142,8 +143,8 @@ export default function Home() {
           <MessageCircle size={22} />
         </div>
         <div style={{ flex: 1 }}>
-          <div className="text-headline">แอด LINE {LINE_ID}</div>
-          <div className="text-caption">สอบถาม/รับสิทธิ์พิเศษคอร์สอบรมภาคปฏิบัติจริง</div>
+          <div className="text-headline">แอด LINE {LINE_ID} — สนใจเรียน</div>
+          <div className="text-caption">กดแล้วส่งข้อความที่พิมพ์ไว้ให้ ทีมงานติดต่อกลับ</div>
         </div>
       </a>
 

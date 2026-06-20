@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle, Check } from 'lucide-react'
 import QRCode from 'qrcode'
+import { LINE_ADD_URL, lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 
-const LINE_URL = 'https://line.me/R/ti/p/@jiacpr'
-const LINE_ID = '@jiacpr'
+// กดแล้วเปิดแชตพร้อมข้อความ "สนใจเรียน + เรียนจบบทแรกในแอป" พิมพ์ไว้ให้ ลูกค้าแค่กดส่ง
+const LINE_INTEREST_URL = lineInterestUrl('เรียนจบบทที่ 1 ในแอป')
 
 // ยิง event อย่างปลอดภัย — fbq อาจยังไม่โหลด/ถูก ad blocker ปิด ห้ามพังแอป
 function fbqTrack(...args) {
@@ -23,7 +24,7 @@ export default function LinePopup({ onConfirm }) {
 
   useEffect(() => {
     let cancelled = false
-    QRCode.toDataURL(LINE_URL, { margin: 1, width: 320 })
+    QRCode.toDataURL(LINE_ADD_URL, { margin: 1, width: 320 })
       .then((url) => { if (!cancelled) setQr(url) })
       .catch(() => { /* ไม่มี QR ก็ยังกดปุ่มเพิ่มเพื่อนได้ */ })
     return () => { cancelled = true }
@@ -82,12 +83,12 @@ export default function LinePopup({ onConfirm }) {
           เรียนจบบทแรกแล้ว 🎉
         </div>
         <div className="text-body text-text-muted" style={{ textAlign: 'center', marginTop: 6 }}>
-          แอด LINE ทางการ <b>{LINE_ID}</b> เพื่อเรียนบทต่อไปฟรี
-          และรับสิทธิ์พิเศษคอร์สอบรมภาคปฏิบัติจริง
+          แอด LINE ทางการ <b>{LINE_ID}</b> แล้ว<b>กดส่งข้อความที่พิมพ์ไว้ให้</b>
+          เพื่อเรียนบทต่อไปฟรี และให้ทีมงานติดต่อกลับเรื่องคอร์สอบรมจริง
         </div>
 
         <a
-          href={LINE_URL}
+          href={LINE_INTEREST_URL}
           target="_blank"
           rel="noopener noreferrer"
           onClick={onAddFriend}
@@ -98,7 +99,19 @@ export default function LinePopup({ onConfirm }) {
             textDecoration: 'none',
           }}
         >
-          <MessageCircle size={20} /> เพิ่มเพื่อน LINE {LINE_ID}
+          <MessageCircle size={20} /> แอด LINE + ส่งข้อความสนใจ
+        </a>
+
+        <a
+          href={LINE_ADD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block', textAlign: 'center', marginTop: 8,
+            fontSize: 12, color: 'var(--color-text-muted)',
+          }}
+        >
+          ยังเพิ่มเพื่อนไม่ได้? เปิดหน้าเพิ่มเพื่อน {LINE_ID}
         </a>
 
         {qr && (
@@ -120,7 +133,7 @@ export default function LinePopup({ onConfirm }) {
           className={`btn btn-block ${opened ? 'btn-primary' : 'btn-secondary'}`}
           style={{ marginTop: 18 }}
         >
-          <Check size={16} /> ฉันแอดแล้ว — เรียนต่อ
+          <Check size={16} /> ส่งข้อความแล้ว — เรียนต่อ
         </button>
       </div>
     </div>
