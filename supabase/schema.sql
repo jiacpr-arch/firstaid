@@ -126,6 +126,22 @@ alter table practical_sessions enable row level security;
 alter table attendance enable row level security;
 alter table certificates enable row level security;
 
+-- LINE nurture (Phase 5): log of re-engagement messages pushed to learners,
+-- used to dedupe/throttle the daily cron (api/nurture/run.js). Service-role only.
+create table if not exists line_nurture_log (
+  id           bigserial primary key,
+  learner_id   uuid not null,
+  line_user_id text not null,
+  campaign     text not null check (campaign in ('abandoned', 'almost_done', 'completed')),
+  sent_at      timestamptz not null default now()
+);
+create index if not exists idx_nurture_log_learner on line_nurture_log(learner_id);
+
+-- Opt-out flag lives on line_identities (created by the LINE Login feature).
+-- Guarded so this file applies cleanly whether or not that table exists yet.
+alter table if exists line_identities add column if not exists nurture_opted_out boolean not null default false;
+alter table if exists line_identities add column if not exists nurture_opted_out_at timestamptz;
+
 -- Learner-data tables: written via service-role API (bypasses RLS) or local Dexie,
 -- never by the public anon client. RLS on with no policy = service-role-only access,
 -- which blocks anon read/write (protects enrollments PII + exam_attempts integrity).
@@ -134,6 +150,7 @@ alter table lesson_progress enable row level security;
 alter table quiz_attempts enable row level security;
 alter table exam_attempts enable row level security;
 alter table simulation_runs enable row level security;
+alter table line_nurture_log enable row level security;
 
 create policy "instructor own cohorts" on cohorts
   for all using (instructor_id = auth.uid()) with check (instructor_id = auth.uid());

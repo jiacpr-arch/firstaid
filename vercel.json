@@ -4,6 +4,7 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "crons": [
-    { "path": "/api/ad-report", "schedule": "0 1 * * *" }
+    { "path": "/api/ad-report", "schedule": "0 1 * * *" },
+    { "path": "/api/nurture/run", "schedule": "0 3 * * *" }
   ]
 }
