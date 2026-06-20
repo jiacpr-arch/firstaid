@@ -152,3 +152,15 @@ create policy "instructor updates attendance for own sessions" on attendance
 
 -- Certificates: learners can read their own via service-role API only (no public RLS read).
 -- Service role bypasses RLS so api/certificates/* endpoints can insert/upsert freely.
+
+-- Phase 2: course interest leads — learners who want to be contacted about practical training
+create table if not exists course_interest (
+  id         uuid primary key default gen_random_uuid(),
+  learner_id text,
+  name       text not null,
+  phone      text not null,
+  source     text,
+  created_at timestamptz not null default now()
+);
+alter table course_interest enable row level security;
+-- service-role only (inserted via api/leads/interest.js, no public read)
