@@ -10,7 +10,8 @@
 // identities table is absent the handler degrades to a no-op 200.
 import crypto from 'node:crypto'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
-import { replyLineMessage } from '../_lib/lineMessage.js'
+import { replyLineMessage, pushLineMessage } from '../_lib/lineMessage.js'
+import { notifyAdminLine } from '../_lib/lineNotify.js'
 
 // Disable Vercel's body parser so we can read the raw bytes for signature checks.
 export const config = { api: { bodyParser: false } }
@@ -26,6 +27,11 @@ function readRawBody(req) {
 
 const OPT_OUT_WORDS = ['หยุด', 'ยกเลิก', 'stop', 'unsubscribe']
 const OPT_IN_WORDS = ['เริ่ม', 'start', 'subscribe']
+const INTEREST_WORDS = ['สนใจ', 'เรียน', 'firstaid', 'first aid', 'cpr', 'aed', 'ปฐมพยาบาล']
+
+const GREETING_MSG = `ยินดีต้อนรับสู่ Jia Training Center นะคะ 🎉
+หากสนใจเรียนปฐมพยาบาล (First Aid) & CPR กับครู Jia พิมพ์ว่า "สนใจเรียน" ได้เลยค่ะ
+หรือลองเรียนออนไลน์ฟรีได้ก่อนที่ https://firstaid.morroo.com`
 
 const norm = (s) => String(s || '').trim().toLowerCase()
 const matches = (text, words) => words.some((w) => norm(text) === norm(w) || norm(text).includes(norm(w)))
@@ -54,10 +60,27 @@ export default async function handler(req, res) {
   const events = Array.isArray(body.events) ? body.events : []
 
   for (const ev of events) {
-    if (ev.type !== 'message' || ev.message?.type !== 'text') continue
     const lineUserId = ev.source?.userId
-    const text = ev.message.text
+
+    // ลูกค้าแอด OA → ส่ง greeting ชวนพิมพ์ว่าสนใจเรียน
+    if (ev.type === 'follow') {
+      await pushLineMessage(lineUserId, GREETING_MSG)
+      continue
+    }
+
+    if (ev.type !== 'message' || ev.message?.type !== 'text') continue
     if (!lineUserId) continue
+    const text = ev.message.text
+
+    // ลูกค้าพิมพ์ว่าสนใจเรียน → ตอบกลับ + แจ้ง admin ทันที
+    if (matches(text, INTEREST_WORDS)) {
+      await Promise.all([
+        replyLineMessage(ev.replyToken,
+          'ขอบคุณที่สนใจนะคะ 😊 ทีมงานจะติดต่อกลับเร็ว ๆ นี้เลยค่ะ!\nระหว่างรอ ลองเรียนออนไลน์ฟรีได้เลยที่ https://firstaid.morroo.com'),
+        notifyAdminLine(`📣 มีคนสนใจเรียน First Aid!\nLINE userId: ${lineUserId}\nข้อความ: "${text}"\nรีบ follow up ด่วน! 🎯`),
+      ])
+      continue
+    }
 
     const optOut = matches(text, OPT_OUT_WORDS)
     const optIn = !optOut && matches(text, OPT_IN_WORDS)
