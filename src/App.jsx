@@ -2,11 +2,15 @@ import { useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
+import { useLearnerStore } from './stores/learnerStore'
+import { useEnsureLearner } from './hooks/useLearner'
+import { upsertLearner } from './db/database'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
 import MetaPixel from './components/MetaPixel'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
+import LineEntryGate from './components/LineEntryGate'
 import RequireAdmin from './components/RequireAdmin'
 
 import Home from './pages/Home'
@@ -41,6 +45,22 @@ export default function App() {
   const theme = useSettingsStore((s) => s.theme)
   const location = useLocation()
 
+  // มี learner ภายในเสมอ (anonymous) เพื่อเก็บสถานะ lineAdded ของด่านทางเข้า
+  useEnsureLearner()
+  const learner = useLearnerStore((s) => s.learner)
+  const updateLearner = useLearnerStore((s) => s.updateLearner)
+
+  const confirmLineEntry = async () => {
+    updateLearner({ lineAdded: true })
+    if (learner?.id) {
+      try {
+        await upsertLearner({ ...learner, lineAdded: true })
+      } catch {
+        /* sync ล้มเหลวไม่เป็นไร — สถานะ local พอให้เข้าใช้งานได้ */
+      }
+    }
+  }
+
   useEffect(() => {
     const root = document.documentElement
     const apply = (isDark) => root.classList.toggle('dark', isDark)
@@ -59,6 +79,19 @@ export default function App() {
   }, [])
 
   const isAdmin = location.pathname.startsWith('/admin')
+  // ด่านแอด LINE ก่อนเข้าใช้งาน — ยกเว้นฝั่ง admin. ปุ่มฉุกเฉิน 1669 อยู่ในตัว gate เอง
+  const showLineGate = !isAdmin && (!learner || !learner.lineAdded)
+
+  if (showLineGate) {
+    return (
+      <div style={{ minHeight: '100vh' }}>
+        <OfflineIndicator />
+        <LineEntryGate onConfirm={confirmLineEntry} />
+        <Analytics />
+        <MetaPixel />
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh' }}>
