@@ -11,6 +11,9 @@ import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
+import LineLoginGate from '../components/LineLoginGate'
+import { useAuthSession } from '../hooks/useAuthSession'
+import { isSupabaseConfigured } from '../config/supabaseClient'
 import { getNewBadge } from '../utils/badges'
 import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
@@ -21,6 +24,7 @@ export default function LessonReader() {
   const navigate = useNavigate()
   const learner = useLearnerStore((s) => s.learner)
   const updateLearner = useLearnerStore((s) => s.updateLearner)
+  const { session } = useAuthSession()
   const markReadStore = useProgressStore((s) => s.markRead)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
@@ -156,8 +160,10 @@ export default function LessonReader() {
     if (correct) setCorrectCount((c) => c + 1)
   }
 
-  // จบบทแรกแล้วต้องแอด LINE ก่อน (honor system) จึงจะเรียนต่อ/ใช้งานส่วนอื่นได้
-  const needLineGate = completed && lesson.order === 1 && !learner?.lineAdded
+  // จบบทแรกแล้วต้องล็อกอินด้วย LINE ก่อน จึงจะเรียนต่อ/ใช้งานส่วนอื่นได้
+  // โหมดปกติ: เช็คจาก Supabase session. โหมด degraded (ไม่มี Supabase): honor-system เดิม
+  const needLoginGate =
+    completed && lesson.order === 1 && (isSupabaseConfigured ? !session : !learner?.lineAdded)
   const confirmLine = async () => {
     updateLearner({ lineAdded: true })
     if (learner?.id) {
@@ -210,7 +216,11 @@ export default function LessonReader() {
         </div>
         {/* เรียนครบทุกบทแล้ว — ชวนมาอบรมปฏิบัติจริง */}
         {!nextLesson && <CertUpsellCard source="lesson_complete_all" />}
-        {needLineGate && <LinePopup onConfirm={confirmLine} />}
+        {needLoginGate && (
+          isSupabaseConfigured
+            ? <LineLoginGate />
+            : <LinePopup onConfirm={confirmLine} />
+        )}
       </div>
     )
   }

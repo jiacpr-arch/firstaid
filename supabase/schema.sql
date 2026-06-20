@@ -170,6 +170,24 @@ create policy "instructor updates attendance for own sessions" on attendance
 -- Certificates: learners can read their own via service-role API only (no public RLS read).
 -- Service role bypasses RLS so api/certificates/* endpoints can insert/upsert freely.
 
+-- ===== LINE Login identity mapping =====
+-- Bridges a LINE userId to a Supabase auth user and the learner's permanent id.
+-- Written ONLY by the service-role bridge (api/auth/line.js). RLS enabled with no
+-- policy = no anon/authenticated access; service role bypasses RLS.
+create table if not exists line_identities (
+  line_user_id text primary key,
+  auth_user_id uuid not null references auth.users(id) on delete cascade,
+  learner_id   uuid not null,
+  email        text,
+  display_name text,
+  picture_url  text,
+  created_at   timestamptz not null default now()
+);
+create index if not exists idx_line_identities_learner on line_identities(learner_id);
+create index if not exists idx_line_identities_auth on line_identities(auth_user_id);
+
+alter table line_identities enable row level security;
+
 -- Phase 2: course interest leads — learners who want to be contacted about practical training
 create table if not exists course_interest (
   id         uuid primary key default gen_random_uuid(),
