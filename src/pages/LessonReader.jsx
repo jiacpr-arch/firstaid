@@ -11,6 +11,7 @@ import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
+import CertUpsellCard from '../components/CertUpsellCard'
 
 export default function LessonReader() {
   useEnsureLearner()
@@ -180,6 +181,8 @@ export default function LessonReader() {
             </Link>
           )}
         </div>
+        {/* เรียนครบทุกบทแล้ว — ชวนมาอบรมปฏิบัติจริง */}
+        {!nextLesson && <CertUpsellCard source="lesson_complete_all" />}
         {needLineGate && <LinePopup onConfirm={confirmLine} />}
       </div>
     )

@@ -10,6 +10,7 @@ import { useEnsureProgress } from '../hooks/useProgress'
 import { saveExamAttempt } from '../db/database'
 import ProgressBar from '../components/ProgressBar'
 import TheoryCertCard from '../components/TheoryCertCard'
+import CertUpsellCard from '../components/CertUpsellCard'
 
 export default function ExamPage({ kind }) {
   useEnsureLearner()
@@ -106,6 +107,7 @@ export default function ExamPage({ kind }) {
         </div>
 
         {passedTheory && <TheoryCertCard postAttempt={done} />}
+        {passedTheory && <CertUpsellCard source="post_test_pass" />}
 
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {exam.questions.map((qq, i) => {
