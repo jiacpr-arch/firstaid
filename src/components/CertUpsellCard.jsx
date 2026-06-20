@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Phone, MessageCircle, Sparkles, Users, Award, ClipboardList } from 'lucide-react'
 import PracticalInterestForm from './PracticalInterestForm'
+import { lineInterestUrl, LINE_OA_ID as LINE_DISPLAY } from '../utils/lineLinks'
 
 const PHONE_NUMBER = '0909791212'
 const PHONE_DISPLAY = '090-979-1212'
-const LINE_URL = 'https://line.me/R/ti/p/@jiacpr'
-const LINE_DISPLAY = '@jiacpr'
 const ORG_NAME = 'Jia Training Center'
 
 // ยิง event อย่างปลอดภัย — fbq อาจยังไม่โหลด/ถูก ad blocker ปิด ห้ามพังแอป
@@ -19,6 +18,8 @@ function fbqTrack(...args) {
 
 export default function CertUpsellCard({ source = 'cert_page' }) {
   const [showForm, setShowForm] = useState(false)
+  // กดแล้วเปิดแชตพร้อมข้อความ "สนใจอบรมภาคปฏิบัติ + ที่มา" พิมพ์ไว้ให้ ลูกค้าแค่กดส่ง
+  const lineUrl = lineInterestUrl(`สนใจคอร์สอบรมภาคปฏิบัติ (${source})`)
 
   useEffect(() => {
     fbqTrack('trackCustom', 'CertificateUpsellView', { source })
@@ -106,7 +107,7 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
             <Phone size={15} /> โทร {PHONE_DISPLAY}
           </a>
           <a
-            href={LINE_URL}
+            href={lineUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => onCtaClick('line')}

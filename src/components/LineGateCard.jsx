@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle, Check } from 'lucide-react'
 import QRCode from 'qrcode'
+import { LINE_ADD_URL, lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 
-const LINE_URL = 'https://line.me/R/ti/p/@jiacpr'
-const LINE_ID = '@jiacpr'
+// กดแล้วเปิดแชตพร้อมข้อความ "ขอรับใบประกาศ + เรียนจบทฤษฎีออนไลน์" พิมพ์ไว้ให้ ลูกค้าแค่กดส่ง
+const LINE_INTEREST_URL = lineInterestUrl('ขอรับใบประกาศ — เรียนจบทฤษฎีออนไลน์')
 
 // ยิง event อย่างปลอดภัย — fbq อาจยังไม่โหลด/ถูก ad blocker ปิด ห้ามพังแอป
 function fbqTrack(...args) {
@@ -22,7 +23,7 @@ export default function LineGateCard({ onConfirm }) {
 
   useEffect(() => {
     let cancelled = false
-    QRCode.toDataURL(LINE_URL, { margin: 1, width: 320 })
+    QRCode.toDataURL(LINE_ADD_URL, { margin: 1, width: 320 })
       .then((url) => { if (!cancelled) setQr(url) })
       .catch(() => { /* ไม่มี QR ก็ยังกดปุ่มเพิ่มเพื่อนได้ */ })
     return () => { cancelled = true }
@@ -62,18 +63,18 @@ export default function LineGateCard({ onConfirm }) {
         แอด LINE เพื่อรับใบประกาศ
       </div>
       <div className="text-caption" style={{ marginTop: 4 }}>
-        แอด LINE ทางการ {LINE_ID} แล้วพิมพ์ <b>ชื่อ-เบอร์</b> ทักในแชท
+        แอด LINE ทางการ {LINE_ID} แล้ว<b>กดส่งข้อความที่พิมพ์ไว้ให้</b> แล้วพิมพ์ <b>ชื่อ-เบอร์</b> ต่อ
         เพื่อยืนยันตัวตนและรับสิทธิ์พิเศษคอร์สอบรมภาคปฏิบัติจริง
       </div>
 
       <ol style={{ margin: '12px 0 0', paddingLeft: 18, display: 'grid', gap: 6 }}>
-        <li className="text-caption">กดปุ่ม “เพิ่มเพื่อน LINE” ด้านล่าง</li>
-        <li className="text-caption">พิมพ์ชื่อ-เบอร์ทักในแชท</li>
-        <li className="text-caption">กลับมากด “ฉันแอดแล้ว” เพื่อดาวน์โหลด</li>
+        <li className="text-caption">กดปุ่ม “แอด LINE + ส่งข้อความ” ด้านล่าง แล้วกดส่ง</li>
+        <li className="text-caption">พิมพ์ชื่อ-เบอร์ทักในแชทต่อ</li>
+        <li className="text-caption">กลับมากด “ส่งข้อความแล้ว” เพื่อดาวน์โหลด</li>
       </ol>
 
       <a
-        href={LINE_URL}
+        href={LINE_INTEREST_URL}
         target="_blank"
         rel="noopener noreferrer"
         onClick={onAddFriend}
@@ -84,7 +85,19 @@ export default function LineGateCard({ onConfirm }) {
           textDecoration: 'none',
         }}
       >
-        <MessageCircle size={18} /> เพิ่มเพื่อน LINE {LINE_ID}
+        <MessageCircle size={18} /> แอด LINE + ส่งข้อความ
+      </a>
+
+      <a
+        href={LINE_ADD_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'block', textAlign: 'center', marginTop: 8,
+          fontSize: 12, color: 'var(--color-text-muted)',
+        }}
+      >
+        ยังเพิ่มเพื่อนไม่ได้? เปิดหน้าเพิ่มเพื่อน {LINE_ID}
       </a>
 
       {qr && (
@@ -106,7 +119,7 @@ export default function LineGateCard({ onConfirm }) {
         className={`btn btn-block ${opened ? 'btn-primary' : 'btn-secondary'}`}
         style={{ marginTop: 14 }}
       >
-        <Check size={16} /> ฉันแอดแล้ว — รับใบประกาศ
+        <Check size={16} /> ส่งข้อความแล้ว — รับใบประกาศ
       </button>
     </div>
   )
