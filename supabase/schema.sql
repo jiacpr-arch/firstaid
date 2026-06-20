@@ -112,6 +112,9 @@ create table if not exists certificates (
   unique (learner_id, kind)
 );
 
+-- Phase 3: booth mode — kind column on practical_sessions (idempotent for existing deployments).
+alter table if exists practical_sessions add column if not exists kind text not null default 'session' check (kind in ('session', 'booth'));
+
 -- Contact fields for self-service theory issuance (idempotent for existing deployments).
 alter table if exists certificates add column if not exists learner_phone text;
 alter table if exists certificates add column if not exists learner_email text;

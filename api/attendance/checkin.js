@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
+import { notifyAdminLine } from '../_lib/lineNotify.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
   // Look up session by qr_token (session code)
   const { data: session, error: sErr } = await admin
     .from('practical_sessions')
-    .select('id, closed_at')
+    .select('id, title, location, closed_at, kind')
     .eq('qr_token', sessionCode.toUpperCase())
     .single()
   if (sErr || !session) { res.status(404).json({ error: 'Session not found' }); return }
@@ -39,5 +40,14 @@ export default async function handler(req, res) {
     .upsert(row, { onConflict: 'session_id,learner_id' })
 
   if (error) { res.status(500).json({ error: error.message }); return }
+
+  // Notify admin for booth check-ins (leads) — fire and forget
+  if (session.kind === 'booth') {
+    const loc = session.location ? ` (${session.location})` : ''
+    notifyAdminLine(
+      `📋 check-in บูธ${loc}\nชื่อ: ${learnerName}\nโทร: ${learnerPhone || '—'}\nรหัส: ${sessionCode.toUpperCase()}`
+    ).catch(() => {})
+  }
+
   res.status(200).json({ ok: true })
 }
