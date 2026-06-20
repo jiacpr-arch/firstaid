@@ -107,7 +107,7 @@ export default function Certification() {
       </div>
 
       {/* ชวนต่อยอดไปอบรมภาคปฏิบัติ — แสดงเมื่อได้ใบประกาศแล้ว */}
-      {(theoryCert || practicalCert) && <CertUpsellCard />}
+      {(theoryCert || practicalCert) && <CertUpsellCard source="cert_page" />}
     </div>
   )
 }

@@ -12,6 +12,7 @@ import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
 import { getNewBadge } from '../utils/badges'
+import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
 
 export default function LessonReader() {
@@ -45,6 +46,10 @@ export default function LessonReader() {
     setCompleted(false)
     setEarnedBadge(null)
   }
+
+  useEffect(() => {
+    if (lesson) track('lesson_start', { lessonId: lesson.id, lessonOrder: lesson.order, lessonTitle: lesson.title })
+  }, [lessonId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // โหลดสื่อที่แอดมินผูกไว้กับบทนี้ (รูป/วิดีโอจาก Supabase)
   useEffect(() => {
@@ -125,18 +130,24 @@ export default function LessonReader() {
     markReadStore(lesson.id)
     localStorage.setItem('lastStudyDate', new Date().toISOString().slice(0, 10))
     if (newBadge) track('badge_earned', { badgeId: newBadge.id, lessonId: lesson.id })
+    const quizScore = quizCount > 0 ? Math.round((correctCount / quizCount) * 100) : null
     if (quizCount > 0) {
-      const score = Math.round((correctCount / quizCount) * 100)
       await saveQuizAttempt({
         learnerId: learner.id,
         lessonId: lesson.id,
-        score,
+        score: quizScore,
         correctCount,
         totalQuestions: quizCount,
-        passed: score >= 70,
+        passed: quizScore >= 70,
       })
     }
     setEarnedBadge(newBadge)
+    track('lesson_complete', {
+      lessonId: lesson.id,
+      lessonOrder: lesson.order,
+      lessonTitle: lesson.title,
+      ...(quizScore !== null ? { quizScore, quizCorrect: correctCount, quizTotal: quizCount } : {}),
+    })
     setCompleted(true)
   }
 
@@ -197,6 +208,8 @@ export default function LessonReader() {
             </Link>
           )}
         </div>
+        {/* เรียนครบทุกบทแล้ว — ชวนมาอบรมปฏิบัติจริง */}
+        {!nextLesson && <CertUpsellCard source="lesson_complete_all" />}
         {needLineGate && <LinePopup onConfirm={confirmLine} />}
       </div>
     )
