@@ -1,9 +1,21 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Map, Activity, Phone, Award, UserCheck } from 'lucide-react'
+import { BookOpen, Map, Activity, Phone, Award, UserCheck, MessageCircle } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
+
+const LINE_URL = 'https://line.me/R/ti/p/@jiacpr'
+const LINE_ID = '@jiacpr'
+
+// ยิง event อย่างปลอดภัย — fbq อาจยังไม่โหลด/ถูก ad blocker ปิด ห้ามพังแอป
+function fbqTrack(...args) {
+  try {
+    window.fbq?.(...args)
+  } catch {
+    /* tracking ห้ามพังแอป */
+  }
+}
 
 const QUICK = [
   { to: '/learn', label: 'เริ่มเรียน', desc: '10 บทเรียนสั้น ๆ ประมาณ 1 ชั่วโมง', icon: BookOpen, color: '#16A34A' },
@@ -72,6 +84,38 @@ export default function Home() {
           </Link>
         ))}
       </div>
+
+      <a
+        href={LINE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => fbqTrack('track', 'Lead', {
+          content_name: 'cpr_aed_inperson_course',
+          source: 'home_line_button',
+          channel: 'line',
+        })}
+        className="card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          marginTop: 10,
+          background: '#F0FDF4',
+          border: '1.5px solid #BBF7D0',
+          textDecoration: 'none',
+        }}
+      >
+        <div style={{
+          width: 44, height: 44, borderRadius: 12, background: '#06C755',
+          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <MessageCircle size={22} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div className="text-headline">แอด LINE {LINE_ID}</div>
+          <div className="text-caption">สอบถาม/รับสิทธิ์พิเศษคอร์สอบรมภาคปฏิบัติจริง</div>
+        </div>
+      </a>
 
       <JiaAedNewsFeed />
 
