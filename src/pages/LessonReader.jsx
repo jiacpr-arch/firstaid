@@ -11,6 +11,7 @@ import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
+import { track } from '../utils/analytics'
 
 export default function LessonReader() {
   useEnsureLearner()
@@ -39,6 +40,10 @@ export default function LessonReader() {
     setQuizCount(0)
     setCompleted(false)
   }
+
+  useEffect(() => {
+    if (lesson) track('lesson_start', { lessonId: lesson.id, lessonOrder: lesson.order, lessonTitle: lesson.title })
+  }, [lessonId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // โหลดสื่อที่แอดมินผูกไว้กับบทนี้ (รูป/วิดีโอจาก Supabase)
   useEffect(() => {
@@ -116,17 +121,23 @@ export default function LessonReader() {
     if (!learner?.id) return
     await markLessonRead(learner.id, lesson.id)
     markReadStore(lesson.id)
+    const quizScore = quizCount > 0 ? Math.round((correctCount / quizCount) * 100) : null
     if (quizCount > 0) {
-      const score = Math.round((correctCount / quizCount) * 100)
       await saveQuizAttempt({
         learnerId: learner.id,
         lessonId: lesson.id,
-        score,
+        score: quizScore,
         correctCount,
         totalQuestions: quizCount,
-        passed: score >= 70,
+        passed: quizScore >= 70,
       })
     }
+    track('lesson_complete', {
+      lessonId: lesson.id,
+      lessonOrder: lesson.order,
+      lessonTitle: lesson.title,
+      ...(quizScore !== null ? { quizScore, quizCorrect: correctCount, quizTotal: quizCount } : {}),
+    })
     setCompleted(true)
   }
 

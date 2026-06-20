@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, CheckCircle2, XCircle, Lock } from 'lucide-react'
 import { preTest, postTest } from '../courses/firstaid/exams'
@@ -10,6 +10,7 @@ import { useEnsureProgress } from '../hooks/useProgress'
 import { saveExamAttempt } from '../db/database'
 import ProgressBar from '../components/ProgressBar'
 import TheoryCertCard from '../components/TheoryCertCard'
+import { track } from '../utils/analytics'
 
 export default function ExamPage({ kind }) {
   useEnsureLearner()
@@ -27,6 +28,14 @@ export default function ExamPage({ kind }) {
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState({})
   const [done, setDone] = useState(null)
+  const startTracked = useRef(false)
+
+  useEffect(() => {
+    if (!startTracked.current) {
+      startTracked.current = true
+      track('exam_start', { kind })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const q = exam.questions[idx]
   const isLast = idx === exam.questions.length - 1
@@ -55,6 +64,7 @@ export default function ExamPage({ kind }) {
     await saveExamAttempt(result)
     if (kind === 'pre') markPreTestDone()
     else markPostTestDone()
+    track('exam_complete', { kind, score, passed, correctCount, totalQuestions: exam.questions.length })
     setDone(result)
   }
 
