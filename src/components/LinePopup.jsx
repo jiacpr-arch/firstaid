@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageCircle, Check, Phone } from 'lucide-react'
+import { MessageCircle, Check } from 'lucide-react'
 import QRCode from 'qrcode'
 
 const LINE_URL = 'https://line.me/R/ti/p/@jiacpr'
@@ -14,10 +14,10 @@ function fbqTrack(...args) {
   }
 }
 
-// ด่านแอด LINE หน้าทางเข้าแอป — ต้องแอด LINE OA @jiacpr ก่อนถึงจะเริ่มใช้งานได้
-// (honor system: ผู้ใช้กด “ฉันแอดแล้ว” เอง ไม่ verify จริง) เก็บ lead เข้า LINE OA
-// ให้พนักงานทักตามต่อ. ยกเว้นปุ่มฉุกเฉิน “โทร 1669” ที่ต้องกดได้เสมอแม้ยังไม่แอด
-export default function LineEntryGate({ onConfirm }) {
+// ป๊อบอัพแอด LINE หลังเรียนจบบทแรก — honor system gate: ต้องกดแอด LINE OA @jiacpr
+// แล้วกด "ฉันแอดแล้ว" ก่อนถึงจะเรียนต่อ/ใช้งานส่วนอื่นได้ (ปิดเองไม่ได้) เก็บ lead ให้
+// พนักงานทักตามต่อชวนมาอบรมภาคปฏิบัติจริง
+export default function LinePopup({ onConfirm }) {
   const [qr, setQr] = useState('')
   const [opened, setOpened] = useState(false)
 
@@ -33,33 +33,39 @@ export default function LineEntryGate({ onConfirm }) {
     setOpened(true)
     fbqTrack('track', 'Lead', {
       content_name: 'cpr_aed_inperson_course',
-      source: 'entry_line_gate',
+      source: 'lesson1_line_popup',
       channel: 'line',
     })
   }
 
   const onConfirmClick = () => {
-    fbqTrack('trackCustom', 'EntryLineGateConfirmed')
+    fbqTrack('trackCustom', 'Lesson1LinePopupConfirmed')
     onConfirm?.()
   }
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
       style={{
-        minHeight: '100vh',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        background: 'rgba(0,0,0,0.55)',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px 20px calc(24px + env(safe-area-inset-bottom))',
-        background: '#F0FDF4',
+        padding: '20px',
+        paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
       }}
     >
       <div
         className="card"
         style={{
           width: '100%',
-          maxWidth: 420,
+          maxWidth: 400,
+          maxHeight: '90vh',
+          overflowY: 'auto',
           border: '1px solid #BBF7D0',
         }}
       >
@@ -72,11 +78,11 @@ export default function LineEntryGate({ onConfirm }) {
           </div>
         </div>
 
-        <div className="text-display" style={{ textAlign: 'center', marginTop: 12 }}>
-          แอด LINE ก่อนเริ่มใช้งาน
+        <div className="text-title" style={{ textAlign: 'center', marginTop: 12 }}>
+          เรียนจบบทแรกแล้ว 🎉
         </div>
         <div className="text-body text-text-muted" style={{ textAlign: 'center', marginTop: 6 }}>
-          แอด LINE ทางการ <b>{LINE_ID}</b> เพื่อเข้าใช้งานเรียนปฐมพยาบาลออนไลน์ฟรี
+          แอด LINE ทางการ <b>{LINE_ID}</b> เพื่อเรียนบทต่อไปฟรี
           และรับสิทธิ์พิเศษคอร์สอบรมภาคปฏิบัติจริง
         </div>
 
@@ -100,8 +106,8 @@ export default function LineEntryGate({ onConfirm }) {
             <img
               src={qr}
               alt={`QR สำหรับแอด LINE ${LINE_ID}`}
-              width={160}
-              height={160}
+              width={150}
+              height={150}
               style={{ borderRadius: 12, border: '1px solid #E5E7EB', background: '#fff' }}
             />
             <div className="text-caption">หรือสแกน QR นี้ด้วยมือถืออีกเครื่อง</div>
@@ -114,23 +120,9 @@ export default function LineEntryGate({ onConfirm }) {
           className={`btn btn-block ${opened ? 'btn-primary' : 'btn-secondary'}`}
           style={{ marginTop: 18 }}
         >
-          <Check size={16} /> ฉันแอดแล้ว — เข้าใช้งาน
+          <Check size={16} /> ฉันแอดแล้ว — เรียนต่อ
         </button>
       </div>
-
-      {/* ฉุกเฉิน: ต้องกดโทร 1669 ได้เสมอแม้ยังไม่แอด LINE */}
-      <a
-        href="tel:1669"
-        onClick={() => fbqTrack('trackCustom', 'EntryGateEmergencyCall')}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          width: '100%', maxWidth: 420, marginTop: 14, padding: '13px',
-          borderRadius: 12, background: '#DC2626', color: '#fff',
-          fontWeight: 800, fontSize: 15, textDecoration: 'none',
-        }}
-      >
-        <Phone size={18} /> เหตุฉุกเฉิน — โทร 1669
-      </a>
     </div>
   )
 }
