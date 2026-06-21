@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Award, Download } from 'lucide-react'
+import { Award, Download, ImageDown } from 'lucide-react'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { getBestExam, getCertificates } from '../db/database'
@@ -8,6 +8,7 @@ import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
 import TheoryCertCard from '../components/TheoryCertCard'
 import { downloadCertPdf } from '../utils/certPdf'
+import { downloadCertPng } from '../utils/certImage'
 
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -48,17 +49,26 @@ export default function Certification() {
     setCerts((c) => [...c.filter((x) => x.kind !== 'theory'), cert])
   }
 
+  const certArgs = (cert) => ({
+    kind: cert.kind,
+    learnerName: cert.learnerName || learner?.name || '',
+    dateStr: fmtDate(cert.issuedAt),
+    code: cert.code,
+    instructorName: cert.instructorName,
+    location: cert.location,
+  })
+
   const downloadPdf = (cert) => {
-    downloadCertPdf({
-      kind: cert.kind,
-      learnerName: cert.learnerName || learner?.name || '',
-      dateStr: fmtDate(cert.issuedAt),
-      code: cert.code,
-      instructorName: cert.instructorName,
-      location: cert.location,
-    }).catch((err) => {
+    downloadCertPdf(certArgs(cert)).catch((err) => {
       console.error('download cert pdf failed', err)
       alert('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
+    })
+  }
+
+  const downloadPng = (cert) => {
+    downloadCertPng(certArgs(cert)).catch((err) => {
+      console.error('download cert png failed', err)
+      alert('บันทึกรูปไม่สำเร็จ กรุณาลองใหม่')
     })
   }
 
@@ -99,6 +109,10 @@ export default function Certification() {
               />
             </div>
             <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 10 }}
+              onClick={() => downloadPng(practicalCert)}>
+              <ImageDown size={16} /> บันทึกเป็นรูปภาพ (PNG)
+            </button>
+            <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }}
               onClick={() => downloadPdf(practicalCert)}>
               <Download size={16} /> ดาวน์โหลด PDF
             </button>

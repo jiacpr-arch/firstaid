@@ -1,5 +1,10 @@
 // Certificate templates (Theory + Practical) + pass criteria
 
+// Logo shown on the certificate. Drop the official artwork at /public/cert-logo.png
+// (or .svg) and update this path; it ships same-origin so html-to-image can embed it.
+export const CERT_LOGO_SRC = '/cert-logo.svg'
+export const CERT_ORG_NAME = 'Jia Training Center'
+
 export const CERT_KINDS = {
   theory: {
     kind: 'theory',
