@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, CheckCircle2, ClipboardCheck, FileText, Lock } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Lock } from 'lucide-react'
 import { lessons, lessonsByChapter } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -8,6 +8,7 @@ import { useEnsureProgress } from '../hooks/useProgress'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import { computeBadges } from '../utils/badges'
+import { encourage } from '../utils/encouragement'
 
 export default function Learn() {
   useEnsureLearner()
@@ -24,6 +25,11 @@ export default function Learn() {
   const allLessonsDone = total > 0 && done === total
   const postLocked = !allLessonsDone
   const earnedBadges = computeBadges({ readLessonIds: readSet, postTestDone })
+
+  // บทถัดไปที่ยังไม่ได้เรียน — ใช้ทำปุ่ม "เรียนต่อ" ให้กลับมาเรียนง่าย
+  const nextUnread = !lessonsLocked && !allLessonsDone
+    ? lessons.find((l) => !readSet.has(l.id))
+    : null
 
   // ข้อความบอกขั้นตอนถัดไป — บังคับลำดับ Pre-test → เรียน → Post-test
   const flowHint = lessonsLocked
@@ -45,6 +51,17 @@ export default function Learn() {
           <span className="text-caption">{done} / {total} บท</span>
         </div>
         <ProgressBar value={done} max={total} />
+        {!lessonsLocked && (
+          <div className="text-caption" style={{ marginTop: 8, color: 'var(--color-brand-dark)', fontWeight: 600 }}>
+            {encourage(done, total)}
+          </div>
+        )}
+        {nextUnread && (
+          <Link to={`/learn/${nextUnread.id}`} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+            <BookOpen size={16} /> {done > 0 ? 'เรียนต่อ' : 'เริ่มเรียน'}: บทที่ {nextUnread.order} {nextUnread.title}
+            <ChevronRight size={16} />
+          </Link>
+        )}
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <Link to="/pre-test" className="btn btn-secondary" style={{ flex: 1 }}>
             <ClipboardCheck size={16} /> Pre-test
