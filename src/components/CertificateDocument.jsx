@@ -67,7 +67,7 @@ export default function CertificateDocument({
           textAlign: 'center',
         }}
       >
-        <img src={logoSrc} alt={CERT_ORG_NAME} style={{ height: 132, objectFit: 'contain' }} />
+        <img src={logoSrc} alt={CERT_ORG_NAME} style={{ height: 170, objectFit: 'contain' }} />
 
         <div
           style={{
