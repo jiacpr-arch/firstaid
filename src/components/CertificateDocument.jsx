@@ -55,15 +55,19 @@ export default function CertificateDocument({
         }}
       />
 
-      {/* Content */}
+      {/* Content — vertically centered in the area above the footer */}
       <div
         style={{
           position: 'absolute',
-          inset: 28,
-          padding: '44px 72px 0',
+          top: 28,
+          left: 28,
+          right: 28,
+          bottom: 120,
+          padding: '0 72px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          justifyContent: 'center',
           textAlign: 'center',
         }}
       >
