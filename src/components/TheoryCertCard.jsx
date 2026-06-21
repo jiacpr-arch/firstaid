@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Award, Download } from 'lucide-react'
+import { Award, Download, ImageDown } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { getCertificates, upsertLearner } from '../db/database'
 import { CERT_KINDS, evaluateTheoryEligibility } from '../courses/firstaid/cert'
@@ -7,6 +7,7 @@ import { issueTheoryCertificate } from '../utils/certIssue'
 import CertificatePreview from './CertificatePreview'
 import LineGateCard from './LineGateCard'
 import { downloadCertPdf } from '../utils/certPdf'
+import { downloadCertPng } from '../utils/certImage'
 
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -91,15 +92,24 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     }
   }
 
+  const certArgs = () => ({
+    kind: 'theory',
+    learnerName: cert.learnerName || learner?.name || '',
+    dateStr: fmtDate(cert.issuedAt),
+    code: cert.code,
+  })
+
   const downloadPdf = () => {
-    downloadCertPdf({
-      kind: 'theory',
-      learnerName: cert.learnerName || learner?.name || '',
-      dateStr: fmtDate(cert.issuedAt),
-      code: cert.code,
-    }).catch((err) => {
+    downloadCertPdf(certArgs()).catch((err) => {
       console.error('download cert pdf failed', err)
       setError('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
+    })
+  }
+
+  const downloadPng = () => {
+    downloadCertPng(certArgs()).catch((err) => {
+      console.error('download cert png failed', err)
+      setError('บันทึกรูปไม่สำเร็จ กรุณาลองใหม่')
     })
   }
 
@@ -132,6 +142,10 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
             ออกใบประกาศแล้ว — ข้อมูลถูกล็อก หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่
           </div>
           <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 10 }}
+            onClick={downloadPng}>
+            <ImageDown size={16} /> บันทึกเป็นรูปภาพ (PNG)
+          </button>
+          <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }}
             onClick={downloadPdf}>
             <Download size={16} /> ดาวน์โหลด PDF
           </button>
