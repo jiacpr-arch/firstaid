@@ -12,6 +12,7 @@ import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
 import { getNewBadge } from '../utils/badges'
+import { encourage } from '../utils/encouragement'
 import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
 
@@ -123,6 +124,10 @@ export default function LessonReader() {
   const idx = lesson.order - 1
   const nextLesson = lessons[idx + 1]
 
+  // ความก้าวหน้าทั้งคอร์ส — กี่บทแล้ว จากทั้งหมด (อัปเดตเองหลังเรียนจบบท)
+  const totalLessons = lessons.length
+  const doneLessons = lessons.filter((l) => readLessonIds.has(l.id)).length
+
   const finishLesson = async () => {
     if (!learner?.id) return
     const newBadge = getNewBadge({ readLessonIds, postTestDone, lessonId: lesson.id })
@@ -191,6 +196,15 @@ export default function LessonReader() {
               ตอบคำถามถูก {correctCount} / {quizCount}
             </div>
           )}
+          <div style={{ marginTop: 16 }}>
+            <ProgressBar value={doneLessons} max={totalLessons} />
+            <div className="text-caption" style={{ marginTop: 6 }}>
+              เรียนจบแล้ว {doneLessons} / {totalLessons} บท
+            </div>
+            <div className="text-body-strong" style={{ marginTop: 6, color: 'var(--color-brand-dark)' }}>
+              {encourage(doneLessons, totalLessons)}
+            </div>
+          </div>
         </div>
         {earnedBadge && (
           <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 20, background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
@@ -226,9 +240,22 @@ export default function LessonReader() {
         <ArrowLeft size={16} /> รายการบท
       </button>
       <div style={{ marginTop: 4 }}>
-        <div className="text-caption">บทที่ {lesson.order}</div>
+        <div className="text-caption">บทที่ {lesson.order} จาก {totalLessons}</div>
         <div className="text-title">{lesson.title}</div>
       </div>
+
+      {/* ความก้าวหน้าทั้งคอร์ส + คำให้กำลังใจ ให้มีแรงเรียนต่อจนจบ */}
+      <div className="card" style={{ marginTop: 12, padding: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span className="text-caption">ความก้าวหน้าทั้งคอร์ส</span>
+          <span className="text-caption">เรียนจบแล้ว {doneLessons} / {totalLessons} บท</span>
+        </div>
+        <ProgressBar value={doneLessons} max={totalLessons} />
+        <div className="text-caption" style={{ marginTop: 8, color: 'var(--color-brand-dark)', fontWeight: 600 }}>
+          {encourage(doneLessons, totalLessons)}
+        </div>
+      </div>
+
       <div style={{ marginTop: 12, marginBottom: 12 }}>
         <ProgressBar value={stepIdx + 1} max={slides.length} />
         <div className="text-caption" style={{ marginTop: 4 }}>
