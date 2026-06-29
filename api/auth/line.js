@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   const channelId = process.env.VITE_LINE_LOGIN_CHANNEL_ID
   const channelSecret = process.env.LINE_LOGIN_CHANNEL_SECRET
   if (!channelId || !channelSecret) {
-    res.status(500).json({ error: 'LINE login not configured' })
+    res.status(500).json({ error: 'LINE login not configured', code: 'not_configured' })
     return
   }
 
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     const tokenJson = await tokenResp.json().catch(() => ({}))
     if (!tokenResp.ok || !tokenJson.id_token) {
       console.error('LINE token exchange failed', tokenResp.status, tokenJson)
-      res.status(401).json({ error: 'LINE token exchange failed' })
+      res.status(401).json({ error: 'LINE token exchange failed', code: 'token_exchange_failed' })
       return
     }
 
@@ -60,12 +60,12 @@ export default async function handler(req, res) {
     const claims = await verifyResp.json().catch(() => ({}))
     if (!verifyResp.ok || !claims.sub) {
       console.error('LINE id_token verify failed', verifyResp.status, claims)
-      res.status(401).json({ error: 'LINE verify failed' })
+      res.status(401).json({ error: 'LINE verify failed', code: 'verify_failed' })
       return
     }
     // Replay protection: the nonce echoed in the id_token must match the one we sent.
     if (nonce && claims.nonce && claims.nonce !== nonce) {
-      res.status(401).json({ error: 'Nonce mismatch' })
+      res.status(401).json({ error: 'Nonce mismatch', code: 'nonce_mismatch' })
       return
     }
 
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
       // still works for it. Any other error is fatal.
       if (createErr && !/already|exist|registered/i.test(createErr.message || '')) {
         console.error('createUser failed', createErr)
-        res.status(500).json({ error: 'Account creation failed' })
+        res.status(500).json({ error: 'Account creation failed', code: 'account_create_failed' })
         return
       }
     }
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
     const tokenHash = linkData?.properties?.hashed_token
     if (linkErr || !tokenHash) {
       console.error('generateLink failed', linkErr)
-      res.status(500).json({ error: 'Session mint failed' })
+      res.status(500).json({ error: 'Session mint failed', code: 'session_mint_failed' })
       return
     }
 
@@ -139,6 +139,6 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('LINE auth bridge error', err)
-    res.status(500).json({ error: 'LINE login failed' })
+    res.status(500).json({ error: 'LINE login failed', code: 'server_error' })
   }
 }

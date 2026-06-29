@@ -7,8 +7,9 @@
 
 const AUTHORIZE_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const SS_KEY = 'firstaid.lineAuth'
-// อายุสั้น ๆ พอสำหรับรอบล็อกอินเดียว (10 นาที)
-const COOKIE_MAX_AGE = 600
+// อายุพอสำหรับรอบล็อกอินเดียว (30 นาที) — เผื่อผู้ใช้ค้างที่หน้า LINE/สลับแอปนานใน
+// in-app browser ของ FB/IG ก่อน redirect กลับ ไม่งั้น state หายแล้วเจอ error "ยืนยันไม่ถูกต้อง"
+const COOKIE_MAX_AGE = 1800
 
 export const LINE_CHANNEL_ID = import.meta.env.VITE_LINE_LOGIN_CHANNEL_ID || ''
 export const isLineLoginConfigured = !!LINE_CHANNEL_ID

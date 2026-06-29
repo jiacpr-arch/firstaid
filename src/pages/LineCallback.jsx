@@ -5,10 +5,22 @@ import { supabase } from '../config/supabaseClient'
 import { readLineAuthState, clearLineAuthState, startLineLogin } from '../utils/lineAuth'
 import { linkLearnerToAuth } from '../utils/linkLearner'
 import { useLearnerStore } from '../stores/learnerStore'
+import { phCapture } from '../lib/posthog'
 
 function fbqTrack(...args) {
   try { window.fbq?.(...args) } catch { /* tracking ห้ามพังแอป */ }
 }
+
+// แปลง error code จาก /api/auth/line เป็นข้อความไทยที่บอกสาเหตุชัด ช่วยให้ผู้ใช้รู้ว่าควรทำอะไรต่อ
+const ERROR_MESSAGES = {
+  token_exchange_failed: 'เชื่อมต่อกับ LINE ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+  verify_failed: 'ยืนยันตัวตนกับ LINE ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+  nonce_mismatch: 'เซสชันไม่ตรงกัน กรุณาเริ่มเข้าสู่ระบบใหม่',
+  account_create_failed: 'สร้างบัญชีไม่สำเร็จ กรุณาลองใหม่ภายหลัง',
+  session_mint_failed: 'สร้างเซสชันไม่สำเร็จ กรุณาลองใหม่ภายหลัง',
+  not_configured: 'ระบบเข้าสู่ระบบด้วย LINE ยังไม่พร้อมใช้งาน',
+}
+const messageForCode = (code) => ERROR_MESSAGES[code] || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
 
 // Handles the LINE redirect back: verify state, redeem the code via /api/auth/line,
 // establish the Supabase session with the returned magiclink token_hash, link the
@@ -27,9 +39,11 @@ export default function LineCallback() {
       const lineError = params.get('error')
       const saved = readLineAuthState()
 
-      if (lineError) { setError('การเข้าสู่ระบบถูกยกเลิก'); return }
+      if (lineError) { setError('คุณยกเลิกการเข้าสู่ระบบด้วย LINE — กดปุ่มด้านล่างเพื่อลองใหม่ได้'); return }
       if (!code || !saved || returnedState !== saved.state) {
-        setError('การยืนยันตัวตนไม่ถูกต้อง กรุณาลองใหม่')
+        // state/nonce หาย — มักเกิดจากเซสชันหมดอายุ หรือเปิดผ่าน in-app browser ของ FB/IG
+        // ที่สร้าง browsing context ใหม่ตอน redirect กลับ แนะให้ลองใหม่หรือเปิดในเบราว์เซอร์จริง
+        setError('เซสชันหมดอายุหรือเบราว์เซอร์ไม่รองรับ ลองเข้าสู่ระบบใหม่ หรือเปิดหน้านี้ใน Chrome/Safari')
         return
       }
 
@@ -46,7 +60,8 @@ export default function LineCallback() {
         })
         const data = await resp.json().catch(() => ({}))
         if (!resp.ok || !data.tokenHash) {
-          throw new Error(data.error || 'login_failed')
+          if (!cancelled) setError(messageForCode(data.code))
+          return
         }
 
         const { data: verified, error: verifyErr } = await supabase.auth.verifyOtp({
@@ -65,11 +80,12 @@ export default function LineCallback() {
         })
 
         fbqTrack('track', 'CompleteRegistration', { content_name: 'line_login', status: true })
+        phCapture('student_registered', { method: 'line' })
         clearLineAuthState()
         if (!cancelled) navigate('/learn', { replace: true })
       } catch (err) {
         console.error('LINE callback failed', err)
-        if (!cancelled) setError('เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+        if (!cancelled) setError('เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง (อาจเป็นปัญหาเครือข่ายชั่วคราว)')
       }
     }
     run()

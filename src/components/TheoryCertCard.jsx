@@ -8,6 +8,7 @@ import CertificatePreview from './CertificatePreview'
 import LineGateCard from './LineGateCard'
 import { downloadCertPdf } from '../utils/certPdf'
 import { downloadCertPng } from '../utils/certImage'
+import { track } from '../utils/analytics'
 
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -59,6 +60,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
 
   const confirmLine = async () => {
     updateLearner({ lineAdded: true })
+    track('line_add', { source: 'cert_gate' })
     await upsertLearner({ ...learner, lineAdded: true })
   }
 
