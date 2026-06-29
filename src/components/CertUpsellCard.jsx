@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Phone, MessageCircle, Sparkles, Users, Award, ClipboardList } from 'lucide-react'
 import PracticalInterestForm from './PracticalInterestForm'
 import { lineInterestUrl, LINE_OA_ID as LINE_DISPLAY } from '../utils/lineLinks'
+import { phCapture } from '../lib/posthog'
 
 const PHONE_NUMBER = '0909791212'
 const PHONE_DISPLAY = '090-979-1212'
@@ -31,6 +32,7 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
       source: 'cert_upsell_card',
       channel,
     })
+    phCapture('contact_click', { channel, source })
   }
 
   return (
