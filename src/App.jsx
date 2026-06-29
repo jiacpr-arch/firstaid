@@ -7,6 +7,7 @@ import { useEnsureLearner } from './hooks/useLearner'
 import { lessons } from './courses/firstaid/lessons'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
+import InAppBrowserNotice from './components/InAppBrowserNotice'
 import MetaPixel from './components/MetaPixel'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
@@ -77,9 +78,11 @@ export default function App() {
   }, [])
 
   const isAdmin = location.pathname.startsWith('/admin')
-  // Onboarding: บังคับเรียนบทแรกก่อนเสมอ จนกว่าจะแอด LINE @jiacpr (honor-system)
+  // Onboarding (soft gate): ครั้งแรกพาไปเริ่มที่บทแรกเพื่อให้ได้เห็นคำชวนแอด LINE @jiacpr
+  // หลังเรียนจบบท 1 แต่ "ไม่บังคับ" — ถ้าผู้ใช้กด "ดูภายหลัง" (ตั้ง lineSkippedAt) หรือแอดแล้ว
+  // (lineAdded) ก็เข้าทุกหน้าได้อิสระ ลด drop กลางทาง
   // ยกเว้นฝั่ง admin และหน้าโทรฉุกเฉิน /call (โทร 1669 ต้องเข้าได้เสมอ)
-  const onboarding = !isAdmin && (!learner || !learner.lineAdded)
+  const onboarding = !isAdmin && (!learner || (!learner.lineAdded && !learner.lineSkippedAt))
 
   if (
     onboarding &&
@@ -92,6 +95,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh' }}>
+      <InAppBrowserNotice />
       <OfflineIndicator />
       <Routes>
         <Route path="/" element={<Home />} />

@@ -18,7 +18,7 @@ function fbqTrack(...args) {
 // ป๊อบอัพแอด LINE หลังเรียนจบบทแรก — honor system gate: ต้องกดแอด LINE OA @jiacpr
 // แล้วกด "ฉันแอดแล้ว" ก่อนถึงจะเรียนต่อ/ใช้งานส่วนอื่นได้ (ปิดเองไม่ได้) เก็บ lead ให้
 // พนักงานทักตามต่อชวนมาอบรมภาคปฏิบัติจริง
-export default function LinePopup({ onConfirm }) {
+export default function LinePopup({ onConfirm, onSkip }) {
   const [qr, setQr] = useState('')
   const [opened, setOpened] = useState(false)
 
@@ -42,6 +42,11 @@ export default function LinePopup({ onConfirm }) {
   const onConfirmClick = () => {
     fbqTrack('trackCustom', 'Lesson1LinePopupConfirmed')
     onConfirm?.()
+  }
+
+  const onSkipClick = () => {
+    fbqTrack('trackCustom', 'Lesson1LinePopupSkipped')
+    onSkip?.()
   }
 
   return (
@@ -135,6 +140,20 @@ export default function LinePopup({ onConfirm }) {
         >
           <Check size={16} /> ส่งข้อความแล้ว — เรียนต่อ
         </button>
+
+        {onSkip && (
+          <button
+            type="button"
+            onClick={onSkipClick}
+            style={{
+              display: 'block', width: '100%', marginTop: 10, padding: '8px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--color-text-muted)', fontSize: 13, textDecoration: 'underline',
+            }}
+          >
+            ดูภายหลัง — เรียนบทอื่นต่อก่อน
+          </button>
+        )}
       </div>
     </div>
   )

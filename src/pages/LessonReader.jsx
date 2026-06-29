@@ -161,9 +161,10 @@ export default function LessonReader() {
     if (correct) setCorrectCount((c) => c + 1)
   }
 
-  const needLoginGate = completed && lesson.order === 1 && !learner?.lineAdded
+  const needLoginGate = completed && lesson.order === 1 && !learner?.lineAdded && !learner?.lineSkippedAt
   const confirmLine = async () => {
     updateLearner({ lineAdded: true })
+    track('line_add', { source: 'lesson1_popup' })
     // แจ้ง admin LINE ว่ามีคนสนใจ (fire-and-forget — ไม่บล็อก UX ถ้า notify ล้มเหลว)
     fetch('/api/notify/line-add', {
       method: 'POST',
@@ -177,6 +178,11 @@ export default function LessonReader() {
         /* sync ล้มเหลวไม่เป็นไร — สถานะ local พอให้เรียนต่อได้ */
       }
     }
+  }
+  // Soft gate: กด "ดูภายหลัง" — บันทึกว่าข้าม แล้วปลดล็อกให้เรียนบทอื่นต่อได้
+  const skipLine = () => {
+    updateLearner({ lineSkippedAt: new Date().toISOString() })
+    track('line_skip', { source: 'lesson1_popup' })
   }
 
   const advance = () => {
@@ -229,7 +235,7 @@ export default function LessonReader() {
         </div>
         {/* เรียนครบทุกบทแล้ว — ชวนมาอบรมปฏิบัติจริง */}
         {!nextLesson && <CertUpsellCard source="lesson_complete_all" />}
-        {needLoginGate && <LinePopup onConfirm={confirmLine} />}
+        {needLoginGate && <LinePopup onConfirm={confirmLine} onSkip={skipLine} />}
       </div>
     )
   }
