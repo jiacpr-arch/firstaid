@@ -13,7 +13,7 @@ import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
 import CallEmergencyButton from './components/CallEmergencyButton'
 import RequireAdmin from './components/RequireAdmin'
-import { initPostHog, identifyLearner } from './lib/posthog'
+import { initPostHog, identifyLearner, phCapture } from './lib/posthog'
 
 const FIRST_LESSON_PATH = `/learn/${lessons[0].id}`
 
@@ -59,6 +59,12 @@ export default function App() {
   useEffect(() => {
     if (learner?.id) identifyLearner({ learnerId: learner.id, lineUserId: learner.lineUserId, displayName: learner.name })
   }, [learner?.id, learner?.lineUserId, learner?.name])
+
+  // ยิง $pageview เข้า PostHog ทุกครั้งที่เปลี่ยนหน้า (init ตั้ง capture_pageview:false ไว้
+  // เพราะเป็น SPA) — เพื่อให้ firstaid มีข้อมูล top-of-funnel วัด conversion ได้จริง
+  useEffect(() => {
+    phCapture('$pageview')
+  }, [location.pathname])
 
   useEffect(() => {
     const root = document.documentElement
