@@ -3,12 +3,14 @@ import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
 import { notifyCertIssued } from '../_lib/certNotify.js'
-
-const PASSING = 80
+import { scoreExam, POST_PASSING as PASSING } from '../_lib/examKey.js'
+import { learnerIdFromToken, reconcileLearner } from '../_lib/authLearner.js'
+import { rateLimited } from '../_lib/rateLimit.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
+  if (rateLimited(req, res, { key: 'issue-theory', limit: 10, windowMs: 60_000 })) return
 
   const admin = getSupabaseAdmin()
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
@@ -19,8 +21,7 @@ export default async function handler(req, res) {
     learnerPhone,
     learnerEmail,
     consent,
-    score,
-    passed,
+    answers,
   } = req.body || {}
   // Contact details + PDPA consent are required for self-service issuance.
   if (!learnerId || !learnerName || !learnerPhone || !learnerEmail) {
@@ -28,6 +29,12 @@ export default async function handler(req, res) {
     return
   }
   if (!consent) { res.status(400).json({ error: 'Consent required' }); return }
+
+  // Bind to the authenticated learner when a LINE session token is present, so a
+  // cert can't be minted against someone else's learnerId.
+  const tokenLearnerId = await learnerIdFromToken(admin, req)
+  const { forbidden } = reconcileLearner(learnerId, tokenLearnerId)
+  if (forbidden) { res.status(403).json({ error: 'learnerId does not match session' }); return }
 
   // Idempotent: a learner gets exactly one theory certificate. Return the existing
   // one before doing any writes so repeated taps never create duplicates.
@@ -39,8 +46,9 @@ export default async function handler(req, res) {
     .maybeSingle()
   if (existing) { res.status(200).json({ certificate: existing }); return }
 
-  // The post-test is scored on the client; record the passing attempt server-side
-  // if it isn't there yet so the certificate is backed by a real attempt row.
+  // Eligibility must be backed by a server-scored post-test attempt — the score
+  // is never taken from the client. Prefer an existing attempt row; if there
+  // isn't one yet, score the submitted answers here against the real key.
   const { data: attempts } = await admin
     .from('exam_attempts')
     .select('score, passed')
@@ -49,20 +57,25 @@ export default async function handler(req, res) {
     .order('score', { ascending: false })
     .limit(1)
   let best = attempts?.[0]
-  if (!best && typeof score === 'number' && passed && score >= PASSING) {
-    const { data: inserted } = await admin
-      .from('exam_attempts')
-      .insert({
-        uuid: randomUUID(),
-        learner_id: learnerId,
-        kind: 'post',
-        score,
-        passed: true,
-        finished_at: new Date().toISOString(),
-      })
-      .select('score, passed')
-      .single()
-    best = inserted
+  if ((!best || !best.passed || best.score < PASSING) && answers && typeof answers === 'object') {
+    const result = scoreExam('post', answers)
+    if (result.passed) {
+      const { data: inserted } = await admin
+        .from('exam_attempts')
+        .insert({
+          uuid: randomUUID(),
+          learner_id: learnerId,
+          kind: 'post',
+          score: result.score,
+          correct: result.correctCount,
+          total: result.totalQuestions,
+          passed: true,
+          finished_at: new Date().toISOString(),
+        })
+        .select('score, passed')
+        .single()
+      best = inserted
+    }
   }
   if (!best || !best.passed || best.score < PASSING) {
     res.status(409).json({ error: 'Post-test not passed' })

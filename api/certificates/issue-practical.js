@@ -2,10 +2,12 @@ import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
 import { notifyCertIssued } from '../_lib/certNotify.js'
+import { rateLimited } from '../_lib/rateLimit.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
+  if (rateLimited(req, res, { key: 'issue-practical', limit: 10, windowMs: 60_000 })) return
 
   const admin = getSupabaseAdmin()
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
