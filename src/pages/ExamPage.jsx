@@ -8,6 +8,7 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { saveExamAttempt } from '../db/database'
+import { flushSync } from '../db/sync'
 import ProgressBar from '../components/ProgressBar'
 import TheoryCertCard from '../components/TheoryCertCard'
 import CertUpsellCard from '../components/CertUpsellCard'
@@ -71,6 +72,7 @@ export default function ExamPage({ kind }) {
       await saveExamAttempt(result)
       if (kind === 'pre') markPreTestDone()
       else markPostTestDone()
+      flushSync(learner.id)
       track('exam_complete', { kind, score, passed, correctCount, totalQuestions: exam.questions.length })
       setDone(result)
     } finally {
