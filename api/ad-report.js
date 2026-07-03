@@ -73,7 +73,12 @@ async function pushLine(channelToken, userId, text) {
 export default async function handler(req, res) {
   const { CRON_SECRET, META_ACCESS_TOKEN, LINE_CHANNEL_ACCESS_TOKEN, LINE_USER_ID } = process.env
 
-  if (CRON_SECRET && req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
+  // Fail closed: refuse to run if the shared secret isn't configured, so this
+  // endpoint is never world-callable (it pushes ad-spend to LINE + burns Graph quota).
+  if (!CRON_SECRET) {
+    return res.status(500).json({ ok: false, error: 'CRON_SECRET not configured' })
+  }
+  if (req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
     return res.status(401).json({ ok: false, error: 'unauthorized' })
   }
   const missing = ['META_ACCESS_TOKEN', 'LINE_CHANNEL_ACCESS_TOKEN', 'LINE_USER_ID'].filter(

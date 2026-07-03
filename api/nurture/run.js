@@ -49,7 +49,12 @@ function messageFor(campaign, { lessonsRead }) {
 
 export default async function handler(req, res) {
   const { CRON_SECRET } = process.env
-  if (CRON_SECRET && req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
+  // Fail closed: without the shared secret this endpoint could be triggered by
+  // anyone to fire a mass LINE push (spam + API cost), so refuse to run.
+  if (!CRON_SECRET) {
+    return res.status(500).json({ ok: false, error: 'CRON_SECRET not configured' })
+  }
+  if (req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
     return res.status(401).json({ ok: false, error: 'unauthorized' })
   }
 

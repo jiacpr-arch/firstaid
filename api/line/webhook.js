@@ -40,13 +40,25 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const secret = process.env.LINE_CHANNEL_SECRET
+  // Fail closed: without the channel secret we cannot verify authenticity, so
+  // reject rather than process forged events (which could flip opt-out flags or
+  // trigger admin LINE pushes).
+  if (!secret) {
+    return res.status(500).json({ error: 'LINE_CHANNEL_SECRET not configured' })
+  }
   const raw = await readRawBody(req)
 
-  // Verify signature — reject tampered/forged calls. Skip only if no secret set.
-  if (secret) {
-    const expected = crypto.createHmac('sha256', secret).update(raw).digest('base64')
-    const got = req.headers['x-line-signature']
-    if (!got || got !== expected) return res.status(401).json({ error: 'bad signature' })
+  // Verify signature (constant-time) — reject tampered/forged calls.
+  const expected = crypto.createHmac('sha256', secret).update(raw).digest('base64')
+  const got = req.headers['x-line-signature']
+  const expectedBuf = Buffer.from(expected)
+  const gotBuf = Buffer.from(String(got || ''))
+  if (
+    !got ||
+    gotBuf.length !== expectedBuf.length ||
+    !crypto.timingSafeEqual(gotBuf, expectedBuf)
+  ) {
+    return res.status(401).json({ error: 'bad signature' })
   }
 
   let body
