@@ -122,7 +122,7 @@ export default function CheckIn() {
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="เช่น A3F9K2"
-            maxLength={8}
+            maxLength={6}
             style={{ letterSpacing: 3, fontWeight: 700, textAlign: 'center', fontSize: 18 }}
           />
           <div className="text-caption" style={{ marginTop: 6, textAlign: 'center' }}>
