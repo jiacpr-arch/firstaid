@@ -1,10 +1,14 @@
 import { saveCertificate } from '../db/database'
 import { generateCertCode } from '../courses/firstaid/cert'
+import { authHeader } from './authHeader'
 
 // Issues the theory certificate, preferring the server (Supabase-backed, gives a
 // verifiable code + one-per-learner guarantee) and falling back to a purely local
 // certificate when the backend isn't configured or is unreachable. Either way the
 // result is persisted to Dexie so it survives reloads and works offline.
+//
+// The server re-scores the post-test from the raw answers (it never trusts a
+// client-supplied score), so we send `answers` rather than score/passed.
 export async function issueTheoryCertificate({ learner, attempt, phone, email }) {
   const learnerName = (learner?.name || '').trim()
   const localId = `theory-${learner.id}`
@@ -12,15 +16,14 @@ export async function issueTheoryCertificate({ learner, attempt, phone, email })
   try {
     const res = await fetch('/api/certificates/issue-theory', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify({
         learnerId: learner.id,
         learnerName,
         learnerPhone: phone,
         learnerEmail: email,
         consent: true,
-        score: attempt?.score,
-        passed: attempt?.passed,
+        answers: attempt?.answers,
       }),
     })
     if (res.ok) {

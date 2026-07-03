@@ -8,6 +8,7 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
+import { flushSync } from '../db/sync'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
@@ -147,6 +148,7 @@ export default function LessonReader() {
       })
     }
     setEarnedBadge(newBadge)
+    flushSync(learner.id)
     track('lesson_complete', {
       lessonId: lesson.id,
       lessonOrder: lesson.order,

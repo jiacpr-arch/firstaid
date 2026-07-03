@@ -8,6 +8,7 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { saveExamAttempt } from '../db/database'
+import { flushSync } from '../db/sync'
 import ProgressBar from '../components/ProgressBar'
 import TheoryCertCard from '../components/TheoryCertCard'
 import CertUpsellCard from '../components/CertUpsellCard'
@@ -29,6 +30,7 @@ export default function ExamPage({ kind }) {
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState({})
   const [done, setDone] = useState(null)
+  const [busy, setBusy] = useState(false)
   const startTracked = useRef(false)
 
   useEffect(() => {
@@ -49,24 +51,33 @@ export default function ExamPage({ kind }) {
       setIdx((i) => i + 1)
       return
     }
-    const correctCount = exam.questions.filter((qq) => answers[qq.id] === qq.correctId).length
-    const score = Math.round((correctCount / exam.questions.length) * 100)
-    const passing = exam.passingScore ?? 0
-    const passed = score >= passing
-    const result = {
-      learnerId: learner.id,
-      kind,
-      score,
-      correctCount,
-      totalQuestions: exam.questions.length,
-      answers,
-      passed,
+    // Guard against double-tap on the final question — otherwise a second tap
+    // creates a duplicate examAttempts row and calls markPostTestDone() twice.
+    if (busy) return
+    setBusy(true)
+    try {
+      const correctCount = exam.questions.filter((qq) => answers[qq.id] === qq.correctId).length
+      const score = Math.round((correctCount / exam.questions.length) * 100)
+      const passing = exam.passingScore ?? 0
+      const passed = score >= passing
+      const result = {
+        learnerId: learner.id,
+        kind,
+        score,
+        correctCount,
+        totalQuestions: exam.questions.length,
+        answers,
+        passed,
+      }
+      await saveExamAttempt(result)
+      if (kind === 'pre') markPreTestDone()
+      else markPostTestDone()
+      flushSync(learner.id)
+      track('exam_complete', { kind, score, passed, correctCount, totalQuestions: exam.questions.length })
+      setDone(result)
+    } finally {
+      setBusy(false)
     }
-    await saveExamAttempt(result)
-    if (kind === 'pre') markPreTestDone()
-    else markPostTestDone()
-    track('exam_complete', { kind, score, passed, correctCount, totalQuestions: exam.questions.length })
-    setDone(result)
   }
 
   // Post-test: รอโหลดสถานะความก้าวหน้าก่อน เพื่อไม่ให้โผล่ข้อสอบแวบ ๆ ตอนเปิด URL ตรง
@@ -222,8 +233,8 @@ export default function ExamPage({ kind }) {
       </div>
 
       <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }}
-        disabled={!answers[q.id]} onClick={next}>
-        {isLast ? 'ส่งคำตอบทั้งหมด' : 'ข้อต่อไป'} <ChevronRight size={16} />
+        disabled={!answers[q.id] || busy} onClick={next}>
+        {isLast ? (busy ? 'กำลังส่ง…' : 'ส่งคำตอบทั้งหมด') : 'ข้อต่อไป'} <ChevronRight size={16} />
       </button>
     </div>
   )

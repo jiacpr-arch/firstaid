@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { ChevronRight, Phone, AlertTriangle, CheckCircle2, ArrowRightCircle } from 'lucide-react'
 import { groupMediaByStep } from '../utils/lessonMediaSteps'
 import { MediaRow } from './Media'
@@ -102,12 +103,12 @@ export default function AlgorithmFlowchart({ algorithm, media = [] }) {
         )
       })}
       {currentStep?.kind === 'goto' && currentStep.terminal && (
-        <a
-          href={`/algorithms/${currentStep.targetId}`}
+        <Link
+          to={`/algorithms/${currentStep.targetId}`}
           className="btn btn-primary btn-block"
         >
           ดู flowchart: {currentStep.targetId}
-        </a>
+        </Link>
       )}
     </div>
   )

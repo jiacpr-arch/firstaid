@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
 import { useEnsureLearner } from './hooks/useLearner'
+import { startBackgroundSync } from './db/sync'
 import { lessons } from './courses/firstaid/lessons'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
@@ -59,6 +60,12 @@ export default function App() {
   useEffect(() => {
     if (learner?.id) identifyLearner({ learnerId: learner.id, lineUserId: learner.lineUserId, displayName: learner.name })
   }, [learner?.id, learner?.lineUserId, learner?.name])
+
+  // Push offline-first progress up to Supabase (dashboards + cross-device).
+  useEffect(() => {
+    if (!learner?.id) return
+    return startBackgroundSync(() => learner.id)
+  }, [learner?.id])
 
   // ยิง $pageview เข้า PostHog ทุกครั้งที่เปลี่ยนหน้า (init ตั้ง capture_pageview:false ไว้
   // เพราะเป็น SPA) — เพื่อให้ firstaid มีข้อมูล top-of-funnel วัด conversion ได้จริง

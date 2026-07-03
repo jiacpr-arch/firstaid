@@ -724,6 +724,10 @@ export const lessons = [
   },
 ]
 
+// Single source of truth for the lesson count — imported by the nurture cron
+// (api/nurture/run.js) so its "lessons remaining" math can never drift from content.
+export const TOTAL_LESSONS = lessons.length
+
 export const lessonsById = Object.fromEntries(lessons.map(l => [l.id, l]))
 export const lessonsByChapter = chapters.map(c => ({
   ...c,

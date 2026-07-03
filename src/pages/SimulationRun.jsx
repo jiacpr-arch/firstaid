@@ -6,6 +6,7 @@ import ScenarioRunner from '../components/ScenarioRunner'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { saveSimulationRun } from '../db/database'
+import { flushSync } from '../db/sync'
 import { fetchContentMedia } from '../utils/lessonMediaSteps'
 import { track } from '../utils/analytics'
 
@@ -45,6 +46,7 @@ export default function SimulationRun() {
         passed,
         history,
       })
+      flushSync(learner.id)
     }
     track('simulation_complete', { scenarioId, score, total, passed })
     setResult({ score, total, passed })

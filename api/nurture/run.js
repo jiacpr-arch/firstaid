@@ -13,10 +13,9 @@
 // into line_identities.nurture_opted_out, which we filter on here.
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { pushLineMessage } from '../_lib/lineMessage.js'
+import { TOTAL_LESSONS } from '../../src/courses/firstaid/lessons.js'
 
-// Keep in sync with src/courses/firstaid/lessons.js (api/ runs as standalone
-// Node and does not import the React course bundle).
-const TOTAL_LESSONS = 24
+// TOTAL_LESSONS is imported from the course content so it can never drift.
 const ALMOST_DONE_AT = TOTAL_LESSONS - 2 // อ่านครบเท่านี้ขึ้นไป = ใกล้จบ
 const ABANDONED_AFTER_DAYS = 3
 const ABANDONED_COOLDOWN_DAYS = 7
@@ -50,7 +49,12 @@ function messageFor(campaign, { lessonsRead }) {
 
 export default async function handler(req, res) {
   const { CRON_SECRET } = process.env
-  if (CRON_SECRET && req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
+  // Fail closed: without the shared secret this endpoint could be triggered by
+  // anyone to fire a mass LINE push (spam + API cost), so refuse to run.
+  if (!CRON_SECRET) {
+    return res.status(500).json({ ok: false, error: 'CRON_SECRET not configured' })
+  }
+  if (req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
     return res.status(401).json({ ok: false, error: 'unauthorized' })
   }
 
