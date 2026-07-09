@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { MessageCircle, AlertTriangle } from 'lucide-react'
+import { MessageCircle, AlertTriangle, Copy, Check } from 'lucide-react'
 import { supabase } from '../config/supabaseClient'
 import { readLineAuthState, clearLineAuthState, startLineLogin } from '../utils/lineAuth'
+import { detectInAppBrowser } from '../utils/inAppBrowser'
 import { linkLearnerToAuth } from '../utils/linkLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { phCapture } from '../lib/posthog'
@@ -30,6 +31,20 @@ export default function LineCallback() {
   const navigate = useNavigate()
   const learner = useLearnerStore((s) => s.learner)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  // ถ้าล็อกอินพังเพราะอยู่ใน in-app browser (FB/IG/LINE) การกดลองใหม่ในหน้าเดิมมักพังซ้ำ
+  // เพราะ context ใหม่ทำ state หายอีก — เปิดในเบราว์เซอร์จริงเท่านั้นถึงจะจบ flow ได้
+  const inAppSource = detectInAppBrowser()
+
+  const copyLoginLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.origin)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* คลิปบอร์ดไม่รองรับก็ไม่เป็นไร — ผู้ใช้กดเมนู ⋯ เปิดในเบราว์เซอร์เองได้ */
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -100,6 +115,29 @@ export default function LineCallback() {
           <AlertTriangle size={40} color="#DC2626" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>เข้าสู่ระบบไม่สำเร็จ</div>
           <div className="text-body text-text-muted" style={{ marginTop: 6 }}>{error}</div>
+          {inAppSource && (
+            <div
+              style={{
+                marginTop: 12, padding: '10px 12px', borderRadius: 10, textAlign: 'left',
+                background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', fontSize: 13, lineHeight: 1.45,
+              }}
+            >
+              คุณกำลังเปิดผ่านแอป {inAppSource === 'facebook' ? 'Facebook' : inAppSource === 'instagram' ? 'Instagram' : 'LINE'} —
+              การเข้าสู่ระบบมักไม่สำเร็จในเบราว์เซอร์ในแอป กรุณากดเมนู ⋯ แล้วเลือก
+              “เปิดในเบราว์เซอร์” (Chrome/Safari) หรือคัดลอกลิงก์ไปเปิดเอง แล้วเข้าสู่ระบบอีกครั้ง
+              <button
+                type="button"
+                onClick={copyLoginLink}
+                style={{
+                  marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 10px', borderRadius: 8, border: '1px solid #D97706',
+                  background: '#fff', color: '#92400E', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                }}
+              >
+                {copied ? <><Check size={14} /> คัดลอกลิงก์แล้ว</> : <><Copy size={14} /> คัดลอกลิงก์</>}
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => startLineLogin(learner?.id)}
