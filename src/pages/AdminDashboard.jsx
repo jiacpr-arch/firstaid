@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
-import { Users, Calendar, Award, Image, Film, LogOut } from 'lucide-react'
+import { Users, Calendar, Award, Image, Film, Ticket, LogOut } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { OPEN_ADMIN } from '../config/adminAccess'
 
 const QUICK = [
   { to: '/admin/lesson-media', label: 'ใส่รูป/วิดีโอในเนื้อหา', desc: 'บทเรียน / สถานการณ์ / ผัง → แนบสื่อ → แสดงทันที', icon: Film, color: '#DB2777' },
+  { to: '/admin/vouchers', label: 'โค้ดปลดล็อกบทเรียน', desc: 'สร้าง/ดูโค้ดขายเรียนออนไลน์รายหมวด', icon: Ticket, color: '#0891B2' },
   { to: '/admin/cohorts', label: 'กลุ่มผู้เรียน (Cohorts)', desc: 'สร้างกลุ่ม / ดูความก้าวหน้า', icon: Users, color: '#16A34A' },
   { to: '/admin/sessions', label: 'คลาสภาคปฏิบัติ', desc: 'เปิด session + เช็คชื่อ + อนุมัติ', icon: Calendar, color: '#2563EB' },
   { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ค้นหา / ออกใหม่ / เพิกถอน', icon: Award, color: '#D97706' },
