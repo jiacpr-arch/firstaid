@@ -104,6 +104,8 @@ export default function Learn() {
       {lessonsByChapter.map((ch) => {
         const chTotal = ch.lessons.length
         const chDone = ch.lessons.filter((l) => readSet.has(l.id)).length
+        // ราคาปลดล็อกคิดต่อ "หมวด" ไม่ใช่ต่อบท — โชว์ครั้งเดียวที่หัวหมวด ไม่ติดซ้ำทุกบทข้างล่าง
+        const chapterPaidLocked = !lessonsLocked && !isChapterUnlocked(ch.id, unlockedChapters)
         return (
           <div key={ch.id} style={{ marginTop: 20 }}>
             <div style={{
@@ -116,7 +118,9 @@ export default function Learn() {
                 </div>
                 <div className="text-body-strong">{ch.title}</div>
               </div>
-              <span className="text-caption">{chDone}/{chTotal}</span>
+              {chapterPaidLocked
+                ? <span className="badge badge-brand">฿{CHAPTER_PRICES[ch.id]} ทั้งหมวด</span>
+                : <span className="text-caption">{chDone}/{chTotal}</span>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {ch.lessons.map((l) => {
@@ -145,7 +149,6 @@ export default function Learn() {
                       <div className="text-body-strong">{l.order}. {l.title}</div>
                       <div className="text-caption">{l.summary} • {l.minutes} นาที</div>
                     </div>
-                    {paidLocked && <span className="badge badge-brand">฿{CHAPTER_PRICES[l.chapter]}</span>}
                     {!locked && isRead && <span className="badge badge-success">เรียนแล้ว</span>}
                   </>
                 )
