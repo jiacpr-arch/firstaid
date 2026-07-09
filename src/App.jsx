@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
 import { useEnsureLearner } from './hooks/useLearner'
+import { initAuthListener } from './stores/authStore'
 import { startBackgroundSync } from './db/sync'
 import { lessons } from './courses/firstaid/lessons'
 import { courseMeta } from './config/courseMode'
@@ -42,6 +43,7 @@ const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
 const AdminCertificates = lazy(() => import('./pages/AdminCertificates'))
 const AdminMedia = lazy(() => import('./pages/AdminMedia'))
 const AdminLessonMedia = lazy(() => import('./pages/AdminLessonMedia'))
+const AdminVouchers = lazy(() => import('./pages/AdminVouchers'))
 
 const AdminFallback = () => (
   <div className="page-container py-12 text-center text-caption">กำลังโหลด admin…</div>
@@ -56,6 +58,10 @@ export default function App() {
   const learner = useLearnerStore((s) => s.learner)
 
   useEffect(() => { initPostHog() }, [])
+
+  // เปิด listener สถานะล็อกอิน (LINE → Supabase Auth) ครั้งเดียวตอนแอปเริ่ม — จำเป็นสำหรับ
+  // ระบบปลดล็อกบทเรียนที่ผูกสิทธิ์กับ learner_id ถาวร ไม่ใช่แค่ local id ที่สลับได้
+  useEffect(() => initAuthListener(), [])
 
   useEffect(() => {
     if (learner?.id) identifyLearner({ learnerId: learner.id, lineUserId: learner.lineUserId, displayName: learner.name })
@@ -155,6 +161,9 @@ export default function App() {
         } />
         <Route path="/admin/lesson-media" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLessonMedia /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/vouchers" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminVouchers /></RequireAdmin></Suspense>
         } />
       </Routes>
       {!isAdmin && !onboarding && <HouseAdStrip />}

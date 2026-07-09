@@ -7,6 +7,10 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
+import { useEntitlementStore } from '../stores/entitlementStore'
+import { useEnsureEntitlements } from '../hooks/useEntitlements'
+import { isChapterUnlocked } from '../config/pricing'
+import ChapterUnlockCard from '../components/ChapterUnlockCard'
 import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { flushSync } from '../db/sync'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
@@ -29,6 +33,9 @@ export default function LessonReader() {
   const postTestDone = useProgressStore((s) => s.postTestDone)
   const progressLoaded = useProgressStore((s) => s.loaded)
   useEnsureProgress(learner?.id)
+  const unlockedChapters = useEntitlementStore((s) => s.chapters)
+  const entitlementsLoaded = useEntitlementStore((s) => s.loaded)
+  useEnsureEntitlements()
 
   const lesson = lessonsById[lessonId]
   const [prevLessonId, setPrevLessonId] = useState(lessonId)
@@ -118,6 +125,13 @@ export default function LessonReader() {
         </div>
       </div>
     )
+  }
+
+  // ปลดล็อกด้วยการซื้อ — หมวด 1 ฟรีเสมอ (isChapterUnlocked คืน true ทันที) หมวด 2-4 ต้องมี
+  // entitlement ผูกกับ learner_id ถาวร ครอบคลุมทั้ง URL ตรง, list ในหน้า Learn และปุ่ม "บทถัดไป"
+  // เพราะทุกทางเข้าวิ่งผ่าน route นี้เหมือนกัน
+  if (entitlementsLoaded && !isChapterUnlocked(lesson.chapter, unlockedChapters)) {
+    return <ChapterUnlockCard chapter={lesson.chapter} />
   }
 
   const slide = slides[stepIdx]

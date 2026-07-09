@@ -199,3 +199,34 @@ create table if not exists course_interest (
 );
 alter table course_interest enable row level security;
 -- service-role only (inserted via api/leads/interest.js, no public read)
+
+-- ===== Course paywall (Phase 1): per-chapter unlock via voucher code =====
+-- chapter 0 = whole-course bundle (unlocks every chapter, cheaper than buying separately).
+-- learner_id is the canonical id from line_identities — a learner must be logged in
+-- via LINE before an entitlement can be granted, so purchases survive a device change.
+create table if not exists lesson_entitlements (
+  learner_id  uuid not null,
+  chapter     int  not null default 0 check (chapter between 0 and 4),
+  source      text not null check (source in ('voucher', 'admin_grant')),
+  order_ref   text,
+  granted_at  timestamptz not null default now(),
+  primary key (learner_id, chapter)
+);
+create index if not exists idx_entitlements_learner on lesson_entitlements(learner_id);
+
+create table if not exists vouchers (
+  code        text primary key,
+  chapter     int  not null default 0 check (chapter between 0 and 4),
+  status      text not null default 'active' check (status in ('active', 'redeemed', 'void')),
+  price_thb   int,
+  redeemed_by uuid,
+  redeemed_at timestamptz,
+  created_by  uuid references auth.users(id),
+  created_at  timestamptz not null default now()
+);
+
+-- Service-role only (api/entitlements/*, api/vouchers/*) — no anon/authenticated
+-- policy, same pattern as enrollments/lesson_progress above. Money-adjacent tables
+-- are never written directly by the client.
+alter table lesson_entitlements enable row level security;
+alter table vouchers enable row level security;

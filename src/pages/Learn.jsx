@@ -5,6 +5,9 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
+import { useEntitlementStore } from '../stores/entitlementStore'
+import { useEnsureEntitlements } from '../hooks/useEntitlements'
+import { isChapterUnlocked, CHAPTER_PRICES } from '../config/pricing'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import { computeBadges } from '../utils/badges'
@@ -18,6 +21,8 @@ export default function Learn() {
   const postTestDone = useProgressStore((s) => s.postTestDone)
 
   useEnsureProgress(learner?.id)
+  const unlockedChapters = useEntitlementStore((s) => s.chapters)
+  useEnsureEntitlements()
 
   const total = lessons.length
   const done = lessons.filter((l) => readSet.has(l.id)).length
@@ -116,20 +121,23 @@ export default function Learn() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {ch.lessons.map((l) => {
                 const isRead = readSet.has(l.id)
+                // ปลดล็อกด้วยการซื้อ (แยกจาก lessonsLocked ที่ล็อกด้วยลำดับ Pre-test) — หมวด 1 ฟรีเสมอ
+                const paidLocked = !lessonsLocked && !isChapterUnlocked(l.chapter, unlockedChapters)
+                const locked = lessonsLocked || paidLocked
                 const inner = (
                   <>
                     <div style={{
                       width: 38, height: 38, borderRadius: 10,
-                      background: lessonsLocked
+                      background: locked
                         ? 'var(--color-bg-tertiary)'
                         : isRead ? '#D1FAE5' : 'var(--color-bg-tertiary)',
-                      color: lessonsLocked
+                      color: locked
                         ? 'var(--color-text-secondary)'
                         : isRead ? '#065F46' : 'var(--color-text-secondary)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontWeight: 700,
                     }}>
-                      {lessonsLocked
+                      {locked
                         ? <Lock size={18} />
                         : isRead ? <CheckCircle2 size={20} /> : <BookOpen size={18} />}
                     </div>
@@ -137,7 +145,8 @@ export default function Learn() {
                       <div className="text-body-strong">{l.order}. {l.title}</div>
                       <div className="text-caption">{l.summary} • {l.minutes} นาที</div>
                     </div>
-                    {!lessonsLocked && isRead && <span className="badge badge-success">เรียนแล้ว</span>}
+                    {paidLocked && <span className="badge badge-brand">฿{CHAPTER_PRICES[l.chapter]}</span>}
+                    {!locked && isRead && <span className="badge badge-success">เรียนแล้ว</span>}
                   </>
                 )
                 if (lessonsLocked) {
@@ -157,7 +166,7 @@ export default function Learn() {
                     key={l.id}
                     to={`/learn/${l.id}`}
                     className="card"
-                    style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: paidLocked ? 0.85 : 1 }}
                   >
                     {inner}
                   </Link>
