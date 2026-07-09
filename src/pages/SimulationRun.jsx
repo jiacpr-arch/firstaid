@@ -5,6 +5,7 @@ import { scenariosById } from '../courses/firstaid/scenarios'
 import ScenarioRunner from '../components/ScenarioRunner'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
+import { useProgressStore } from '../stores/progressStore'
 import { saveSimulationRun } from '../db/database'
 import { flushSync } from '../db/sync'
 import { fetchContentMedia } from '../utils/lessonMediaSteps'
@@ -16,6 +17,7 @@ export default function SimulationRun() {
   const navigate = useNavigate()
   const scenario = scenariosById[scenarioId]
   const learner = useLearnerStore((s) => s.learner)
+  const markScenarioPassed = useProgressStore((s) => s.markScenarioPassed)
   const [result, setResult] = useState(null)
   const [media, setMedia] = useState([])
 
@@ -48,6 +50,8 @@ export default function SimulationRun() {
       })
       flushSync(learner.id)
     }
+    // ผ่านฉากนี้แล้ว → อัปเดต store ทันที เพื่อให้เกณฑ์ปลดล็อก Post-test นับต่อได้เลย
+    if (passed) markScenarioPassed(scenarioId)
     track('simulation_complete', { scenarioId, score, total, passed })
     setResult({ score, total, passed })
   }
