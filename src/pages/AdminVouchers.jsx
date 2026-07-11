@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Plus, Copy, Check, Ticket } from 'lucide-react'
-import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { isSupabaseConfigured } from '../config/supabaseClient'
+import { adminFetch } from '../utils/adminFetch'
 import { chapters } from '../courses/firstaid/lessons'
 import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, COURSE_BUNDLE_CHAPTER } from '../config/pricing'
 
@@ -30,17 +31,8 @@ export default function AdminVouchers() {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState('')
 
-  const authedFetch = async (url, opts = {}) => {
-    const { data } = await supabase.auth.getSession()
-    const token = data?.session?.access_token
-    return fetch(url, {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opts.headers },
-    })
-  }
-
   const fetchVouchers = async () => {
-    const res = await authedFetch('/api/vouchers/list')
+    const res = await adminFetch('/api/vouchers/list')
     const data = await res.json().catch(() => ({}))
     return res.ok ? data.vouchers || [] : []
   }
@@ -54,7 +46,6 @@ export default function AdminVouchers() {
       setLoading(false)
     })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const create = async () => {
@@ -62,7 +53,7 @@ export default function AdminVouchers() {
     setBusy(true)
     setError('')
     try {
-      const res = await authedFetch('/api/vouchers/create', {
+      const res = await adminFetch('/api/vouchers/create', {
         method: 'POST',
         body: JSON.stringify({ chapter, count: Number(count) || 1, priceThb: priceThb ? Number(priceThb) : null }),
       })

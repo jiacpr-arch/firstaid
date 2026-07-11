@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const {
-    learnerId,
+    learnerId: bodyLearnerId,
     learnerName,
     learnerPhone,
     learnerEmail,
@@ -24,17 +24,30 @@ export default async function handler(req, res) {
     answers,
   } = req.body || {}
   // Contact details + PDPA consent are required for self-service issuance.
-  if (!learnerId || !learnerName || !learnerPhone || !learnerEmail) {
+  if (!bodyLearnerId || !learnerName || !learnerPhone || !learnerEmail) {
     res.status(400).json({ error: 'Missing fields' })
     return
   }
   if (!consent) { res.status(400).json({ error: 'Consent required' }); return }
 
   // Bind to the authenticated learner when a LINE session token is present, so a
-  // cert can't be minted against someone else's learnerId.
+  // cert can't be minted against someone else's learnerId. All DB operations
+  // below must use the reconciled id, never the raw body value.
   const tokenLearnerId = await learnerIdFromToken(admin, req)
-  const { forbidden } = reconcileLearner(learnerId, tokenLearnerId)
+  const { learnerId, forbidden } = reconcileLearner(bodyLearnerId, tokenLearnerId)
   if (forbidden) { res.status(403).json({ error: 'learnerId does not match session' }); return }
+
+  // Anonymous issuance is allowed (offline-first learners who never logged in),
+  // but a learnerId that is bound to a LINE account can only be used with that
+  // account's token — otherwise anyone could mint/block the cert of a known id.
+  if (!tokenLearnerId) {
+    const { data: bound } = await admin
+      .from('line_identities')
+      .select('learner_id')
+      .eq('learner_id', learnerId)
+      .maybeSingle()
+    if (bound) { res.status(403).json({ error: 'Login required for this learnerId' }); return }
+  }
 
   // Idempotent: a learner gets exactly one theory certificate. Return the existing
   // one before doing any writes so repeated taps never create duplicates.

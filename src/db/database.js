@@ -123,6 +123,30 @@ export async function getCertificates(learnerId) {
   return db.certificates.where('learnerId').equals(learnerId).toArray()
 }
 
+// ===== Re-key on canonical-id adoption =====
+// When LINE login adopts the canonical learner id from another device, rows the
+// user already created locally under the throwaway anonymous id would otherwise
+// be stranded (flushSync only queries the new id, so they'd never be pushed).
+// Re-key them to the new id and clear syncedAt so the next flush uploads them.
+export async function rekeyLearnerData(oldId, newId) {
+  if (!oldId || !newId || oldId === newId) return
+  const tables = [db.lessonProgress, db.quizAttempts, db.examAttempts, db.simulationRuns, db.attendance, db.certificates]
+  await db.transaction('rw', tables, async () => {
+    for (const table of ['quizAttempts', 'examAttempts', 'simulationRuns', 'attendance']) {
+      await db[table].where('learnerId').equals(oldId).modify({ learnerId: newId, syncedAt: null })
+    }
+    // lessonProgress dedupes by [learnerId+lessonId] — drop rows the new id already has
+    const rows = await db.lessonProgress.where('learnerId').equals(oldId).toArray()
+    for (const r of rows) {
+      const dupe = await db.lessonProgress
+        .where('[learnerId+lessonId]').equals([newId, r.lessonId]).count()
+      if (dupe) await db.lessonProgress.delete(r.autoId)
+      else await db.lessonProgress.update(r.autoId, { learnerId: newId, syncedAt: null })
+    }
+    await db.certificates.where('learnerId').equals(oldId).modify({ learnerId: newId })
+  })
+}
+
 // ===== Restore from server (cross-device) =====
 // Merges rows pulled from /api/sync/pull into the local Dexie cache, so a
 // learner who logs in with LINE on a new device sees their prior progress

@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabaseClient'
+import { adminFetch } from './adminFetch'
 
 export const BUCKET = 'lesson-media'
 
@@ -22,15 +23,43 @@ export function publicUrl(path) {
 }
 
 // อัปไฟล์ขึ้น Storage แล้วคืน { url, kind, name } — โยน Error ถ้าไม่ใช่รูป/วิดีโอ หรืออัปไม่ผ่าน
+// ขอ signed upload URL จาก API (requireAdmin) ก่อน แล้วอัปตรงขึ้น Storage —
+// bucket ปิด RLS ฝั่งเขียนแล้ว จึงอัปด้วย anon key ตรงๆ ไม่ได้อีก
 export async function uploadMedia(file) {
   const kind = kindOf(file)
   if (kind === 'other') throw new Error(`ไฟล์ "${file.name}" ไม่ใช่รูปหรือวิดีโอ`)
   const path = `${kind === 'image' ? 'images' : 'videos'}/${safeName(file.name)}`
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-    cacheControl: '31536000', upsert: false, contentType: file.type || undefined,
+  const signRes = await adminFetch('/api/media/admin', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'sign-upload', path }),
+  })
+  const signed = await signRes.json().catch(() => ({}))
+  if (!signRes.ok) throw new Error(signed.error || 'ขอสิทธิ์อัปโหลดไม่สำเร็จ (ต้องล็อกอินแอดมิน)')
+  const { error } = await supabase.storage.from(BUCKET).uploadToSignedUrl(path, signed.token, file, {
+    contentType: file.type || undefined,
   })
   if (error) throw error
   return { url: publicUrl(path), kind, name: path.split('/').pop() }
+}
+
+// เขียน/ลบแถว lesson_media ผ่าน API แอดมิน (ตารางปิด RLS ฝั่งเขียนแล้ว)
+export async function insertLessonMedia(row) {
+  const res = await adminFetch('/api/media/admin', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'insert', row }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'บันทึกสื่อไม่สำเร็จ (ต้องล็อกอินแอดมิน)')
+  return data.row
+}
+
+export async function deleteLessonMedia(id) {
+  const res = await adminFetch('/api/media/admin', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'delete', id }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'ลบสื่อไม่สำเร็จ (ต้องล็อกอินแอดมิน)')
 }
 
 // ดึงรหัสวิดีโอจากลิงก์ YouTube (รองรับหลายรูปแบบ) หรือถ้าใส่รหัสมาตรงๆ ก็คืนรหัสนั้น

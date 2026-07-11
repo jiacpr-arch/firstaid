@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
+import { useProgressStore } from './stores/progressStore'
 import { useEnsureLearner } from './hooks/useLearner'
 import { initAuthListener } from './stores/authStore'
 import { startBackgroundSync } from './db/sync'
@@ -67,10 +68,13 @@ export default function App() {
     if (learner?.id) identifyLearner({ learnerId: learner.id, lineUserId: learner.lineUserId, displayName: learner.name })
   }, [learner?.id, learner?.lineUserId, learner?.name])
 
-  // Push offline-first progress up to Supabase (dashboards + cross-device).
+  // Push offline-first progress up to Supabase (dashboards + cross-device) and,
+  // for logged-in learners, pull progress from other devices back down.
   useEffect(() => {
     if (!learner?.id) return
-    return startBackgroundSync(() => learner.id)
+    return startBackgroundSync(() => learner.id, {
+      onPulled: (id) => useProgressStore.getState().refresh(id),
+    })
   }, [learner?.id])
 
   // ยิง $pageview เข้า PostHog ทุกครั้งที่เปลี่ยนหน้า (init ตั้ง capture_pageview:false ไว้

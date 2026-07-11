@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from '../config/supabaseClient'
 // periodic tick), which gives natural event-paced backoff without a scheduler.
 
 let inFlight = null
+let inFlightFor = null
 
 const unsynced = (table, learnerId) =>
   db[table].where('learnerId').equals(learnerId).filter((r) => !r.syncedAt).toArray()
@@ -19,7 +20,13 @@ async function markSynced(table, rows) {
 
 export async function flushSync(learnerId) {
   if (!learnerId || !isSupabaseConfigured) return { skipped: true }
-  if (inFlight) return inFlight
+  if (inFlight) {
+    // A flush for a DIFFERENT learner id (the login/adopt moment) must not be
+    // swallowed by the in-flight one — queue it to run right after.
+    if (inFlightFor === learnerId) return inFlight
+    return inFlight.then(() => flushSync(learnerId))
+  }
+  inFlightFor = learnerId
   inFlight = (async () => {
     try {
       const [lessonProgress, quizAttempts, simulationRuns, examAttempts] = await Promise.all([
@@ -60,9 +67,27 @@ export async function flushSync(learnerId) {
       return { ok: false }
     } finally {
       inFlight = null
+      inFlightFor = null
     }
   })()
   return inFlight
+}
+
+// A pull that failed (login on a flaky connection) is remembered here so the
+// background loop keeps retrying — otherwise a new device would show an empty
+// progress screen forever with no recovery path.
+const PULL_PENDING_KEY = 'firstaid.pullPending'
+
+export function markPullNeeded() {
+  try { localStorage.setItem(PULL_PENDING_KEY, '1') } catch { /* private mode */ }
+}
+
+function clearPullNeeded() {
+  try { localStorage.removeItem(PULL_PENDING_KEY) } catch { /* private mode */ }
+}
+
+function isPullNeeded() {
+  try { return !!localStorage.getItem(PULL_PENDING_KEY) } catch { return false }
 }
 
 // Pulls a learner's progress back down from Supabase and merges it into the
@@ -79,6 +104,7 @@ export async function pullSync(learnerId) {
     if (!res.ok) return { ok: false, status: res.status }
     const data = await res.json()
     await mergeServerProgress(learnerId, data)
+    clearPullNeeded()
     return { ok: true }
   } catch {
     return { ok: false }
@@ -87,18 +113,32 @@ export async function pullSync(learnerId) {
 
 // Wires background sync triggers for a learner: flush now, whenever the device
 // comes back online, when the tab regains focus, and on a slow periodic tick.
+// Logged-in learners also pull periodically so progress made on another device
+// shows up here (pull used to run only once, at first login). onPulled fires
+// after each successful pull so the UI can refresh from Dexie.
 // Returns a cleanup function. Safe to call again when the learner id changes.
-export function startBackgroundSync(getLearnerId) {
+export function startBackgroundSync(getLearnerId, { onPulled } = {}) {
   const run = () => { flushSync(getLearnerId()) }
+  const pull = async () => {
+    const result = await pullSync(getLearnerId())
+    if (result.ok) onPulled?.(getLearnerId())
+  }
   run()
-  const onOnline = () => run()
-  const onVisible = () => { if (document.visibilityState === 'visible') run() }
+  pull()
+  const onOnline = () => { run(); if (isPullNeeded()) pull() }
+  const onVisible = () => {
+    if (document.visibilityState !== 'visible') return
+    run()
+    if (isPullNeeded()) pull()
+  }
   window.addEventListener('online', onOnline)
   document.addEventListener('visibilitychange', onVisible)
   const timer = setInterval(run, 60_000)
+  const pullTimer = setInterval(pull, 5 * 60_000)
   return () => {
     window.removeEventListener('online', onOnline)
     document.removeEventListener('visibilitychange', onVisible)
     clearInterval(timer)
+    clearInterval(pullTimer)
   }
 }

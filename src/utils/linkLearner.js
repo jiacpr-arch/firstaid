@@ -1,7 +1,7 @@
 import { useLearnerStore } from '../stores/learnerStore'
-import { upsertLearner } from '../db/database'
+import { upsertLearner, rekeyLearnerData } from '../db/database'
 import { useProgressStore } from '../stores/progressStore'
-import { pullSync } from '../db/sync'
+import { pullSync, flushSync, markPullNeeded } from '../db/sync'
 
 // Link the local (anonymous) learner profile to the newly authenticated account.
 //
@@ -28,13 +28,21 @@ export async function linkLearnerToAuth({ session, lineUserId, displayName, pict
   setLearner(merged)
   await upsertLearner(merged)
 
-  // Adopting a different id means our in-memory progress is for the wrong learner —
-  // this device has never seen it locally (new device/browser), so pull it down
-  // from Supabase before reloading the progress store from the (now populated)
-  // local cache.
   if (adoptId) {
-    await pullSync(merged.id)
+    // Progress this device already wrote under the throwaway anonymous id must
+    // move to the canonical id first — otherwise flushSync (which queries the
+    // new id) would never push it and it'd be stranded locally forever.
+    await rekeyLearnerData(learner?.id, merged.id)
+
+    // Pull the account's progress from Supabase before reloading the progress
+    // store. A transient failure here used to mean a permanently empty screen —
+    // now the background loop keeps retrying until a pull succeeds.
+    const pulled = await pullSync(merged.id)
+    if (!pulled.ok) markPullNeeded()
     await useProgressStore.getState().refresh(merged.id)
+
+    // Push the re-keyed rows up under the canonical id (fire-and-forget).
+    flushSync(merged.id)
   }
   return merged
 }
