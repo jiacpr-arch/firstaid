@@ -7,6 +7,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
+import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
 import { saveExamAttempt } from '../db/database'
 import { flushSync } from '../db/sync'
 import ProgressBar from '../components/ProgressBar'
@@ -23,9 +24,12 @@ export default function ExamPage({ kind }) {
   const progressLoaded = useProgressStore((s) => s.loaded)
   const markPreTestDone = useProgressStore((s) => s.markPreTestDone)
   const markPostTestDone = useProgressStore((s) => s.markPostTestDone)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   useEnsureProgress(learner?.id)
 
   const allLessonsDone = lessons.length > 0 && lessons.every((l) => readSet.has(l.id))
+  const practiceDone = isPracticeDone(passedScenarioIds)
+  const postReady = allLessonsDone && practiceDone
 
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState({})
@@ -85,20 +89,42 @@ export default function ExamPage({ kind }) {
     return <div className="page-container py-12 text-center text-caption">กำลังโหลด…</div>
   }
 
-  // กัน Post-test ตรง ๆ ผ่าน URL ก่อนเรียนครบ — รอโหลดสถานะก่อนค่อยตัดสิน
-  if (kind === 'post' && progressLoaded && !allLessonsDone && !done) {
-    const remaining = lessons.length - lessons.filter((l) => readSet.has(l.id)).length
+  // กัน Post-test ตรง ๆ ผ่าน URL ก่อนเรียน+ฝึกครบ — รอโหลดสถานะก่อนค่อยตัดสิน
+  if (kind === 'post' && progressLoaded && !postReady && !done) {
+    const lessonsRemaining = lessons.length - lessons.filter((l) => readSet.has(l.id)).length
+    const chaptersRemaining = practiceChaptersRemaining(passedScenarioIds)
+    // เรียนยังไม่ครบ → ให้ไปเรียนก่อน, เรียนครบแล้วแต่ยังฝึกไม่ครบ → ให้ไปฝึก
+    const needLessons = !allLessonsDone
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
           <Lock size={44} color="var(--color-text-secondary)" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>ยังทำ Post-test ไม่ได้</div>
           <div className="text-body" style={{ marginTop: 8 }}>
-            ต้องเรียนให้ครบทุกบทก่อน (เหลืออีก {remaining} บท) จึงจะทำแบบทดสอบหลังเรียนได้
+            ต้องทำให้ครบก่อนจึงจะทำแบบทดสอบหลังเรียนได้:
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {allLessonsDone
+                ? <CheckCircle2 size={18} color="#10B981" />
+                : <Lock size={16} color="var(--color-text-secondary)" />}
+              <span className="text-body">
+                เรียนให้ครบทุกบท{allLessonsDone ? '' : ` (เหลืออีก ${lessonsRemaining} บท)`}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {practiceDone
+                ? <CheckCircle2 size={18} color="#10B981" />
+                : <Lock size={16} color="var(--color-text-secondary)" />}
+              <span className="text-body">
+                ฝึกสถานการณ์ให้ผ่านอย่างน้อย 1 ฉากทุกบท
+                {practiceDone ? '' : ` (เหลืออีก ${chaptersRemaining} บท)`}
+              </span>
+            </div>
           </div>
         </div>
-        <Link to="/learn" className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
-          <ArrowLeft size={16} /> ไปเรียนต่อ
+        <Link to={needLessons ? '/learn' : '/simulation'} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
+          <ArrowLeft size={16} /> {needLessons ? 'ไปเรียนต่อ' : 'ไปฝึกสถานการณ์'}
         </Link>
       </div>
     )

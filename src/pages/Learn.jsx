@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Lock } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Lock, Activity } from 'lucide-react'
 import { lessons, lessonsByChapter } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -8,6 +8,7 @@ import { useEnsureProgress } from '../hooks/useProgress'
 import { useEntitlementStore } from '../stores/entitlementStore'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { isChapterUnlocked, CHAPTER_PRICES } from '../config/pricing'
+import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import { computeBadges } from '../utils/badges'
@@ -17,6 +18,7 @@ export default function Learn() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
   const readSet = useProgressStore((s) => s.readLessonIds)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
   const postTestDone = useProgressStore((s) => s.postTestDone)
 
@@ -28,7 +30,10 @@ export default function Learn() {
   const done = lessons.filter((l) => readSet.has(l.id)).length
   const lessonsLocked = !preTestDone
   const allLessonsDone = total > 0 && done === total
-  const postLocked = !allLessonsDone
+  const practiceDone = isPracticeDone(passedScenarioIds)
+  const practiceRemaining = practiceChaptersRemaining(passedScenarioIds)
+  // Post-test ปลดล็อกเมื่อ "เรียนครบ" และ "ฝึกผ่านอย่างน้อย 1 ฉากทุกบท"
+  const postLocked = !allLessonsDone || !practiceDone
   const earnedBadges = computeBadges({ readLessonIds: readSet, postTestDone })
 
   // บทถัดไปที่ยังไม่ได้เรียน — ใช้ทำปุ่ม "เรียนต่อ" ให้กลับมาเรียนง่าย
@@ -36,12 +41,14 @@ export default function Learn() {
     ? lessons.find((l) => !readSet.has(l.id))
     : null
 
-  // ข้อความบอกขั้นตอนถัดไป — บังคับลำดับ Pre-test → เรียน → Post-test
+  // ข้อความบอกขั้นตอนถัดไป — บังคับลำดับ Pre-test → เรียน → ฝึก → Post-test
   const flowHint = lessonsLocked
-    ? 'ทำ Pre-test ก่อน เพื่อปลดล็อกบทเรียน'
-    : postLocked
-      ? `เรียนให้ครบทุกบท (เหลืออีก ${total - done} บท) เพื่อปลดล็อก Post-test`
-      : 'เรียนครบแล้ว — พร้อมทำ Post-test เพื่อรับใบประกาศ'
+    ? 'ขั้นที่ 1: ทำ Pre-test ก่อน เพื่อปลดล็อกบทเรียน'
+    : !allLessonsDone
+      ? `ขั้นที่ 2: เรียนให้ครบทุกบท (เหลืออีก ${total - done} บท)`
+      : !practiceDone
+        ? `ขั้นที่ 3: ฝึกสถานการณ์ให้ผ่านอย่างน้อย 1 ฉากทุกบท (เหลืออีก ${practiceRemaining} บท) เพื่อปลดล็อก Post-test`
+        : 'ขั้นที่ 4: พร้อมทำ Post-test เพื่อรับใบประกาศ'
 
   return (
     <div className="page-container">
@@ -64,6 +71,13 @@ export default function Learn() {
         {nextUnread && (
           <Link to={`/learn/${nextUnread.id}`} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
             <BookOpen size={16} /> {done > 0 ? 'เรียนต่อ' : 'เริ่มเรียน'}: บทที่ {nextUnread.order} {nextUnread.title}
+            <ChevronRight size={16} />
+          </Link>
+        )}
+        {/* เรียนครบแล้วแต่ยังฝึกไม่ครบ → ดันให้ไปฝึกก่อน (ขั้นก่อน Post-test) */}
+        {allLessonsDone && !practiceDone && (
+          <Link to="/simulation" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+            <Activity size={16} /> ไปฝึกสถานการณ์ (เหลืออีก {practiceRemaining} บท)
             <ChevronRight size={16} />
           </Link>
         )}

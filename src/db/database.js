@@ -98,6 +98,13 @@ export async function getSimulationRun(autoId) {
   return db.simulationRuns.get(Number(autoId))
 }
 
+// scenarioId ของฉากที่ "ผ่านเกณฑ์" (passed) แล้ว — ใช้เป็นเงื่อนไขปลดล็อก Post-test
+export async function getPassedScenarioIds(learnerId) {
+  if (!learnerId) return []
+  const rows = await db.simulationRuns.where('learnerId').equals(learnerId).toArray()
+  return [...new Set(rows.filter((r) => r.passed).map((r) => r.scenarioId))]
+}
+
 // ===== Attendance =====
 export async function saveAttendance(attendance) {
   const row = { uuid: uuidv4(), checkedInAt: new Date().toISOString(), status: 'pending', ...attendance }

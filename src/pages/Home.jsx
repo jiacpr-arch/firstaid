@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom'
 import { BookOpen, Map, Activity, Phone, Award, UserCheck, MessageCircle, ChevronRight } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
+import LearningPathCard from '../components/LearningPathCard'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
+import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
 import { lessons } from '../courses/firstaid/lessons'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 
@@ -33,8 +35,15 @@ export default function Home() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
+  const postTestDone = useProgressStore((s) => s.postTestDone)
   useEnsureProgress(learner?.id)
+
+  const lessonsDone = lessons.filter((l) => readLessonIds.has(l.id)).length
+  const allLessonsDone = lessons.length > 0 && lessonsDone === lessons.length
+  const practiceDone = isPracticeDone(passedScenarioIds)
+  const practiceRemaining = practiceChaptersRemaining(passedScenarioIds)
 
   const nextLesson = preTestDone ? lessons.find((l) => !readLessonIds.has(l.id)) : null
   const studiedToday = localStorage.getItem('lastStudyDate') === new Date().toISOString().slice(0, 10)
@@ -72,6 +81,16 @@ export default function Home() {
           <div className="text-caption" style={{ color: '#7F1D1D' }}>กดเพื่อโทรทันที</div>
         </div>
       </a>
+
+      <LearningPathCard
+        preTestDone={preTestDone}
+        lessonsDone={lessonsDone}
+        lessonsTotal={lessons.length}
+        allLessonsDone={allLessonsDone}
+        practiceDone={practiceDone}
+        practiceRemaining={practiceRemaining}
+        postTestDone={postTestDone}
+      />
 
       {nextLesson && (
         <Link
