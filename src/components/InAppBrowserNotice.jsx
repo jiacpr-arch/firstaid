@@ -3,8 +3,10 @@ import { ExternalLink, Copy, X, Check } from 'lucide-react'
 import { detectInAppBrowser } from '../utils/inAppBrowser'
 import { track } from '../utils/analytics'
 
-// แถบเตือนเมื่อเปิดผ่าน in-app browser ของ FB/IG — แนะนำเปิดใน Chrome/Safari
-// เพื่อให้การแอด LINE ทำงานได้ลื่นขึ้น (กดปิดได้, ขึ้นครั้งเดียวต่อ session)
+// แถบเตือนเมื่อเปิดผ่าน in-app browser ของ FB/IG/LINE — แนะนำเปิดใน Chrome/Safari
+// เพื่อให้การเข้าสู่ระบบด้วย LINE ทำงานได้ลื่นขึ้น (กดปิดได้, ขึ้นครั้งเดียวต่อ session)
+const APP_LABEL = { facebook: 'Facebook', instagram: 'Instagram', line: 'LINE' }
+
 export default function InAppBrowserNotice() {
   const [source] = useState(detectInAppBrowser)
   const [dismissed, setDismissed] = useState(false)
@@ -44,10 +46,10 @@ export default function InAppBrowserNotice() {
     >
       <ExternalLink size={18} style={{ flexShrink: 0, marginTop: 1 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <b>เปิดในเบราว์เซอร์จริงเพื่อแอด LINE ได้ลื่นกว่า</b>
+        <b>เปิดในเบราว์เซอร์จริงเพื่อเข้าสู่ระบบได้ลื่นกว่า</b>
         <div style={{ marginTop: 2 }}>
-          คุณกำลังเปิดผ่านแอป {source === 'facebook' ? 'Facebook' : 'Instagram'} — กดเมนู ⋯
-          มุมขวาบนแล้วเลือก “เปิดในเบราว์เซอร์” (Chrome/Safari)
+          คุณกำลังเปิดผ่านแอป {APP_LABEL[source] || source} — กดเมนู ⋯
+          แล้วเลือก “เปิดในเบราว์เซอร์” (Chrome/Safari) ไม่งั้นการเข้าสู่ระบบด้วย LINE อาจไม่สำเร็จ
         </div>
         <button
           type="button"
