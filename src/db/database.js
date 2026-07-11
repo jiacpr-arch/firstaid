@@ -122,3 +122,41 @@ export async function getCertificates(learnerId) {
   if (!learnerId) return []
   return db.certificates.where('learnerId').equals(learnerId).toArray()
 }
+
+// ===== Restore from server (cross-device) =====
+// Merges rows pulled from /api/sync/pull into the local Dexie cache, so a
+// learner who logs in with LINE on a new device sees their prior progress
+// instead of starting over. Rows are deduped against what's already local
+// (by uuid, or [learnerId+lessonId] for lesson progress) and stamped
+// syncedAt so the push flow never re-sends them.
+async function mergeByUuid(table, learnerId, rows) {
+  const now = new Date().toISOString()
+  for (const r of rows) {
+    if (!r.uuid) continue
+    const exists = await db[table].where('uuid').equals(r.uuid).count()
+    if (exists) continue
+    await db[table].add({ ...r, learnerId, syncedAt: now })
+  }
+}
+
+export async function mergeServerProgress(learnerId, payload) {
+  if (!learnerId || !payload) return
+  const now = new Date().toISOString()
+
+  for (const r of payload.lessonProgress || []) {
+    if (!r.lessonId) continue
+    const exists = await db.lessonProgress
+      .where('[learnerId+lessonId]').equals([learnerId, r.lessonId]).count()
+    if (exists) continue
+    await db.lessonProgress.add({ learnerId, lessonId: r.lessonId, readAt: r.readAt, syncedAt: now })
+  }
+
+  await mergeByUuid('quizAttempts', learnerId, payload.quizAttempts || [])
+  await mergeByUuid('examAttempts', learnerId, payload.examAttempts || [])
+  await mergeByUuid('simulationRuns', learnerId, payload.simulationRuns || [])
+
+  for (const c of payload.certificates || []) {
+    if (!c.id) continue
+    await db.certificates.put({ ...c, learnerId, syncedAt: now })
+  }
+}

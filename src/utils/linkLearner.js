@@ -1,6 +1,7 @@
 import { useLearnerStore } from '../stores/learnerStore'
 import { upsertLearner } from '../db/database'
 import { useProgressStore } from '../stores/progressStore'
+import { pullSync } from '../db/sync'
 
 // Link the local (anonymous) learner profile to the newly authenticated account.
 //
@@ -28,8 +29,11 @@ export async function linkLearnerToAuth({ session, lineUserId, displayName, pict
   await upsertLearner(merged)
 
   // Adopting a different id means our in-memory progress is for the wrong learner —
-  // reload it from the canonical id.
+  // this device has never seen it locally (new device/browser), so pull it down
+  // from Supabase before reloading the progress store from the (now populated)
+  // local cache.
   if (adoptId) {
+    await pullSync(merged.id)
     await useProgressStore.getState().refresh(merged.id)
   }
   return merged

@@ -1,4 +1,4 @@
-import { db } from './database'
+import { db, mergeServerProgress } from './database'
 import { authHeader } from '../utils/authHeader'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 
@@ -63,6 +63,26 @@ export async function flushSync(learnerId) {
     }
   })()
   return inFlight
+}
+
+// Pulls a learner's progress back down from Supabase and merges it into the
+// local Dexie cache — the counterpart to flushSync(), used when a learner logs
+// in with LINE on a device that has no local history for their canonical id
+// (see linkLearnerToAuth). Requires a live session; no-ops otherwise since the
+// server rejects anonymous pulls.
+export async function pullSync(learnerId) {
+  if (!learnerId || !isSupabaseConfigured) return { skipped: true }
+  const headers = await authHeader()
+  if (!headers.Authorization) return { skipped: true }
+  try {
+    const res = await fetch('/api/sync/pull', { headers })
+    if (!res.ok) return { ok: false, status: res.status }
+    const data = await res.json()
+    await mergeServerProgress(learnerId, data)
+    return { ok: true }
+  } catch {
+    return { ok: false }
+  }
 }
 
 // Wires background sync triggers for a learner: flush now, whenever the device
