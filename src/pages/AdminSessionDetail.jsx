@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { ArrowLeft, Check, X, RefreshCw, Download } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { adminFetch } from '../utils/adminFetch'
 
 function exportCsv(rows, filename) {
   const header = ['ชื่อ', 'เบอร์โทร', 'เวลาเช็คชื่อ', 'สถานะ']
@@ -77,10 +78,9 @@ export default function AdminSessionDetail() {
       status: 'approved', approved_by: user.id, approved_at: new Date().toISOString(),
     }).eq('id', att.id)
     if (error) { alert(error.message); return }
-    // Trigger practical certificate issuance via API
-    fetch('/api/certificates/issue-practical', {
+    // Trigger practical certificate issuance via API (requireAdmin-protected)
+    adminFetch('/api/certificates/issue-practical', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ attendanceId: att.id }),
     }).catch(() => {})
     load()

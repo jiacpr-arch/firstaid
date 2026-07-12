@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { lessons } from '../courses/firstaid/lessons'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { algorithms } from '../courses/firstaid/algorithms'
-import { uploadMedia, parseYouTubeId } from '../utils/mediaUpload'
+import { uploadMedia, parseYouTubeId, insertLessonMedia, deleteLessonMedia } from '../utils/mediaUpload'
 import { mediaRowToStep } from '../utils/lessonMediaSteps'
 import LessonStep from '../components/LessonStep'
 
@@ -223,8 +223,7 @@ export default function AdminLessonMedia() {
       ...position,
       ...rest,
     }
-    const { error: e } = await supabase.from('lesson_media').insert(row)
-    if (e) throw new Error(e.message)
+    await insertLessonMedia(row)
     setActiveSlot(null)
     await reload()
   }
@@ -232,8 +231,12 @@ export default function AdminLessonMedia() {
   const onDelete = async (row) => {
     if (!window.confirm('ลบสื่อนี้ออกจากเนื้อหา?')) return
     setDeleteError('')
-    const { error: e } = await supabase.from('lesson_media').delete().eq('id', row.id)
-    if (e) { setDeleteError(e.message); return }
+    try {
+      await deleteLessonMedia(row.id)
+    } catch (e) {
+      setDeleteError(e.message)
+      return
+    }
     reload()
   }
 

@@ -2,16 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Upload, Copy, Check, Image as ImageIcon, Film } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { uploadMedia } from '../utils/mediaUpload'
 
 const BUCKET = 'lesson-media'
-
-// ชื่อไฟล์ปลอดภัย: ตัวเล็ก เว้นวรรค/อักขระพิเศษ → '-' กันชนกันด้วย timestamp
-function safeName(name) {
-  const dot = name.lastIndexOf('.')
-  const base = (dot > 0 ? name.slice(0, dot) : name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-  const ext = (dot > 0 ? name.slice(dot + 1) : '').toLowerCase().replace(/[^a-z0-9]/g, '')
-  return `${Date.now()}-${base || 'file'}${ext ? '.' + ext : ''}`
-}
 
 // สร้างโค้ด step สำหรับวางใน lessons.js
 function snippetFor(kind, url) {
@@ -19,13 +12,6 @@ function snippetFor(kind, url) {
     return `{ type: 'image', src: '${url}',\n  alt: 'คำอธิบายรูป', caption: 'ข้อความใต้รูป' },`
   }
   return `{ type: 'video', src: '${url}',\n  caption: 'คำอธิบายวิดีโอ' },`
-}
-
-function kindOf(file) {
-  if (file.type?.startsWith('image/')) return 'image'
-  if (file.type?.startsWith('video/')) return 'video'
-  return file.name?.match(/\.(png|jpe?g|webp|gif|svg)$/i) ? 'image'
-    : file.name?.match(/\.(mp4|webm|mov|m4v)$/i) ? 'video' : 'other'
 }
 
 const publicUrl = (path) => supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
@@ -66,14 +52,12 @@ export default function AdminMedia() {
     setBusy(true)
     const uploaded = []
     for (const file of Array.from(fileList)) {
-      const kind = kindOf(file)
-      if (kind === 'other') { setError(`ไฟล์ "${file.name}" ไม่ใช่รูปหรือวิดีโอ`); continue }
-      const path = `${kind === 'image' ? 'images' : 'videos'}/${safeName(file.name)}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: '31536000', upsert: false, contentType: file.type || undefined,
-      })
-      if (upErr) { setError(upErr.message); continue }
-      uploaded.push({ name: path.split('/').pop(), url: publicUrl(path), kind })
+      try {
+        const { url, kind, name } = await uploadMedia(file)
+        uploaded.push({ name, url, kind })
+      } catch (e) {
+        setError(e.message)
+      }
     }
     setBusy(false)
     if (uploaded.length) setItems((prev) => [...uploaded, ...prev])

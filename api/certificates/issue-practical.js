@@ -3,6 +3,7 @@ import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
 import { notifyCertIssued } from '../_lib/certNotify.js'
 import { rateLimited } from '../_lib/rateLimit.js'
+import { requireAdmin } from '../_lib/requireAdmin.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
@@ -11,6 +12,11 @@ export default async function handler(req, res) {
 
   const admin = getSupabaseAdmin()
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
+
+  // Practical certs are only issued from the admin session-management UI —
+  // the endpoint must never be callable by (or for) an arbitrary attendanceId.
+  const adminUser = await requireAdmin(req, res)
+  if (!adminUser) return
 
   const { attendanceId } = req.body || {}
   if (!attendanceId) { res.status(400).json({ error: 'Missing attendanceId' }); return }
