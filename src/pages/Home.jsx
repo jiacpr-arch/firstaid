@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Map, Activity, Phone, Award, UserCheck, MessageCircle, ChevronRight } from 'lucide-react'
+import { BookOpen, Map, Activity, Phone, Award, UserCheck, MessageCircle, ChevronRight, Gamepad2 } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import LearningPathCard from '../components/LearningPathCard'
@@ -27,6 +27,7 @@ const QUICK = [
   { to: '/learn', label: 'เริ่มเรียน', desc: '10 บทเรียนสั้น ๆ ประมาณ 1 ชั่วโมง', icon: BookOpen, color: '#16A34A' },
   { to: '/algorithms', label: 'เปิดดูตามอาการ', desc: 'Flowchart ฉุกเฉิน 11 หัวข้อ', icon: Map, color: '#2563EB' },
   { to: '/simulation', label: 'ฝึกสถานการณ์', desc: 'ฝึกตัดสินใจกับเหตุการณ์จำลอง', icon: Activity, color: '#7C3AED' },
+  { to: '/game', label: 'โหมดเกม — FIRST AID HERO', desc: 'เกมตัดสินใจช่วยชีวิต จับเวลา เก็บคอมโบและเหรียญ', icon: Gamepad2, color: '#DB2777' },
   { to: '/certificate', label: 'ใบประกาศของฉัน', desc: 'ดู/ดาวน์โหลดใบประกาศภาคทฤษฎีและปฏิบัติ', icon: Award, color: '#D97706' },
   { to: '/checkin', label: 'เช็คชื่อภาคปฏิบัติ', desc: 'สแกน QR หรือกรอกรหัสจากครูผู้สอน', icon: UserCheck, color: '#0EA5E9' },
 ]

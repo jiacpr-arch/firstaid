@@ -36,6 +36,9 @@ import Settings from './pages/Settings'
 import News from './pages/News'
 import LineCallback from './pages/LineCallback'
 
+// เกมโหมดโบนัส (FIRST AID HERO) — lazy เพื่อไม่ให้ chunk หลักโตจนชน PWA precache cap
+const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
+
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminSessions = lazy(() => import('./pages/AdminSessions'))
@@ -101,6 +104,8 @@ export default function App() {
   }, [])
 
   const isAdmin = location.pathname.startsWith('/admin')
+  // เกมเป็นหน้า full-screen มีปุ่มกลับของตัวเอง — ซ่อนแท็บบาร์/แถบโฆษณาเหมือนกันกับฝั่ง admin
+  const isGame = location.pathname === '/game'
   // Onboarding (soft gate): ครั้งแรกพาไปเริ่มที่บทแรกเพื่อให้ได้เห็นคำชวนแอด LINE @jiacpr
   // หลังเรียนจบบท 1 แต่ "ไม่บังคับ" — ถ้าผู้ใช้กด "ดูภายหลัง" (ตั้ง lineSkippedAt) หรือแอดแล้ว
   // (lineAdded) ก็เข้าทุกหน้าได้อิสระ ลด drop กลางทาง
@@ -111,6 +116,7 @@ export default function App() {
     onboarding &&
     location.pathname !== FIRST_LESSON_PATH &&
     location.pathname !== '/call' &&
+    location.pathname !== '/game' && // เกมเป็นจุดดึงคนเข้าแอป (แชร์ลิงก์/ยิงแอด) — เข้าเล่นได้เลยไม่ต้องผ่าน onboarding
     location.pathname !== '/auth/line/callback'
   ) {
     return <Navigate to={FIRST_LESSON_PATH} replace />
@@ -132,6 +138,11 @@ export default function App() {
 
         <Route path="/simulation" element={<SimulationSelect />} />
         <Route path="/simulation/:scenarioId" element={<SimulationRun />} />
+        <Route path="/game" element={
+          <Suspense fallback={<div className="page-container py-12 text-center text-caption">กำลังโหลดเกม…</div>}>
+            <FirstAidGame />
+          </Suspense>
+        } />
 
         <Route path="/certificate" element={<Certification />} />
         <Route path="/call" element={<EmergencyCall />} />
@@ -170,10 +181,11 @@ export default function App() {
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminVouchers /></RequireAdmin></Suspense>
         } />
       </Routes>
-      {!isAdmin && !onboarding && <HouseAdStrip />}
-      {!isAdmin && !onboarding && <BottomTabBar />}
-      {/* ระหว่าง onboarding ซ่อนแท็บบาร์เพื่อบังคับเรียนบทแรก แต่คงปุ่มโทร 1669 ไว้เสมอ */}
-      {onboarding && <CallEmergencyButton />}
+      {!isAdmin && !onboarding && !isGame && <HouseAdStrip />}
+      {!isAdmin && !onboarding && !isGame && <BottomTabBar />}
+      {/* ระหว่าง onboarding ซ่อนแท็บบาร์เพื่อบังคับเรียนบทแรก แต่คงปุ่มโทร 1669 ไว้เสมอ
+          (ยกเว้นในเกม — ปุ่มลอยทับกล่องบทพูดพอดี และผู้เล่นปกติก็ไม่มีแท็บบาร์ในเกมเช่นกัน) */}
+      {onboarding && !isGame && <CallEmergencyButton />}
       <Analytics />
       <MetaPixel />
     </div>
