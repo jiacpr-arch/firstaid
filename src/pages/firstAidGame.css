@@ -549,6 +549,30 @@
 .cbs-tl-note { color: #8B99C4; font-size: 12.5px; display: block; }
 .cbs-debrief-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 
+/* การ์ดชวนไปเรียนต่อท้ายเกม — เขียวโดดจากโทนกรมท่า แต่ไม่แย่งซีนปุ่มเล่นซ้ำ */
+.cbs-learn-cta {
+  margin-top: 16px;
+  padding: 16px 14px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(55, 200, 113, .45);
+  background: linear-gradient(150deg, rgba(55, 200, 113, .14), rgba(55, 200, 113, .05));
+  text-align: center;
+}
+.cbs-learn-cta-head { font-size: 16px; font-weight: 800; color: var(--cbs-ink); }
+.cbs-learn-cta-sub { font-size: 13.5px; line-height: 1.6; color: var(--cbs-dim); margin: 6px 0 12px; }
+.cbs-btn-learn {
+  width: 100%;
+  padding: 13px 18px;
+  border-radius: 12px;
+  background: var(--cbs-green);
+  color: #082514;
+  font-size: 15.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(55, 200, 113, .3);
+}
+.cbs-btn-learn:active { transform: scale(.98); }
+
 @media (prefers-reduced-motion: reduce) {
   .cbs-shake, .cbs-flash.cbs-go, .cbs-redflash.cbs-go,
   .cbs-title::before, .cbs-stage.cbs-drama::before, .cbs-stage.cbs-drama-red::before,
