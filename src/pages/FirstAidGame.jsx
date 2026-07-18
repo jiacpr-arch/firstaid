@@ -4,6 +4,8 @@ import { AlertTriangle, RefreshCw, Home, Volume2, VolumeX } from 'lucide-react';
 import {
   scenarios, LEVEL_META, TRACK_META, trackOf,
 } from '../courses/firstaid/gameScenarios';
+import { lessons } from '../courses/firstaid/lessons';
+import { useProgressStore } from '../stores/progressStore';
 import { getCharacter } from '../game/characters';
 import CharacterSprite from '../game/CharacterSprite';
 import EcgStrip from '../game/EcgStrip';
@@ -92,6 +94,14 @@ const pool = scenarios;
 
 export default function FirstAidGame() {
   const navigate = useNavigate();
+  // ชวนไปเรียนต่อหลังจบเคส — คนเพิ่งเล่นจบคือคนที่กำลังอินกับเรื่องช่วยชีวิตที่สุด
+  // ชี้ไปบทถัดไปที่ยังไม่อ่าน (คนใหม่ = บทแรก) ถ้าเรียนครบแล้วไม่ต้องโชว์
+  const readLessonIds = useProgressStore((s) => s.readLessonIds);
+  const nextLesson = lessons.find((l) => !readLessonIds.has(l.id));
+  const goLearn = (sc) => {
+    track('game_learn_cta_click', { scenario_id: sc?.id, lesson_id: nextLesson?.id });
+    navigate(`/learn/${nextLesson.id}`);
+  };
   const [reducedMotion] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
@@ -834,6 +844,19 @@ export default function FirstAidGame() {
               </div>
             ))}
           </div>
+          {nextLesson && (
+            <div className="cbs-learn-cta">
+              <div className="cbs-learn-cta-head">
+                💚 อยากช่วยคนตรงหน้าได้จริง ไม่ใช่แค่ในเกม?
+              </div>
+              <div className="cbs-learn-cta-sub">
+                เรียนปฐมพยาบาลออนไลน์ฟรี บทละ 5–10 นาที จบหลักสูตรสอบรับใบเซอร์ได้เลย
+              </div>
+              <button type="button" className="cbs-btn-learn" onClick={() => goLearn(sc)}>
+                เรียนฟรี รับใบเซอร์ →
+              </button>
+            </div>
+          )}
           <div className="cbs-debrief-actions">
             <button type="button" className="cbs-btn-main" onClick={startGame}>
               <RefreshCw size={16} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 8 }} />
