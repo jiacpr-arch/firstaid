@@ -65,6 +65,24 @@ export default function SimulationSelect() {
         )
       ))}
 
+      <Link
+        to="/game"
+        className="card"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, marginTop: 24,
+          background: 'linear-gradient(135deg, #1B2340, #2A1B40)',
+          border: '1.5px solid #4A3D7A',
+        }}
+      >
+        <div style={{ fontSize: 28 }}>🎮</div>
+        <div style={{ flex: 1 }}>
+          <div className="text-body-strong" style={{ color: '#F2C14E' }}>โหมดเกม — FIRST AID HERO</div>
+          <div className="text-caption" style={{ color: '#B8C2E0' }}>
+            ฝึกแบบเกม: จับเวลา เก็บคอมโบ ปลดล็อกเหรียญ (ของแถมสนุกๆ ไม่มีผลต่อใบเซอร์)
+          </div>
+        </div>
+      </Link>
+
       {ungrouped.length > 0 && (
         <div style={{ marginTop: 20 }}>
           <div className="text-body-strong" style={{ marginBottom: 10 }}>อื่นๆ</div>
