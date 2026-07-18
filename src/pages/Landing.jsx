@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import {
   BookOpen, HeartPulse, Bandage, Skull, Phone, Award, MessageCircle,
-  CheckCircle2, ArrowRight, Map, Activity, Gamepad2,
+  CheckCircle2, ArrowRight, Map, Activity,
 } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
+import GamePromoCard from '../components/GamePromoCard'
 import QuickMenu from '../components/QuickMenu'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
@@ -141,6 +142,9 @@ export default function Landing() {
           </div>
         </a>
 
+        {/* ═══ โหมดเกม — จุดเข้าแบบสนุก อยู่ตำแหน่งบนให้เห็นทันที (เข้าได้โดยไม่ติด onboarding) ═══ */}
+        <GamePromoCard source="landing_game_click" />
+
         {/* ═══ ตัวเลขคอร์ส ═══ */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 28 }}>
           {STATS.map(({ value, label, icon: Icon, color }) => (
@@ -162,32 +166,6 @@ export default function Landing() {
         {/* ═══ เมนูทั้งระบบ — ผู้ใช้ใหม่ต้องเห็นครบตั้งแต่หน้าแรกว่ามีอะไรให้ใช้บ้าง ═══ */}
         <div className="text-title" style={{ marginBottom: 14 }}>เข้าใช้งานได้เลย</div>
         <QuickMenu style={{ marginBottom: 28 }} />
-
-        {/* ═══ โหมดเกม — จุดเข้าแบบสนุกสำหรับคนยังไม่พร้อมเรียน (เข้าได้โดยไม่ติด onboarding) ═══ */}
-        <Link
-          to="/game"
-          onClick={() => phCapture('landing_game_click')}
-          className="card"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28,
-            background: 'linear-gradient(135deg, #1B2340, #2A1B40)',
-            border: '1.5px solid #4A3D7A', textDecoration: 'none',
-          }}
-        >
-          <div style={{
-            width: 44, height: 44, borderRadius: 12, background: '#DB277725', color: '#F2C14E',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <Gamepad2 size={22} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div className="text-headline" style={{ color: '#F2C14E' }}>ยังไม่พร้อมเรียน? ลองเล่นเกมก่อน</div>
-            <div className="text-caption" style={{ color: '#B8C2E0' }}>
-              FIRST AID HERO — เกมตัดสินใจช่วยชีวิต 17 เคส เล่นฟรีไม่ต้องสมัคร
-            </div>
-          </div>
-          <ArrowRight size={18} color="#F2C14E" />
-        </Link>
 
         {/* ═══ จะได้เรียนอะไรบ้าง ═══ */}
         <div className="text-title" style={{ marginBottom: 4 }}>จะได้เรียนอะไรบ้าง</div>

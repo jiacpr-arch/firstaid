@@ -3,6 +3,7 @@ import { BookOpen, Phone, MessageCircle, ChevronRight } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import LearningPathCard from '../components/LearningPathCard'
+import GamePromoCard from '../components/GamePromoCard'
 import QuickMenu from '../components/QuickMenu'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -105,6 +106,8 @@ export default function Home() {
           <ChevronRight size={18} color="#2563EB" />
         </Link>
       )}
+
+      <GamePromoCard source="home_game_click" style={{ marginBottom: 16 }} />
 
       <QuickMenu />
 
