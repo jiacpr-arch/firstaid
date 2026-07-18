@@ -4,6 +4,7 @@ import {
   CheckCircle2, ArrowRight, Map, Activity, Gamepad2,
 } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
+import QuickMenu from '../components/QuickMenu'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
@@ -80,7 +81,7 @@ export default function Landing() {
   const ctaTo = hasStarted ? `/learn/${nextLesson.id}` : FIRST_LESSON_PATH
 
   return (
-    <div style={{ paddingBottom: 32 }}>
+    <div>
       {/* ═══ Hero ═══ */}
       <div style={{ background: 'linear-gradient(160deg, #0F1A2E 0%, #14532D 100%)', color: '#fff' }}>
         <div className="page-container" style={{ paddingTop: 40, paddingBottom: 36 }}>
@@ -118,7 +119,7 @@ export default function Landing() {
         </div>
       </div>
 
-      <div className="page-container" style={{ paddingTop: 20, paddingBottom: 0 }}>
+      <div className="page-container" style={{ paddingTop: 20 }}>
         {/* ═══ เหตุฉุกเฉินตอนนี้ — ต้องเข้าถึงได้เสมอแม้อยู่หน้า landing ═══ */}
         <a
           href="tel:1669"
@@ -157,6 +158,10 @@ export default function Landing() {
             </div>
           ))}
         </div>
+
+        {/* ═══ เมนูทั้งระบบ — ผู้ใช้ใหม่ต้องเห็นครบตั้งแต่หน้าแรกว่ามีอะไรให้ใช้บ้าง ═══ */}
+        <div className="text-title" style={{ marginBottom: 14 }}>เข้าใช้งานได้เลย</div>
+        <QuickMenu style={{ marginBottom: 28 }} />
 
         {/* ═══ โหมดเกม — จุดเข้าแบบสนุกสำหรับคนยังไม่พร้อมเรียน (เข้าได้โดยไม่ติด onboarding) ═══ */}
         <Link
