@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Home, Volume2, VolumeX } from 'lucide-react';
 import {
-  scenarios, LEVEL_META, TRACK_META, trackOf,
+  scenarios, LEVEL_META, TRACK_META, trackOf, getScenarioById,
 } from '../courses/firstaid/gameScenarios';
 import { lessons } from '../courses/firstaid/lessons';
 import { useProgressStore } from '../stores/progressStore';
+import { useLearnerStore } from '../stores/learnerStore';
+import { submitGameResult, fetchLeaderboard } from '../services/gameResults';
 import { getCharacter } from '../game/characters';
 import CharacterSprite from '../game/CharacterSprite';
 import EcgStrip from '../game/EcgStrip';
@@ -112,6 +114,20 @@ export default function FirstAidGame() {
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === '1');
   const mutedRef = useRef(muted);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
+
+  // ตัวตนผู้เล่น (learner ภายในเครื่อง) — ใช้ส่งผลขึ้น leaderboard และ mark แถวของตัวเอง
+  const learner = useLearnerStore((s) => s.learner);
+  // อันดับผู้เล่น: 'loading' | 'error' | rows[] — โหลดเมื่อกดเปิดหน้า board
+  const [board, setBoard] = useState('loading');
+
+  function openBoard() {
+    setScreen('board');
+    window.scrollTo(0, 0);
+    setBoard('loading');
+    fetchLeaderboard(learner?.id).then((rows) => {
+      setBoard(rows || 'error');
+    });
+  }
 
   // ---- engine state: mutable ใน ref (logic) + snapshot state (render) ----
   const S = useRef(createInitialState(DEFAULT_DIFFICULTY));
@@ -284,6 +300,22 @@ export default function FirstAidGame() {
       setAwardsTick((n) => n + 1);
     }
     setFreshAwards(fresh);
+    // ส่งผลขึ้น leaderboard (best-effort — ออฟไลน์/ล่มก็ไม่กระทบเกม)
+    if (learner?.id) {
+      submitGameResult({
+        uuid: crypto.randomUUID(),
+        learnerId: learner.id,
+        displayName: learner.name || null,
+        scenarioId: sc.id,
+        difficulty: st.difficulty,
+        won,
+        grade,
+        score,
+        wrong: st.wrong,
+        durationSeconds: Math.round(st.simTime),
+        finishedAt: new Date().toISOString(),
+      });
+    }
     track('game_completed', {
       scenario_id: sc.id,
       difficulty: st.difficulty,
@@ -533,6 +565,46 @@ export default function FirstAidGame() {
     });
   }
 
+  // ============ LEADERBOARD (อันดับผู้เล่น) ============
+  if (screen === 'board') {
+    return (
+      <div className="cbs-app">
+        <section className="cbs-select">
+          <div className="cbs-eyebrow">{GAME_EYEBROW} · อันดับผู้เล่น</div>
+          <h1 className="cbs-select-title"><span className="cbs-gold-text">TOP 20</span> ฮีโร่คะแนนสูงสุด</h1>
+          <p className="cbs-select-sub">คะแนนรอบเดียวที่ดีที่สุดของแต่ละคน — ตั้งชื่อของคุณได้ที่หน้า "ใบประกาศของฉัน"</p>
+          {board === 'loading' && <div className="cbs-board-empty">กำลังโหลดอันดับ…</div>}
+          {board === 'error' && <div className="cbs-board-empty">โหลดอันดับไม่ได้ตอนนี้ — ลองใหม่อีกครั้งภายหลัง</div>}
+          {Array.isArray(board) && board.length === 0 && (
+            <div className="cbs-board-empty">ยังไม่มีใครขึ้นกระดาน — ผ่านเคสแรกให้ได้ แล้วชื่อคุณจะอยู่ตรงนี้!</div>
+          )}
+          {Array.isArray(board) && board.length > 0 && (
+            <div className="cbs-board">
+              {board.map((r) => (
+                <div key={r.rank} className={`cbs-board-row ${r.you ? 'cbs-board-you' : ''}`}>
+                  <span className="cbs-board-rank">
+                    {r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : r.rank}
+                  </span>
+                  <span className="cbs-board-name">
+                    {r.name}{r.you ? ' (คุณ)' : ''}
+                    <span className="cbs-board-meta">
+                      {getScenarioById(r.scenarioId)?.id === r.scenarioId ? getScenarioById(r.scenarioId).title : r.scenarioId}
+                      {' · '}{getDifficulty(r.difficulty).label}{r.grade ? ` · เกรด ${r.grade}` : ''}
+                    </span>
+                  </span>
+                  <span className="cbs-board-score">{r.score}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" className="cbs-btn-ghost" onClick={() => { setScreen('select'); window.scrollTo(0, 0); }}>
+            ← กลับไปเลือกเคส
+          </button>
+        </section>
+      </div>
+    );
+  }
+
   // ============ AWARDS (รางวัล/เหรียญ) ============
   if (screen === 'awards') {
     // awardsTick อ้างในนี้เพื่อให้ re-read localStorage หลังจบเคส (ค่าเหรียญ sticky)
@@ -688,6 +760,9 @@ export default function FirstAidGame() {
           </div>
           <button type="button" className="cbs-btn-ghost" onClick={() => { setScreen('awards'); window.scrollTo(0, 0); }}>
             🏅 รางวัลของฉัน ({badgeList.filter((b) => b.earned).length}/{badgeList.length})
+          </button>
+          <button type="button" className="cbs-btn-ghost" onClick={openBoard}>
+            🏆 อันดับผู้เล่น TOP 20
           </button>
           <button type="button" className="cbs-btn-ghost" onClick={() => navigate('/')}>
             <Home size={15} strokeWidth={2.4} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />
