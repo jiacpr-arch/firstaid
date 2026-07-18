@@ -13,17 +13,21 @@
 // ไม่มีผลต่อ progress, post-test หรือใบเซอร์
 
 import { faCprAed } from './game/faCprAed';
+import { faDrowning } from './game/faDrowning';
 import { faChoking } from './game/faChoking';
 import { faBleeding } from './game/faBleeding';
 import { faBurn } from './game/faBurn';
 import { faSeizure } from './game/faSeizure';
 import { faStroke } from './game/faStroke';
+import { faSnakeBite } from './game/faSnakeBite';
+import { faHeatStroke } from './game/faHeatStroke';
 
 // เคสทั้งหมด — จัดเรียงตามหมวด (track) และในหมวดเรียงง่าย→ยาก
 // ลำดับในนี้คือ "บันได" ของแต่ละหมวดบนหน้าเลือกเคส + ลำดับเคสแนะนำถัดไป
 export const scenarios = [
   // ── 🫀 หมดสติ · CPR + AED ──
   faCprAed,
+  faDrowning,
   // ── 🌬 สำลัก ──
   faChoking,
   // ── 🩹 เลือดออก · แผลไหม้ ──
@@ -32,6 +36,9 @@ export const scenarios = [
   // ── 🧠 ชัก · หลอดเลือดสมอง ──
   faSeizure,
   faStroke,
+  // ── 🌿 กลางแจ้ง ──
+  faSnakeBite,
+  faHeatStroke,
 ];
 
 export function getScenarioById(id) {
@@ -64,6 +71,10 @@ export const TRACK_META = {
   neuro: {
     label: 'ชัก · หลอดเลือดสมอง', icon: '🧠', order: 3,
     desc: 'ดูแลคนชักให้ปลอดภัย · จับสัญญาณ FAST แล้วรีบโทร 1669',
+  },
+  outdoor: {
+    label: 'กลางแจ้ง', icon: '🌿', order: 4,
+    desc: 'งูกัด · ลมแดด — เหตุนอกบ้านที่ความเชื่อผิดๆ อันตรายที่สุด',
   },
   other: { label: 'เคสอื่นๆ', icon: '📋', order: 9, desc: '' },
 };
