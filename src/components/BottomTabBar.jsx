@@ -1,11 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, BookOpen, Map, Activity, Phone } from 'lucide-react'
+import { Home, BookOpen, Map, Activity, Gamepad2, Phone } from 'lucide-react'
 
 const ITEMS = [
   { to: '/', label: 'หน้าหลัก', icon: Home, exact: true },
   { to: '/learn', label: 'เรียน', icon: BookOpen },
   { to: '/algorithms', label: 'Algorithm', icon: Map },
   { to: '/simulation', label: 'ฝึก', icon: Activity },
+  { to: '/game', label: 'เกม', icon: Gamepad2 },
   { to: '/call', label: '1669', icon: Phone, danger: true },
 ]
 

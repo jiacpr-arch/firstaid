@@ -5,8 +5,8 @@
 ## โปรเจกต์คืออะไร
 
 **FirstAid Morroo** (https://firstaid.morroo.com) — แพลตฟอร์มเรียนปฐมพยาบาลออนไลน์ (PWA)
-สำหรับบุคคลทั่วไป โดย Jia Training Center: 10 บทเรียน (~1 ชม.), 11 ผังช่วยชีวิตฉุกเฉิน,
-5 สถานการณ์จำลอง, สอบ pre/post-test และออกใบเซอร์ — React + Vite, deploy บน Vercel,
+สำหรับบุคคลทั่วไป โดย Jia Training Center: 24 บทเรียนสั้น ๆ, 17 ผังช่วยชีวิตฉุกเฉิน,
+40 สถานการณ์จำลอง, สอบ pre/post-test และออกใบเซอร์ — React + Vite, deploy บน Vercel,
 ข้อมูล sync ผ่าน Supabase
 
 คำสั่งหลัก: `npm run dev` (รัน local), `npm run build` (build + ตรวจว่าโค้ดพัง), `npx eslint src/`

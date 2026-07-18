@@ -108,8 +108,7 @@ export default function App() {
   // คอร์สคืออะไร ฟรีไหม ได้อะไร แล้วค่อยกดเริ่มเอง) ส่วนคำชวนแอด LINE @jiacpr ยังอยู่ที่
   // ท้ายบทที่ 1 เหมือนเดิม (LineGateCard ใน LessonReader) — จบบท 1 แล้วแอด/ข้าม ถึงพ้นสถานะนี้
   const onboarding = !isAdmin && (!learner || (!learner.lineAdded && !learner.lineSkippedAt))
-  // หน้า landing เป็นหน้าขาย — ซ่อนแท็บบาร์/แถบโฆษณาให้โฟกัสปุ่ม "เริ่มเรียน" อย่างเดียว
-  const isLanding = onboarding && location.pathname === '/'
+  // หน้า landing โชว์แท็บบาร์/แถบโฆษณาเหมือนหน้าปกติ — ผู้ใช้ใหม่ต้องเห็นทางเข้าทั้งระบบตั้งแต่แรก
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -170,8 +169,8 @@ export default function App() {
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminVouchers /></RequireAdmin></Suspense>
         } />
       </Routes>
-      {!isAdmin && !isGame && !isLanding && <HouseAdStrip />}
-      {!isAdmin && !isGame && !isLanding && <BottomTabBar />}
+      {!isAdmin && !isGame && <HouseAdStrip />}
+      {!isAdmin && !isGame && <BottomTabBar />}
       <Analytics />
       <MetaPixel />
     </div>
