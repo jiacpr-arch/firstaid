@@ -704,3 +704,29 @@
 .cbs-status-line.cbs-bad { color: var(--cbs-red); animation: cbs-blink 1s steps(2) infinite; }
 .cbs-status-line.cbs-warn { color: var(--cbs-gold); }
 .cbs-status-line.cbs-good { color: var(--cbs-green); }
+
+/* ── FirstAid: กระดานอันดับผู้เล่น (leaderboard) ── */
+.cbs-board { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 18px; }
+.cbs-board-row {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(20, 27, 51, .85); border: 2px solid #2A3560; border-radius: 10px;
+  padding: 9px 12px; text-align: left;
+}
+.cbs-board-you { border-color: var(--cbs-gold); box-shadow: 0 0 10px rgba(242, 193, 78, .25); }
+.cbs-board-rank {
+  font-family: var(--cbs-mono); font-size: 14px; font-weight: 800; color: #8B99C4;
+  min-width: 30px; text-align: center;
+}
+.cbs-board-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--cbs-ink); min-width: 0; }
+.cbs-board-name .cbs-board-meta {
+  display: block; font-size: 10.5px; font-weight: 500; color: #8B99C4; margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cbs-board-score {
+  font-family: var(--cbs-mono); font-variant-numeric: tabular-nums;
+  font-size: 16px; font-weight: 800; color: var(--cbs-gold);
+}
+.cbs-board-empty {
+  color: #8B99C4; font-size: 13px; padding: 26px 10px; text-align: center;
+  border: 2px dashed #2A3560; border-radius: 10px; margin: 14px 0 18px;
+}
