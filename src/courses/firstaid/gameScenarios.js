@@ -15,12 +15,20 @@
 import { faCprAed } from './game/faCprAed';
 import { faDrowning } from './game/faDrowning';
 import { faChoking } from './game/faChoking';
+import { faInfantChoking } from './game/faInfantChoking';
+import { faAnaphylaxis } from './game/faAnaphylaxis';
+import { faChestPain } from './game/faChestPain';
 import { faBleeding } from './game/faBleeding';
 import { faBurn } from './game/faBurn';
+import { faFracture } from './game/faFracture';
+import { faSpine } from './game/faSpine';
 import { faSeizure } from './game/faSeizure';
+import { faFainting } from './game/faFainting';
 import { faStroke } from './game/faStroke';
+import { faHypoglycemia } from './game/faHypoglycemia';
 import { faSnakeBite } from './game/faSnakeBite';
 import { faHeatStroke } from './game/faHeatStroke';
+import { faChemical } from './game/faChemical';
 
 // เคสทั้งหมด — จัดเรียงตามหมวด (track) และในหมวดเรียงง่าย→ยาก
 // ลำดับในนี้คือ "บันได" ของแต่ละหมวดบนหน้าเลือกเคส + ลำดับเคสแนะนำถัดไป
@@ -30,15 +38,24 @@ export const scenarios = [
   faDrowning,
   // ── 🌬 สำลัก ──
   faChoking,
-  // ── 🩹 เลือดออก · แผลไหม้ ──
+  faInfantChoking,
+  // ── 💊 แพ้รุนแรง · เจ็บหน้าอก ──
+  faAnaphylaxis,
+  faChestPain,
+  // ── 🩹 เลือดออก · บาดเจ็บ ──
   faBleeding,
   faBurn,
-  // ── 🧠 ชัก · หลอดเลือดสมอง ──
+  faFracture,
+  faSpine,
+  // ── 🧠 เป็นลม · ชัก · สมอง ──
+  faFainting,
   faSeizure,
   faStroke,
-  // ── 🌿 กลางแจ้ง ──
+  faHypoglycemia,
+  // ── 🌿 กลางแจ้ง · สารเคมี ──
   faSnakeBite,
   faHeatStroke,
+  faChemical,
 ];
 
 export function getScenarioById(id) {
@@ -62,19 +79,23 @@ export const TRACK_META = {
   },
   choking: {
     label: 'สำลัก', icon: '🌬', order: 1,
-    desc: 'อาหารติดคอ พูดไม่ออก — รัดกระตุกหน้าท้องให้ทันก่อนหมดสติ',
+    desc: 'ผู้ใหญ่รัดกระตุกหน้าท้อง · ทารกตบหลัง 5 กระแทกอก 5 — ให้ทันก่อนหมดสติ',
+  },
+  medical: {
+    label: 'แพ้รุนแรง · เจ็บหน้าอก', icon: '💊', order: 2,
+    desc: 'EpiPen ให้ทัน · แน่นอกร้าวแขน อย่ารอ "เดี๋ยวก็หาย" — โทร 1669',
   },
   trauma: {
-    label: 'เลือดออก · แผลไหม้', icon: '🩹', order: 2,
-    desc: 'ห้ามเลือดให้ทัน · ระบายความร้อนแผลไหม้ให้ถูกวิธี',
+    label: 'เลือดออก · บาดเจ็บ', icon: '🩹', order: 3,
+    desc: 'ห้ามเลือด · แผลไหม้ · ดามกระดูก · อุบัติเหตุที่ห้ามขยับคนเจ็บมั่วๆ',
   },
   neuro: {
-    label: 'ชัก · หลอดเลือดสมอง', icon: '🧠', order: 3,
-    desc: 'ดูแลคนชักให้ปลอดภัย · จับสัญญาณ FAST แล้วรีบโทร 1669',
+    label: 'เป็นลม · ชัก · สมอง', icon: '🧠', order: 4,
+    desc: 'เป็นลมนอนยกขา · คนชักห้ามยัดปาก · FAST · "คนเมา" ที่จริงๆ คือน้ำตาลต่ำ',
   },
   outdoor: {
-    label: 'กลางแจ้ง', icon: '🌿', order: 4,
-    desc: 'งูกัด · ลมแดด — เหตุนอกบ้านที่ความเชื่อผิดๆ อันตรายที่สุด',
+    label: 'กลางแจ้ง · สารเคมี', icon: '🌿', order: 5,
+    desc: 'งูกัด · ลมแดด · สารเคมีเข้าตา — เหตุนอกบ้านที่ความเชื่อผิดๆ อันตรายที่สุด',
   },
   other: { label: 'เคสอื่นๆ', icon: '📋', order: 9, desc: '' },
 };
