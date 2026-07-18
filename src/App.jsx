@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
@@ -7,20 +7,17 @@ import { useProgressStore } from './stores/progressStore'
 import { useEnsureLearner } from './hooks/useLearner'
 import { initAuthListener } from './stores/authStore'
 import { startBackgroundSync } from './db/sync'
-import { lessons } from './courses/firstaid/lessons'
 import { courseMeta } from './config/courseMode'
 import OfflineIndicator from './components/OfflineIndicator'
 import InAppBrowserNotice from './components/InAppBrowserNotice'
 import MetaPixel from './components/MetaPixel'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
-import CallEmergencyButton from './components/CallEmergencyButton'
 import RequireAdmin from './components/RequireAdmin'
 import { initPostHog, identifyLearner, phCapture } from './lib/posthog'
 
-const FIRST_LESSON_PATH = `/learn/${lessons[0].id}`
-
 import Home from './pages/Home'
+import Landing from './pages/Landing'
 import Learn from './pages/Learn'
 import LessonReader from './pages/LessonReader'
 import ExamPage from './pages/ExamPage'
@@ -106,28 +103,20 @@ export default function App() {
   const isAdmin = location.pathname.startsWith('/admin')
   // เกมเป็นหน้า full-screen มีปุ่มกลับของตัวเอง — ซ่อนแท็บบาร์/แถบโฆษณาเหมือนกันกับฝั่ง admin
   const isGame = location.pathname === '/game'
-  // Onboarding (soft gate): ครั้งแรกพาไปเริ่มที่บทแรกเพื่อให้ได้เห็นคำชวนแอด LINE @jiacpr
-  // หลังเรียนจบบท 1 แต่ "ไม่บังคับ" — ถ้าผู้ใช้กด "ดูภายหลัง" (ตั้ง lineSkippedAt) หรือแอดแล้ว
-  // (lineAdded) ก็เข้าทุกหน้าได้อิสระ ลด drop กลางทาง
-  // ยกเว้นฝั่ง admin และหน้าโทรฉุกเฉิน /call (โทร 1669 ต้องเข้าได้เสมอ)
+  // Onboarding: ผู้ใช้ใหม่ (ยังไม่แอด LINE และยังไม่กดข้าม) เห็นหน้า landing เชิญชวนที่ "/"
+  // แทนแดชบอร์ด Home — ไม่บังคับ redirect เข้าบทเรียนอีกแล้ว (คนคลิกจากแอดต้องเห็นก่อนว่า
+  // คอร์สคืออะไร ฟรีไหม ได้อะไร แล้วค่อยกดเริ่มเอง) ส่วนคำชวนแอด LINE @jiacpr ยังอยู่ที่
+  // ท้ายบทที่ 1 เหมือนเดิม (LineGateCard ใน LessonReader) — จบบท 1 แล้วแอด/ข้าม ถึงพ้นสถานะนี้
   const onboarding = !isAdmin && (!learner || (!learner.lineAdded && !learner.lineSkippedAt))
-
-  if (
-    onboarding &&
-    location.pathname !== FIRST_LESSON_PATH &&
-    location.pathname !== '/call' &&
-    location.pathname !== '/game' && // เกมเป็นจุดดึงคนเข้าแอป (แชร์ลิงก์/ยิงแอด) — เข้าเล่นได้เลยไม่ต้องผ่าน onboarding
-    location.pathname !== '/auth/line/callback'
-  ) {
-    return <Navigate to={FIRST_LESSON_PATH} replace />
-  }
+  // หน้า landing เป็นหน้าขาย — ซ่อนแท็บบาร์/แถบโฆษณาให้โฟกัสปุ่ม "เริ่มเรียน" อย่างเดียว
+  const isLanding = onboarding && location.pathname === '/'
 
   return (
     <div style={{ minHeight: '100vh' }}>
       <InAppBrowserNotice />
       <OfflineIndicator />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={onboarding ? <Landing /> : <Home />} />
         <Route path="/learn" element={<Learn />} />
         <Route path="/learn/:lessonId" element={<LessonReader />} />
         <Route path="/pre-test" element={<ExamPage kind="pre" />} />
@@ -181,11 +170,8 @@ export default function App() {
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminVouchers /></RequireAdmin></Suspense>
         } />
       </Routes>
-      {!isAdmin && !onboarding && !isGame && <HouseAdStrip />}
-      {!isAdmin && !onboarding && !isGame && <BottomTabBar />}
-      {/* ระหว่าง onboarding ซ่อนแท็บบาร์เพื่อบังคับเรียนบทแรก แต่คงปุ่มโทร 1669 ไว้เสมอ
-          (ยกเว้นในเกม — ปุ่มลอยทับกล่องบทพูดพอดี และผู้เล่นปกติก็ไม่มีแท็บบาร์ในเกมเช่นกัน) */}
-      {onboarding && !isGame && <CallEmergencyButton />}
+      {!isAdmin && !isGame && !isLanding && <HouseAdStrip />}
+      {!isAdmin && !isGame && !isLanding && <BottomTabBar />}
       <Analytics />
       <MetaPixel />
     </div>
