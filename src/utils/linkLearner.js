@@ -2,6 +2,7 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { upsertLearner, rekeyLearnerData } from '../db/database'
 import { useProgressStore } from '../stores/progressStore'
 import { pullSync, flushSync, markPullNeeded } from '../db/sync'
+import { authHeader } from './authHeader'
 
 // Link the local (anonymous) learner profile to the newly authenticated account.
 //
@@ -43,6 +44,24 @@ export async function linkLearnerToAuth({ session, lineUserId, displayName, pict
 
     // Push the re-keyed rows up under the canonical id (fire-and-forget).
     flushSync(merged.id)
+
+    // A cohort enrollment made under the throwaway id doesn't follow the rekey
+    // (enrollments live only in Supabase) — re-join under the canonical id so
+    // the learner stays visible on the instructor dashboard.
+    if (merged.cohortCode) {
+      authHeader()
+        .then((h) => fetch('/api/cohorts/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...h },
+          body: JSON.stringify({
+            code: merged.cohortCode,
+            learnerId: merged.id,
+            name: merged.name || null,
+            phone: merged.phone || null,
+          }),
+        }))
+        .catch(() => {})
+    }
   }
   return merged
 }

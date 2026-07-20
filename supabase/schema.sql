@@ -230,3 +230,12 @@ create table if not exists vouchers (
 -- are never written directly by the client.
 alter table lesson_entitlements enable row level security;
 alter table vouchers enable row level security;
+
+-- ===== Cohort classroom (join by code + instructor dashboard) =====
+-- learner_id indexes so api/cohorts/summary.js can fan out .in('learner_id', ids)
+-- across the progress tables efficiently. See supabase/cohort-classroom.sql.
+create index if not exists idx_enrollments_learner on enrollments(learner_id);
+create index if not exists idx_lesson_progress_learner on lesson_progress(learner_id);
+create index if not exists idx_quiz_attempts_learner on quiz_attempts(learner_id);
+create index if not exists idx_exam_attempts_learner on exam_attempts(learner_id);
+create index if not exists idx_sim_runs_learner on simulation_runs(learner_id);
