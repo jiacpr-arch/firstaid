@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { ArrowLeft, RefreshCw, Download, Users } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Download, Users, X } from 'lucide-react'
 import { adminFetch } from '../utils/adminFetch'
 import { lessons } from '../courses/firstaid/lessons'
 import { scenarios } from '../courses/firstaid/scenarios'
@@ -104,6 +104,18 @@ export default function AdminCohortDetail() {
   const learners = data?.learners || []
   const sessions = data?.sessions || []
 
+  // เอาออกจากคลาส = ลบแค่ enrollment (ความคืบหน้าการเรียนไม่หาย) — ใช้เคลียร์คน
+  // join ผิดคลาส หรือแถวซ้ำจากเครื่องเก่าก่อนล็อกอิน LINE
+  const removeLearner = async (l) => {
+    if (!confirm(`เอา "${l.name || l.learnerId}" ออกจากคลาสนี้?`)) return
+    const resp = await adminFetch('/api/cohorts/remove-learner', {
+      method: 'POST',
+      body: JSON.stringify({ cohortId: id, learnerId: l.learnerId }),
+    }).catch(() => null)
+    if (!resp?.ok) { alert('เอาออกไม่สำเร็จ — ลองใหม่อีกครั้ง'); return }
+    load()
+  }
+
   return (
     <div className="page-container" style={{ maxWidth: 900 }}>
       <Link to="/admin/cohorts" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
@@ -174,6 +186,7 @@ export default function AdminCohortDetail() {
                 {sessions.map((s) => (
                   <th key={s.id} style={{ padding: '10px 8px' }}>{s.title}</th>
                 ))}
+                <th style={{ padding: '10px 8px' }} aria-label="จัดการ" />
               </tr>
             </thead>
             <tbody>
@@ -199,6 +212,17 @@ export default function AdminCohortDetail() {
                       </td>
                     )
                   })}
+                  <td style={{ padding: '10px 8px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ padding: 6 }}
+                      title="เอาออกจากคลาส"
+                      onClick={() => removeLearner(l)}
+                    >
+                      <X size={16} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -119,12 +119,15 @@ export default function FirstAidGame() {
   const learner = useLearnerStore((s) => s.learner);
   // อันดับผู้เล่น: 'loading' | 'error' | rows[] — โหลดเมื่อกดเปิดหน้า board
   const [board, setBoard] = useState('loading');
+  // ขอบเขตอันดับ: 'all' ทุกคน | 'class' เฉพาะคลาสของผู้เล่น (มีเมื่อ join คลาสแล้ว)
+  const [boardScope, setBoardScope] = useState('all');
 
-  function openBoard() {
+  function openBoard(scope = boardScope) {
+    setBoardScope(scope);
     setScreen('board');
     window.scrollTo(0, 0);
     setBoard('loading');
-    fetchLeaderboard(learner?.id).then((rows) => {
+    fetchLeaderboard(learner?.id, scope === 'class' ? learner?.cohortCode : null).then((rows) => {
       setBoard(rows || 'error');
     });
   }
@@ -571,8 +574,25 @@ export default function FirstAidGame() {
       <div className="cbs-app">
         <section className="cbs-select">
           <div className="cbs-eyebrow">{GAME_EYEBROW} · อันดับผู้เล่น</div>
-          <h1 className="cbs-select-title"><span className="cbs-gold-text">TOP 20</span> ฮีโร่คะแนนสูงสุด</h1>
+          <h1 className="cbs-select-title">
+            <span className="cbs-gold-text">TOP 20</span> {boardScope === 'class' ? 'ในคลาสของคุณ' : 'ฮีโร่คะแนนสูงสุด'}
+          </h1>
           <p className="cbs-select-sub">คะแนนรอบเดียวที่ดีที่สุดของแต่ละคน — ตั้งชื่อของคุณได้ที่หน้า "ใบประกาศของฉัน"</p>
+          {learner?.cohortCode && (
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+              {[['all', 'ทุกคน'], ['class', `คลาส ${learner.cohortName || learner.cohortCode}`]].map(([scope, label]) => (
+                <button
+                  key={scope}
+                  type="button"
+                  className="cbs-btn-ghost"
+                  style={boardScope === scope ? { borderColor: '#F5C142', color: '#F5C142' } : undefined}
+                  onClick={() => boardScope !== scope && openBoard(scope)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {board === 'loading' && <div className="cbs-board-empty">กำลังโหลดอันดับ…</div>}
           {board === 'error' && <div className="cbs-board-empty">โหลดอันดับไม่ได้ตอนนี้ — ลองใหม่อีกครั้งภายหลัง</div>}
           {Array.isArray(board) && board.length === 0 && (

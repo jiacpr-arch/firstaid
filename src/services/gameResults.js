@@ -17,9 +17,13 @@ export async function submitGameResult(payload) {
 }
 
 // ดึงอันดับผู้เล่น top 20 — คืน [] เมื่อโหลดไม่ได้ (ผู้เรียกโชว์ข้อความว่างเอง)
-export async function fetchLeaderboard(learnerId) {
+// cohortCode (ทางเลือก): จัดอันดับเฉพาะคนในคลาสนั้น
+export async function fetchLeaderboard(learnerId, cohortCode) {
   try {
-    const qs = learnerId ? `?learnerId=${encodeURIComponent(learnerId)}` : ''
+    const params = new URLSearchParams()
+    if (learnerId) params.set('learnerId', learnerId)
+    if (cohortCode) params.set('cohortCode', cohortCode)
+    const qs = params.size ? `?${params}` : ''
     const res = await fetch(`/api/game/leaderboard${qs}`)
     if (!res.ok) return null
     const data = await res.json()
