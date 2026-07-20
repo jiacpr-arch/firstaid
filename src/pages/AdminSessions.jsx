@@ -12,9 +12,10 @@ function makeSessionCode() {
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([])
+  const [cohorts, setCohorts] = useState([])
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ title: '', location: '', kind: 'session' })
+  const [form, setForm] = useState({ title: '', location: '', kind: 'session', cohortId: '' })
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -28,6 +29,13 @@ export default function AdminSessions() {
         setSessions(data || [])
         setLoading(false)
       })
+    // คลาส (cohorts) สำหรับผูก session เข้ากับห้องเรียน — โชว์ผลเช็คชื่อบน dashboard คลาส
+    supabase
+      .from('cohorts')
+      .select('id, name')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (!cancelled) setCohorts(data || []) })
     return () => { cancelled = true }
   }, [])
 
@@ -42,13 +50,14 @@ export default function AdminSessions() {
       location: form.location.trim(),
       qr_token: code,
       kind: form.kind,
+      cohort_id: form.cohortId || null,
       starts_at: new Date().toISOString(),
     }
     const { data, error } = await supabase.from('practical_sessions').insert(row).select().single()
     if (error) { alert(error.message); return }
     setSessions((s) => [data, ...s])
     setCreating(false)
-    setForm({ title: '', location: '', kind: 'session' })
+    setForm({ title: '', location: '', kind: 'session', cohortId: '' })
   }
 
   return (
@@ -91,6 +100,18 @@ export default function AdminSessions() {
           <input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={form.kind === 'booth' ? 'เช่น Health Expo 2025' : 'เช่น รุ่นที่ 7 / 5 มิ.ย. 68'} />
           <label className="label" style={{ marginTop: 10 }}>สถานที่</label>
           <input className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="เช่น ห้องประชุม รพ.ABC" />
+          {form.kind === 'session' && cohorts.length > 0 && (
+            <>
+              <label className="label" style={{ marginTop: 10 }}>ผูกกับคลาส (ไม่บังคับ)</label>
+              <select className="input" value={form.cohortId} onChange={(e) => setForm({ ...form, cohortId: e.target.value })}>
+                <option value="">— ไม่ผูกคลาส —</option>
+                {cohorts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <div className="text-caption" style={{ marginTop: 4 }}>
+                ผูกแล้วผลเช็คชื่อจะขึ้นใน dashboard ของคลาสนั้น — สร้าง 1 session ต่อ 1 ฐาน (เช่น "ฐาน CPR", "ฐาน AED")
+              </div>
+            </>
+          )}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setCreating(false)}>ยกเลิก</button>
             <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={create}>สร้าง</button>

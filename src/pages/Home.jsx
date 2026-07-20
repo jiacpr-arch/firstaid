@@ -5,6 +5,7 @@ import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import LearningPathCard from '../components/LearningPathCard'
 import GamePromoCard from '../components/GamePromoCard'
 import QuickMenu from '../components/QuickMenu'
+import StreakBadge from '../components/StreakBadge'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
@@ -75,6 +76,8 @@ export default function Home() {
           <div className="text-caption" style={{ color: '#7F1D1D' }}>กดเพื่อโทรทันที</div>
         </div>
       </a>
+
+      <StreakBadge />
 
       <LearningPathCard
         preTestDone={preTestDone}
@@ -147,6 +150,7 @@ export default function Home() {
 
       <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)' }}>
         {learner?.name ? `กำลังเรียนในชื่อ ${learner.name}` : 'ยังไม่ได้ตั้งชื่อ — แตะ "ใบประกาศของฉัน" เพื่อกรอกชื่อ'}
+        {learner?.cohortName ? ` · คลาส ${learner.cohortName}` : ''}
       </div>
 
       <CallEmergencyButton />

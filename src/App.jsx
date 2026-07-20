@@ -29,6 +29,7 @@ import Certification from './pages/Certification'
 import EmergencyCall from './pages/EmergencyCall'
 import CheckIn from './pages/CheckIn'
 import CheckInScan from './pages/CheckInScan'
+import JoinClass from './pages/JoinClass'
 import Settings from './pages/Settings'
 import News from './pages/News'
 import LineCallback from './pages/LineCallback'
@@ -41,6 +42,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminSessions = lazy(() => import('./pages/AdminSessions'))
 const AdminSessionDetail = lazy(() => import('./pages/AdminSessionDetail'))
 const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
+const AdminCohortDetail = lazy(() => import('./pages/AdminCohortDetail'))
 const AdminCertificates = lazy(() => import('./pages/AdminCertificates'))
 const AdminMedia = lazy(() => import('./pages/AdminMedia'))
 const AdminLessonMedia = lazy(() => import('./pages/AdminLessonMedia'))
@@ -137,6 +139,8 @@ export default function App() {
         <Route path="/checkin" element={<CheckIn />} />
         <Route path="/checkin/scan" element={<CheckInScan />} />
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
+        <Route path="/join" element={<JoinClass />} />
+        <Route path="/join/:code" element={<JoinClass />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/news" element={<News />} />
         <Route path="/auth/line/callback" element={<LineCallback />} />
@@ -149,6 +153,9 @@ export default function App() {
         } />
         <Route path="/admin/cohorts" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminCohorts /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/cohorts/:id" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminCohortDetail /></RequireAdmin></Suspense>
         } />
         <Route path="/admin/sessions" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminSessions /></RequireAdmin></Suspense>

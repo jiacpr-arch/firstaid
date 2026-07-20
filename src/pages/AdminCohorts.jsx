@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Users } from 'lucide-react'
+import { ArrowLeft, Plus, Users, ChevronRight } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 
 function makeCohortCode() {
@@ -67,13 +67,14 @@ export default function AdminCohorts() {
           <div className="callout callout-info">ยังไม่ได้เชื่อมต่อ Supabase</div>
         )}
         {cohorts.map((c) => (
-          <div key={c.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link key={c.id} to={`/admin/cohorts/${c.id}`} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
             <Users size={22} color="#16A34A" />
             <div style={{ flex: 1 }}>
               <div className="text-body-strong">{c.name}</div>
-              <div className="text-caption">รหัสเข้าร่วม {c.code}</div>
+              <div className="text-caption">รหัสเข้าร่วม {c.code} — แตะดู dashboard ความคืบหน้า</div>
             </div>
-          </div>
+            <ChevronRight size={18} color="var(--color-text-muted)" />
+          </Link>
         ))}
       </div>
     </div>
