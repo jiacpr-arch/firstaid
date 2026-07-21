@@ -6,6 +6,7 @@ import LearningPathCard from '../components/LearningPathCard'
 import GamePromoCard from '../components/GamePromoCard'
 import QuickMenu from '../components/QuickMenu'
 import StreakBadge from '../components/StreakBadge'
+import DailyQuiz from '../components/DailyQuiz'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
@@ -109,6 +110,8 @@ export default function Home() {
           <ChevronRight size={18} color="#2563EB" />
         </Link>
       )}
+
+      <DailyQuiz />
 
       <GamePromoCard source="home_game_click" style={{ marginBottom: 16 }} />
 
