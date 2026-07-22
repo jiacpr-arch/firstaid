@@ -123,6 +123,32 @@ export function playAchievementSound() {
   notes.forEach((f, i) => setTimeout(() => playBeep(f, 0.1, 0.18), i * 80))
 }
 
+// จังหวะ "ตุบ" เดี่ยวของเสียงหัวใจ — sine กวาดลงต่ำ ให้ได้ยินบนลำโพงมือถือ
+function heartThump(ctx, at, vol) {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(150, at)
+  osc.frequency.exponentialRampToValueAtTime(55, at + 0.1)
+  gain.gain.setValueAtTime(vol, at)
+  gain.gain.exponentialRampToValueAtTime(0.001, at + 0.14)
+  osc.start(at)
+  osc.stop(at + 0.15)
+}
+
+// หัวใจเต้นหนึ่งรอบ "ตุบ-ตุบ" (lub-dub) — เลเยอร์ความกดดันพื้นหลังของเกม
+export function playHeartbeatThump(volume = 0.12) {
+  try {
+    const ctx = getAudioContext()
+    heartThump(ctx, ctx.currentTime, volume)
+    heartThump(ctx, ctx.currentTime + 0.16, volume * 0.6)
+  } catch {
+    /* audio not available */
+  }
+}
+
 // ช็อตสำคัญ (ป้าย interstitial เด้ง) — เสียงตุบจาก white noise ผ่าน lowpass
 export function playImpactSound() {
   try {
