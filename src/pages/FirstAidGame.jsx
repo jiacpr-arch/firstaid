@@ -22,6 +22,7 @@ import {
   playMetronomeClick, playBeep, playTapSound, playTypeBlip,
   playChoiceAppear, playTickSound, playCorrectSound, playComboBreakSound,
   playWinJingle, playLoseSound, playAchievementSound, playImpactSound,
+  playHeartbeatThump,
 } from '../utils/sound';
 import { track } from '../utils/analytics';
 import {
@@ -217,6 +218,21 @@ export default function FirstAidGame() {
     t.type = null; t.dec = null; t.metronome = null; t.misc = [];
   }, []);
   useEffect(() => clearAllTimers, [clearAllTimers]);
+
+  // เลเยอร์ความกดดัน: เสียงหัวใจเต้น "ตุบ-ตุบ" พื้นหลังระหว่างเล่น
+  // — HP ยิ่งน้อยยิ่งเต้นเร็ว/ดังขึ้น, ฟื้นแล้ว (ROSC) ช้าลงเบาลงเป็นโทนสงบ
+  // — หยุดระหว่าง CPR ให้ metronome นำจังหวะปั๊มแทน (จังหวะ 110/นาทีคือสาระของบทเรียน)
+  useEffect(() => {
+    if (screen !== 'game' || muted) return undefined;
+    if (view.cpr && !view.rosc) return undefined;
+    if (view.hp <= 0) return undefined;
+    const maxHp = view.maxHp || getDifficulty(view.difficulty).hp;
+    const frac = Math.max(0, Math.min(1, view.hp / maxHp));
+    const bpm = view.rosc ? 64 : 60 + (1 - frac) * 60; // ปกติ ~60 → วิกฤต ~120
+    const vol = view.rosc ? 0.06 : 0.08 + (1 - frac) * 0.12;
+    const id = setInterval(() => playHeartbeatThump(vol), Math.round(60000 / bpm));
+    return () => clearInterval(id);
+  }, [screen, muted, view.cpr, view.rosc, view.hp, view.maxHp, view.difficulty]);
 
   // ---- flow ทั้งหมดเป็น plain functions: เรียกไขว้/เรียกซ้ำกันได้อิสระ
   //      ปลอดภัยจาก stale closure เพราะแตะเฉพาะ ref + state setter (stable) ----
