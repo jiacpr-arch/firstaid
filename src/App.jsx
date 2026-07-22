@@ -32,6 +32,7 @@ import CheckInScan from './pages/CheckInScan'
 import JoinClass from './pages/JoinClass'
 import Settings from './pages/Settings'
 import News from './pages/News'
+import Training from './pages/Training'
 import LineCallback from './pages/LineCallback'
 
 // เกมโหมดโบนัส (FIRST AID HERO) — lazy เพื่อไม่ให้ chunk หลักโตจนชน PWA precache cap
@@ -143,6 +144,7 @@ export default function App() {
         <Route path="/join/:code" element={<JoinClass />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/news" element={<News />} />
+        <Route path="/training" element={<Training />} />
         <Route path="/auth/line/callback" element={<LineCallback />} />
 
         <Route path="/admin/login" element={

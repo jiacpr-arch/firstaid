@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Map, Activity, Award, UserCheck } from 'lucide-react'
+import { BookOpen, Map, Activity, Award, UserCheck, GraduationCap } from 'lucide-react'
 import { lessons } from '../courses/firstaid/lessons'
 import { algorithms } from '../courses/firstaid/algorithms'
 import { scenarios } from '../courses/firstaid/scenarios'
+import { practicalCourse } from '../config/practicalCourse'
 
 // เมนูหลักของระบบ — ใช้ร่วมกันระหว่าง Home และ Landing (นับจำนวนจากข้อมูลจริง ไม่ hardcode)
 const QUICK = [
   { to: '/learn', label: 'เริ่มเรียน', desc: `${lessons.length} บทเรียนสั้น ๆ บทละ 5–10 นาที`, icon: BookOpen, color: '#16A34A' },
+  { to: '/training', label: 'คอร์สอบรมภาคปฏิบัติ', desc: `ฝึกจริงกับครูผู้สอน ${practicalCourse.durationHours} ชม. พร้อมใบเซอร์`, icon: GraduationCap, color: '#DC2626' },
   { to: '/algorithms', label: 'เปิดดูตามอาการ', desc: `Flowchart ฉุกเฉิน ${algorithms.length} หัวข้อ`, icon: Map, color: '#2563EB' },
   { to: '/simulation', label: 'ฝึกสถานการณ์', desc: `ฝึกตัดสินใจกับ ${scenarios.length} เหตุการณ์จำลอง`, icon: Activity, color: '#7C3AED' },
   { to: '/certificate', label: 'ใบประกาศของฉัน', desc: 'ดู/ดาวน์โหลดใบประกาศภาคทฤษฎีและปฏิบัติ', icon: Award, color: '#D97706' },
