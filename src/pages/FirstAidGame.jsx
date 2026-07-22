@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Home, Volume2, VolumeX } from 'lucide-react';
 import {
   scenarios, LEVEL_META, TRACK_META, trackOf, getScenarioById,
@@ -91,6 +91,14 @@ const isUnlocked = (sc, cleared, pool) => lockInfo(sc, cleared, pool).left === 0
 // สุ่มเคสให้ปุ่ม 🎲 — แยกไว้นอก component (react-hooks/purity ไม่ให้เรียก Math.random ใน render)
 const pickRandom = (list) => list[Math.floor(Math.random() * list.length)];
 
+// สุ่มเคสจากที่ปลดล็อกแล้ว (เอาเคสที่ยังไม่ผ่านก่อน) — ใช้ทั้งปุ่ม 🎲 และลิงก์ /game?random=1
+function randomUnlockedCase(cleared, casePool) {
+  const unlockedAll = casePool.filter((c) => isUnlocked(c, cleared, casePool));
+  const fresh = unlockedAll.filter((c) => !cleared.has(c.id));
+  const src = fresh.length ? fresh : unlockedAll;
+  return src.length ? pickRandom(src) : null;
+}
+
 // คลังโจทย์คงที่จากไฟล์ในโค้ด (v1 ไม่มีโหลดจาก backend)
 const pool = scenarios;
 
@@ -144,6 +152,25 @@ export default function FirstAidGame() {
   const [quitMenu, setQuitMenu] = useState(false); // เมนูออก/เล่นใหม่ ระหว่างเล่น
   const [freshAwards, setFreshAwards] = useState([]); // เหรียญที่เพิ่งปลดล็อก (โชว์ใน debrief)
   const [awardsTick, setAwardsTick] = useState(0); // บังคับ re-read เหรียญหลังจบเคส
+
+  // ลิงก์ตรงแบบสุ่มเคส: /game?random=1 (ไว้แปะใน LINE OA welcome message / QR หน้างานบูธ)
+  // เปิดมาแล้วสุ่มเคสที่ปลดล็อกให้ทันที — ลบ param ทิ้งกัน refresh กลางเกมแล้วสุ่มซ้ำ
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (!searchParams.has('random')) return undefined;
+    setSearchParams({}, { replace: true });
+    // สุ่มใน callback (ไม่ setState ตรงๆ ใน effect body — react-hooks/set-state-in-effect)
+    const t = setTimeout(() => {
+      const chosen = randomUnlockedCase(readCleared(), pool);
+      if (chosen) {
+        track('game_random_link', { scenario_id: chosen.id });
+        setSc(chosen);
+        setScreen('title'); // ข้ามหน้าเลือกเคส ไปหน้า title ของเคสที่สุ่มได้เลย
+      }
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [speaker, setSpeaker] = useState(null); // { who, pose, popN }
   const [plate, setPlate] = useState(null); // { name } override (time-skip)
@@ -673,10 +700,8 @@ export default function FirstAidGame() {
 
     // สุ่มเคสจากที่ปลดล็อกแล้ว (เอาเคสที่ยังไม่ผ่านก่อน) — โหมดทบทวนไม่ต้องเลือกเอง
     const randomCase = () => {
-      const unlockedAll = orderedAll.filter((c) => isUnlocked(c, cleared, pool));
-      const fresh = unlockedAll.filter((c) => !cleared.has(c.id));
-      const src = fresh.length ? fresh : unlockedAll;
-      if (src.length) pickScenario(pickRandom(src));
+      const chosen = randomUnlockedCase(cleared, pool);
+      if (chosen) pickScenario(chosen);
     };
 
     const renderCase = (c) => {
