@@ -158,12 +158,16 @@ export default function FirstAidGame() {
 
   // ลิงก์ตรงแบบสุ่มเคส: /game?random=1 (ไว้แปะใน LINE OA welcome message / QR หน้างานบูธ)
   // เปิดมาแล้วสุ่มเคสที่ปลดล็อกให้ทันที — ลบ param ทิ้งกัน refresh กลางเกมแล้วสุ่มซ้ำ
+  // ผูกกับ searchParams (ไม่ใช่ mount-only) ให้ลิงก์ทำงานแม้หน้าเกมเปิดค้างอยู่แล้ว
+  // เช่นกดลิงก์ซ้ำใน PWA ที่แอปยังเปิดอยู่
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     if (!searchParams.has('random')) return undefined;
-    setSearchParams({}, { replace: true });
-    // สุ่มใน callback (ไม่ setState ตรงๆ ใน effect body — react-hooks/set-state-in-effect)
+    // ทำงานใน callback (ไม่ setState ตรงๆ ใน effect body — react-hooks/set-state-in-effect)
+    // และลบ param ใน callback เดียวกัน: ถ้าลบใน effect body ตรงๆ deps จะเปลี่ยน
+    // แล้ว cleanup มา clearTimeout ทิ้งก่อนได้สุ่ม
     const t = setTimeout(() => {
+      setSearchParams({}, { replace: true });
       const chosen = randomUnlockedCase(readCleared(), pool);
       if (chosen) {
         track('game_random_link', { scenario_id: chosen.id });
@@ -172,8 +176,7 @@ export default function FirstAidGame() {
       }
     }, 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   const [speaker, setSpeaker] = useState(null); // { who, pose, popN }
   const [plate, setPlate] = useState(null); // { name } override (time-skip)
