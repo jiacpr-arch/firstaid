@@ -223,19 +223,42 @@ export default function FirstAidGame() {
   useEffect(() => clearAllTimers, [clearAllTimers]);
 
   // เลเยอร์ความกดดัน: เสียงหัวใจเต้น "ตุบ-ตุบ" พื้นหลังระหว่างเล่น
-  // — HP ยิ่งน้อยยิ่งเต้นเร็ว/ดังขึ้น, ฟื้นแล้ว (ROSC) ช้าลงเบาลงเป็นโทนสงบ
-  // — หยุดระหว่าง CPR ให้ metronome นำจังหวะปั๊มแทน (จังหวะ 110/นาทีคือสาระของบทเรียน)
+  // คำนวณ "ความตึงเครียด" ใหม่ทุกจังหวะเต้น จาก HP + ภาวะผู้ป่วย + นาทีบีบคั้นตอนตัดสินใจ
+  // ยิ่งแย่/ยิ่งลุ้น ยิ่งเต้นเร็วและดังขึ้นพร้อมกัน (~55→130 ครั้ง/นาที)
+  // — ระหว่าง CPR เว้นจังหวะให้ metronome นำแทน (110/นาทีคือสาระของบทเรียน)
   useEffect(() => {
     if (screen !== 'game' || muted) return undefined;
-    if (view.cpr && !view.rosc) return undefined;
-    if (view.hp <= 0) return undefined;
-    const maxHp = view.maxHp || getDifficulty(view.difficulty).hp;
-    const frac = Math.max(0, Math.min(1, view.hp / maxHp));
-    const bpm = view.rosc ? 64 : 60 + (1 - frac) * 60; // ปกติ ~60 → วิกฤต ~120
-    const vol = view.rosc ? 0.09 : 0.12 + (1 - frac) * 0.18;
-    const id = setInterval(() => playHeartbeatThump(vol), Math.round(60000 / bpm));
-    return () => clearInterval(id);
-  }, [screen, muted, view.cpr, view.rosc, view.hp, view.maxHp, view.difficulty]);
+    let t = null;
+    const tick = () => {
+      const st = S.current;
+      let period = 800; // ช่วงที่งดตุบ (CPR/หมด HP) — เช็คซ้ำถี่พอให้กลับมาทันเมื่อสถานะเปลี่ยน
+      if (st.hp > 0 && !(st.cpr && !st.rosc)) {
+        if (st.rosc) {
+          // ฟื้นแล้ว — จังหวะสงบ เบาๆ ให้รู้สึกโล่ง
+          if (!mutedRef.current) playHeartbeatThump(0.09);
+          period = Math.round(60000 / 64);
+        } else {
+          const maxHp = st.maxHp || getDifficulty(st.difficulty).hp;
+          const frac = Math.max(0, Math.min(1, st.hp / maxHp));
+          let tension = (1 - frac) * 0.7; // ฐาน: อาการผู้ป่วยยิ่งแย่ยิ่งเครียด
+          if (st.alarm) tension += 0.15; // หมดสติ/ไม่หายใจ
+          if (currentChoiceRef.current) { // กำลังลุ้นตัดสินใจ = ช่วงตื่นเต้นสุด
+            tension += 0.15;
+            const dt = getDifficulty(st.difficulty).decisionTime;
+            const leftFrac = dt > 0 ? Math.max(0, decisionLeftRef.current / dt) : 1;
+            tension += (1 - leftFrac) * 0.3; // เวลายิ่งงวด ยิ่งระทึก
+          }
+          tension = Math.min(1, tension);
+          // ดัง (0.10→0.36) และเร็ว (55→130 bpm) ไปด้วยกันตามระดับความตึงเครียด
+          if (!mutedRef.current) playHeartbeatThump(0.1 + tension * 0.26);
+          period = Math.round(60000 / (55 + tension * 75));
+        }
+      }
+      t = setTimeout(tick, period);
+    };
+    t = setTimeout(tick, 600);
+    return () => clearTimeout(t);
+  }, [screen, muted]);
 
   // ---- flow ทั้งหมดเป็น plain functions: เรียกไขว้/เรียกซ้ำกันได้อิสระ
   //      ปลอดภัยจาก stale closure เพราะแตะเฉพาะ ref + state setter (stable) ----
