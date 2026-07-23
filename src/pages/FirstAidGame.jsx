@@ -232,7 +232,7 @@ export default function FirstAidGame() {
     const maxHp = view.maxHp || getDifficulty(view.difficulty).hp;
     const frac = Math.max(0, Math.min(1, view.hp / maxHp));
     const bpm = view.rosc ? 64 : 60 + (1 - frac) * 60; // ปกติ ~60 → วิกฤต ~120
-    const vol = view.rosc ? 0.06 : 0.08 + (1 - frac) * 0.12;
+    const vol = view.rosc ? 0.09 : 0.12 + (1 - frac) * 0.18;
     const id = setInterval(() => playHeartbeatThump(vol), Math.round(60000 / bpm));
     return () => clearInterval(id);
   }, [screen, muted, view.cpr, view.rosc, view.hp, view.maxHp, view.difficulty]);
