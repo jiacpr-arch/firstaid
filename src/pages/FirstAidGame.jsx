@@ -38,7 +38,52 @@ const GAME_EYEBROW = 'ฮีโร่ปฐมพยาบาล';
 const HISCORE_PREFIX = 'firstaid_game_hiscore';
 const MUTE_KEY = 'firstaid_game_muted';
 const DIFF_KEY = 'firstaid_game_difficulty';
+/** เคยเห็นคำใบ้ "แตะเพื่อเล่นต่อ" แล้วหรือยัง — โชว์ครั้งเดียวต่อเครื่อง */
+const TAP_COACH_KEY = 'firstaid_game_tap_coach';
 const hiscoreKey = (diff) => `${HISCORE_PREFIX}_${diff}`;
+
+/** บทพูดอนุญาต HTML แค่ <span class="cbs-em"> สำหรับเน้นคำ (ดู courses/firstaid/gameScenarios.js) —
+ * parse เฉพาะ pattern นี้แทนการ dangerouslySetInnerHTML ทั้งก้อน กันเนื้อเรื่องที่แอดมิน/AI
+ * แต่งเองในอนาคตแทรก HTML ตามใจชอบได้ ข้อความนอก tag นี้ (รวม `<`/`>` หลุดๆ) render เป็น
+ * literal text เสมอ ไม่ถูกตีความเป็น HTML */
+const EM_OPEN = '<span class="cbs-em">';
+const EM_CLOSE = '</span>';
+function parseEmphasis(text) {
+  const segments = [];
+  let i = 0;
+  while (i < text.length) {
+    const openIdx = text.indexOf(EM_OPEN, i);
+    if (openIdx === -1) {
+      segments.push({ em: false, text: text.slice(i) });
+      break;
+    }
+    if (openIdx > i) segments.push({ em: false, text: text.slice(i, openIdx) });
+    const closeIdx = text.indexOf(EM_CLOSE, openIdx + EM_OPEN.length);
+    if (closeIdx === -1) {
+      // แท็กไม่ปิด — กันเกมค้าง: ถือว่าที่เหลือทั้งหมดเป็นข้อความเน้นแทน
+      segments.push({ em: true, text: text.slice(openIdx + EM_OPEN.length) });
+      break;
+    }
+    segments.push({ em: true, text: text.slice(openIdx + EM_OPEN.length, closeIdx) });
+    i = closeIdx + EM_CLOSE.length;
+  }
+  return segments;
+}
+
+/** บทพูดที่พิมพ์ทีละตัว — reveal ตามจำนวนตัวอักษร ไม่มี HTML */
+function DlgText({ segments, count }) {
+  const parts = [];
+  let remaining = count;
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i];
+    const take = Math.max(0, Math.min(s.text.length, remaining));
+    remaining -= take;
+    if (take) parts.push({ key: i, em: s.em, text: s.text.slice(0, take) });
+  }
+  return parts.map((p) => (
+    <span key={p.key} className={p.em ? 'cbs-em' : undefined}>{p.text}</span>
+  ));
+}
 
 // สำเนาสถานะ engine สำหรับ render (render ห้ามอ่าน ref ตรงๆ)
 function snapshot(st) {
@@ -180,7 +225,8 @@ export default function FirstAidGame() {
 
   const [speaker, setSpeaker] = useState(null); // { who, pose, popN }
   const [plate, setPlate] = useState(null); // { name } override (time-skip)
-  const [dlgHtml, setDlgHtml] = useState('');
+  const [dlgSegments, setDlgSegments] = useState([]);
+  const [dlgCount, setDlgCount] = useState(0);
   const [typing, setTyping] = useState(false);
   const [choice, setChoice] = useState(null); // { q, options, hintTgt }
   const [decisionLeft, setDecisionLeft] = useState(getDifficulty(difficulty).decisionTime);
@@ -196,13 +242,15 @@ export default function FirstAidGame() {
   const timers = useRef({ type: null, dec: null, misc: [], metronome: null });
   const busyRef = useRef(false);
   const [awaitTap, setAwaitTap] = useState(false);
+  // คำใบ้เต็มจอตอนเปิดเกมครั้งแรก — ปิดทิ้งก่อนแตะสักครั้ง
+  const [tapCoach, setTapCoach] = useState(false);
   const currentChoiceRef = useRef(null);
   const retryChoiceRef = useRef(null);
   const decisionLeftRef = useRef(0); // เวลาที่เหลือ ณ วินาทีที่กดเลือก (คำนวณโบนัสความไว)
   const comboBreakN = useRef(0);     // key ให้อนิเมชัน COMBO BREAK เล่นซ้ำได้
   const hintUsedRef = useRef(false); // โหมดง่าย: ใบ้ target หลังตอบผิดครั้งแรกของแต่ละจุด
   const typeDoneRef = useRef(null);
-  const fullHtmlRef = useRef('');
+  const fullSegmentsRef = useRef([]);
   const popCounter = useRef(0);
 
   const stopMetronome = useCallback(() => {
@@ -297,39 +345,38 @@ export default function FirstAidGame() {
     if (fx.cpr && !S.current.cpr) startMetronome();
   }
 
+  function totalChars(segments) {
+    return segments.reduce((n, s) => n + s.text.length, 0);
+  }
+
   function finishTyping() {
     if (timers.current.type) clearTimeout(timers.current.type);
     timers.current.type = null;
-    setDlgHtml(fullHtmlRef.current);
+    setDlgCount(totalChars(fullSegmentsRef.current));
     setTyping(false);
     const done = typeDoneRef.current;
     typeDoneRef.current = null;
     if (done) done();
   }
 
-  function typeText(html, onDone) {
+  function typeText(text, onDone) {
     if (timers.current.type) clearTimeout(timers.current.type);
-    fullHtmlRef.current = html;
+    const segments = parseEmphasis(text);
+    fullSegmentsRef.current = segments;
     typeDoneRef.current = onDone || null;
     setTyping(true);
-    setDlgHtml('');
+    setDlgSegments(segments);
+    setDlgCount(0);
+    const full = segments.map((s) => s.text).join('');
+    const total = full.length;
     let i = 0;
-    let out = '';
     let blipN = 0;
     const step = () => {
-      if (i >= html.length) { finishTyping(); return; }
-      const ch = html[i];
-      if (ch === '<') {
-        const close = html.indexOf('>', i);
-        out += html.slice(i, close + 1);
-        i = close + 1;
-      } else {
-        out += ch;
-        i += 1;
-        // เสียงพิมพ์ทีละตัว (สไตล์ visual novel) — เว้นทุก 3 ตัวอักษรกันถี่เกิน
-        if (!reducedMotion && ch !== ' ' && blipN++ % 3 === 0) sfx(playTypeBlip);
-      }
-      setDlgHtml(out);
+      if (i >= total) { finishTyping(); return; }
+      // เสียงพิมพ์ทีละตัว (สไตล์ visual novel) — เว้นทุก 3 ตัวอักษรกันถี่เกิน
+      if (!reducedMotion && full[i] !== ' ' && blipN++ % 3 === 0) sfx(playTypeBlip);
+      i += 1;
+      setDlgCount(i);
       timers.current.type = setTimeout(step, reducedMotion ? 0 : 16);
     };
     step();
@@ -588,6 +635,11 @@ export default function FirstAidGame() {
   }
 
   function onDialogTap() {
+    // แตะครั้งแรก = เข้าใจแล้ว ไม่ต้องสอนอีก (เก็บถาวรต่อเครื่อง)
+    if (tapCoach) {
+      setTapCoach(false);
+      try { localStorage.setItem(TAP_COACH_KEY, '1'); } catch { /* โหมดส่วนตัว */ }
+    }
     if (busyRef.current) return;
     if (timers.current.type) { sfx(playTapSound); finishTyping(); return; }
     if (!awaitTap) return;
@@ -621,8 +673,11 @@ export default function FirstAidGame() {
     setDrama(null);
     setSpeaker(null);
     setPlate(null);
-    setDlgHtml('');
+    setDlgSegments([]);
+    setDlgCount(0);
     setScreen('game');
+    // สอนเฉพาะคนที่ไม่เคยเล่น — คนเล่นซ้ำไม่ต้องเจอซ้ำ
+    try { setTapCoach(localStorage.getItem(TAP_COACH_KEY) !== '1'); } catch { setTapCoach(false); }
     track('game_started', { scenario_id: sc.id, difficulty });
     later(() => advance(), reducedMotion ? 100 : 400);
   }
@@ -1198,12 +1253,31 @@ export default function FirstAidGame() {
             >
               {plateName}
             </div>
-            {/* บทพูดมาจาก scenario data ในโค้ดเรา (จำกัด <span class="cbs-em"> เท่านั้น) */}
-            <div className="cbs-dlg-text" dangerouslySetInnerHTML={{ __html: dlgHtml }} />
-            {!typing && awaitTap && <div className="cbs-adv">▼</div>}
+            {/* บทพูดมาจาก scenario data (จำกัด <span class="cbs-em"> เท่านั้น) —
+                parse ผ่าน parseEmphasis ก่อนเสมอ ไม่ inject HTML ตรงๆ */}
+            <div className="cbs-dlg-text">
+              <DlgText segments={dlgSegments} count={dlgCount} />
+            </div>
+            {/* เดิมเป็น "▼" 13px มุมขวาล่าง และโผล่เฉพาะตอนพิมพ์จบ — ช่วงที่คน
+                เพิ่งเปิดเกม (กำลังพิมพ์) จึงไม่มีอะไรบอกเลยว่าแตะได้ */}
+            {(typing || awaitTap) && (
+              <div className={`cbs-adv ${typing ? 'cbs-adv-typing' : ''}`}>
+                {typing ? 'แตะเพื่อข้าม' : 'แตะเพื่อไปต่อ'}
+                <span className="cbs-adv-caret" aria-hidden>▼</span>
+              </div>
+            )}
           </div>
         </div>
       </section>
+
+      {/* คำใบ้ครั้งแรก — pointer-events: none เพื่อให้แตะทะลุไปโดนเวทีจริง
+          ผู้เล่นจะได้เดินเรื่องต่อด้วยการแตะเดียว ไม่ต้องปิดคำใบ้ก่อน */}
+      {tapCoach && (
+        <div className="cbs-tap-coach" aria-hidden>
+          <div className="cbs-tap-coach-ring" />
+          <p className="cbs-tap-coach-text">แตะที่หน้าจอเพื่อเล่นต่อ</p>
+        </div>
+      )}
 
       {quitMenu && (
         <div className="cbs-quit" role="dialog" aria-label="เมนูระหว่างเล่น">
