@@ -13,14 +13,24 @@
   --cbs-cyan: #58C4DC;
   --cbs-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  max-width: 460px;
-  margin: 0 auto;
-  min-height: 100dvh;
-  position: relative;
-  overflow: hidden;
+  /* เกมคลุมทั้งจอทับ nav ของแอป — โลกของเกมเป็นของเกม (เดิมอยู่ในหน้าปกติ
+     max-width การ์ด ซึ่งบนคอมพิวเตอร์/แท็บเล็ตดูเหมือนวิดเจ็ตฝังอยู่ในหน้า
+     มากกว่าแอปเกมจริง) */
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--cbs-navy);
   color: var(--cbs-ink);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* จำกัดความกว้างเนื้อในแบบจอมือถือ (เกมออกแบบ mobile-first) — ย้ายมาจาก
+   .cbs-app เดิมตอนเปลี่ยนเป็นเต็มจอ ไม่งั้นเนื้อหาจะยืดเต็มความกว้างจอใหญ่ */
+.cbs-title, .cbs-select, .cbs-game, .cbs-debrief {
+  max-width: 460px;
+  margin: 0 auto;
 }
 
 @keyframes cbs-spin { to { transform: rotate(360deg); } }
@@ -84,12 +94,15 @@
   transition: transform .08s ease, box-shadow .08s ease;
   position: relative;
 }
+.cbs-btn-main:hover { box-shadow: 0 7px 0 #7E1B1F, 0 16px 34px rgba(229, 72, 77, .45); }
 .cbs-btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #7E1B1F; }
 .cbs-btn-ghost {
   appearance: none; border: 2.5px solid #33406E; border-radius: 6px; cursor: pointer;
   background: rgba(10, 16, 36, .7); color: var(--cbs-ink);
   font-family: inherit; font-size: 15px; font-weight: 700; padding: 14px;
+  transition: border-color .15s, background .15s;
 }
+.cbs-btn-ghost:hover { border-color: #4B5A8F; background: rgba(10, 16, 36, .92); }
 .cbs-note {
   font-family: var(--cbs-mono); font-size: 10.5px; letter-spacing: .12em;
   color: #5E6B92; text-align: center;
@@ -109,6 +122,7 @@
   background: rgba(10, 16, 36, .55); color: var(--cbs-dim);
   padding: 10px 6px; transition: border-color .15s, background .15s, color .15s;
 }
+.cbs-diff-btn:hover { border-color: #4B5A8F; color: var(--cbs-ink); }
 .cbs-diff-btn:active { transform: translateY(2px); }
 .cbs-diff-btn:focus-visible { outline: 3px solid var(--cbs-gold); outline-offset: 2px; }
 .cbs-diff-on {
@@ -128,6 +142,7 @@
   width: 40px; height: 40px; border-radius: 8px;
   border: 2px solid #33406E; background: rgba(10, 16, 36, .6); color: var(--cbs-dim);
 }
+.cbs-icon-btn:hover { border-color: #4B5A8F; color: var(--cbs-ink); }
 .cbs-icon-btn:active { transform: translateY(2px); }
 .cbs-icon-btn:focus-visible { outline: 3px solid var(--cbs-gold); outline-offset: 2px; }
 
@@ -347,6 +362,7 @@
   font-size: 18px; line-height: 1; color: var(--cbs-dim);
   border: 2px solid #33406E; background: rgba(4, 8, 18, .82);
 }
+.cbs-menu-btn:hover { border-color: #4B5A8F; color: var(--cbs-ink); }
 .cbs-menu-btn:active { transform: translateY(2px); }
 .cbs-menu-btn:focus-visible { outline: 3px solid var(--cbs-gold); outline-offset: 2px; }
 
@@ -399,9 +415,45 @@
 .cbs-dlg-text { font-size: 16px; line-height: 1.75; min-height: 56px; }
 .cbs-dlg-text .cbs-em { color: var(--cbs-gold); font-weight: 800; }
 .cbs-adv {
-  position: absolute; right: 14px; bottom: 8px;
-  color: var(--cbs-gold); font-size: 13px;
-  animation: cbs-bob 1s ease-in-out infinite;
+  position: absolute; right: 10px; bottom: -14px;
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--cbs-navy); background: var(--cbs-gold);
+  font-size: 13px; font-weight: 800;
+  /* ให้ดูเป็นปุ่มจริง ไม่ใช่ป้ายบอกสถานะ — ขอบขาว + เงายกตัวเป็นภาษาเดียวกับ
+     ปุ่มอื่นในเกม (.cbs-btn-main) ผู้เล่นรายงานว่า "หาปุ่มกดต่อไม่เจอ" */
+  border: 2.5px solid #fff; border-radius: 8px;
+  padding: 7px 14px;
+  box-shadow: 0 3px 0 #a8801f, 0 6px 14px rgba(0, 0, 0, .45);
+}
+/* ตอนกำลังพิมพ์เป็นแค่คำใบ้เบา ๆ ไม่ต้องแย่งสายตาไปจากบทพูด */
+.cbs-adv-typing {
+  background: rgba(8, 12, 26, .85); color: var(--cbs-gold);
+  border-color: #33406E; box-shadow: none;
+  font-size: 11.5px; font-weight: 700; padding: 4px 11px;
+}
+.cbs-adv-caret { animation: cbs-bob 1s ease-in-out infinite; }
+
+/* คำใบ้เต็มจอครั้งแรก */
+.cbs-tap-coach {
+  position: fixed; inset: 0; z-index: 40;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; pointer-events: none;
+  background: rgba(4, 8, 18, .55);
+}
+.cbs-tap-coach-ring {
+  width: 74px; height: 74px; border-radius: 50%;
+  border: 3px solid var(--cbs-gold);
+  box-shadow: 0 0 24px rgba(242, 193, 78, .6);
+  animation: cbs-tap-pulse 1.4s ease-out infinite;
+}
+.cbs-tap-coach-text {
+  font-size: 17px; font-weight: 800; color: var(--cbs-ink);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+}
+@keyframes cbs-tap-pulse {
+  0% { transform: scale(.75); opacity: .35; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1.35); opacity: 0; }
 }
 
 /* Choices overlay */
@@ -432,6 +484,7 @@
 }
 .cbs-choice:nth-child(3) { animation-delay: .05s; }
 .cbs-choice:nth-child(4) { animation-delay: .1s; }
+.cbs-choice:hover { box-shadow: 0 7px 0 #0B1130, 0 12px 24px rgba(0, 0, 0, .5); }
 .cbs-choice:active { transform: translateY(4px); box-shadow: 0 1px 0 #0B1130; }
 .cbs-choice:focus-visible { outline: 3px solid var(--cbs-gold); outline-offset: 2px; }
 .cbs-choice-tgt {
@@ -576,10 +629,12 @@
 @media (prefers-reduced-motion: reduce) {
   .cbs-shake, .cbs-flash.cbs-go, .cbs-redflash.cbs-go,
   .cbs-title::before, .cbs-stage.cbs-drama::before, .cbs-stage.cbs-drama-red::before,
-  .cbs-inter-burst, .cbs-adv, .cbs-choice, .cbs-sprite.cbs-pop,
-  .cbs-inter-bubble, .cbs-stamp {
+  .cbs-inter-burst, .cbs-adv-caret, .cbs-choice, .cbs-sprite.cbs-pop,
+  .cbs-inter-bubble, .cbs-stamp, .cbs-tap-coach-ring {
     animation: none !important;
   }
+  /* วงแหวนไม่กะพริบแล้ว ต้องคงให้เห็นอยู่ ไม่งั้นคำใบ้หายไปครึ่งหนึ่ง */
+  .cbs-tap-coach-ring { opacity: 1; transform: none; }
 }
 
 /* ============ AWARDS / เหรียญรางวัล ============ */
