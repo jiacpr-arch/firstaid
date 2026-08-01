@@ -23,6 +23,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # build มีขั้น prerender ที่ต้องใช้ headless Chromium ของ Playwright
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Lint
         run: npm run lint
 
