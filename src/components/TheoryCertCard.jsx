@@ -6,8 +6,7 @@ import { CERT_KINDS, evaluateTheoryEligibility } from '../courses/firstaid/cert'
 import { issueTheoryCertificate } from '../utils/certIssue'
 import CertificatePreview from './CertificatePreview'
 import LineGateCard from './LineGateCard'
-import { downloadCertPdf } from '../utils/certPdf'
-import { downloadCertPng } from '../utils/certImage'
+// jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
 import { track } from '../utils/analytics'
 
 function fmtDate(iso) {
@@ -102,17 +101,21 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
   })
 
   const downloadPdf = () => {
-    downloadCertPdf(certArgs()).catch((err) => {
-      console.error('download cert pdf failed', err)
-      setError('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
-    })
+    import('../utils/certPdf')
+      .then(({ downloadCertPdf }) => downloadCertPdf(certArgs()))
+      .catch((err) => {
+        console.error('download cert pdf failed', err)
+        setError('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
+      })
   }
 
   const downloadPng = () => {
-    downloadCertPng(certArgs()).catch((err) => {
-      console.error('download cert png failed', err)
-      setError('บันทึกรูปไม่สำเร็จ กรุณาลองใหม่')
-    })
+    import('../utils/certImage')
+      .then(({ downloadCertPng }) => downloadCertPng(certArgs()))
+      .catch((err) => {
+        console.error('download cert png failed', err)
+        setError('บันทึกรูปไม่สำเร็จ กรุณาลองใหม่')
+      })
   }
 
   return (
