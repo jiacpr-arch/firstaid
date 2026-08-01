@@ -7,8 +7,7 @@ import { CERT_KINDS, evaluatePracticalEligibility } from '../courses/firstaid/ce
 import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
 import TheoryCertCard from '../components/TheoryCertCard'
-import { downloadCertPdf } from '../utils/certPdf'
-import { downloadCertPng } from '../utils/certImage'
+// jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
 
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -59,17 +58,21 @@ export default function Certification() {
   })
 
   const downloadPdf = (cert) => {
-    downloadCertPdf(certArgs(cert)).catch((err) => {
-      console.error('download cert pdf failed', err)
-      alert('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
-    })
+    import('../utils/certPdf')
+      .then(({ downloadCertPdf }) => downloadCertPdf(certArgs(cert)))
+      .catch((err) => {
+        console.error('download cert pdf failed', err)
+        alert('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
+      })
   }
 
   const downloadPng = (cert) => {
-    downloadCertPng(certArgs(cert)).catch((err) => {
-      console.error('download cert png failed', err)
-      alert('บันทึกรูปไม่สำเร็จ กรุณาลองใหม่')
-    })
+    import('../utils/certImage')
+      .then(({ downloadCertPng }) => downloadCertPng(certArgs(cert)))
+      .catch((err) => {
+        console.error('download cert png failed', err)
+        alert('บันทึกรูปไม่สำเร็จ กรุณาลองใหม่')
+      })
   }
 
   return (
