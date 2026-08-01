@@ -8,7 +8,7 @@ export const DEFAULT_TITLE =
 export const DEFAULT_DESCRIPTION =
   'คอร์สปฐมพยาบาลออนไลน์ฟรีสำหรับบุคคลทั่วไป: 24 บทเรียนสั้น ๆ (บทละ 5–10 นาที), ' +
   '17 ผังช่วยชีวิตฉุกเฉิน, 40 สถานการณ์จำลอง, สอบรับใบประกาศ โดย Jia Training Center'
-export const DEFAULT_OG_IMAGE = '/og-image.png'
+export const DEFAULT_OG_IMAGE = '/og-image.jpg'
 
 export const ORGANIZATION_JSON_LD = {
   '@context': 'https://schema.org',

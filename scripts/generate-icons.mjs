@@ -23,12 +23,13 @@ function pageHtml(size, { maskable }) {
 }
 
 const browser = await chromium.launch()
+// หมายเหตุ: public/apple-touch-icon.png ไม่ได้สร้างจากสคริปต์นี้ — เป็นโลโก้จริง
+// ของ Jia Training Center (มาจาก main) อย่า generate ทับ
 const jobs = [
   { file: 'public/icons/icon-192.png', size: 192, maskable: false },
   { file: 'public/icons/icon-512.png', size: 512, maskable: false },
   { file: 'public/icons/icon-maskable-192.png', size: 192, maskable: true },
   { file: 'public/icons/icon-maskable-512.png', size: 512, maskable: true },
-  { file: 'public/apple-touch-icon.png', size: 180, maskable: true },
 ]
 for (const job of jobs) {
   const page = await browser.newPage({ viewport: { width: job.size, height: job.size } })

@@ -44,7 +44,7 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}'],
         // og-image ใช้เฉพาะตอนแชร์ลิงก์ — ไม่ต้อง precache ให้เปลืองเน็ตผู้ใช้
-        globIgnores: ['og-image.png'],
+        globIgnores: ['og-image.jpg'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
