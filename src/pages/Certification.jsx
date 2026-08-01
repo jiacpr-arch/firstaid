@@ -7,6 +7,7 @@ import { CERT_KINDS, evaluatePracticalEligibility } from '../courses/firstaid/ce
 import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
 import TheoryCertCard from '../components/TheoryCertCard'
+import Seo from '../components/Seo'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
 
 function fmtDate(iso) {
@@ -77,6 +78,11 @@ export default function Certification() {
 
   return (
     <div className="page-container">
+      <Seo
+        title="ใบประกาศปฐมพยาบาล — สอบออนไลน์ฟรี ดาวน์โหลดได้ทันที | Jia Training Center"
+        description="เรียนจบ สอบผ่าน รับใบประกาศภาคทฤษฎีปฐมพยาบาลเบื้องต้นฟรี ดาวน์โหลดเป็น PDF/รูปได้ทันที โดย Jia Training Center"
+        path="/certificate"
+      />
       <div style={{ marginTop: 8 }}>
         <div className="text-caption">ใบประกาศของฉัน</div>
         <div className="text-title">ทฤษฎี + ปฏิบัติ</div>

@@ -7,6 +7,7 @@ import { upsertLearner } from '../db/database'
 import { flushSync } from '../db/sync'
 import { authHeader } from '../utils/authHeader'
 import { isSupabaseConfigured } from '../config/supabaseClient'
+import Seo from '../components/Seo'
 
 // เข้าร่วมคลาสด้วยรหัส 6 หลักจากครูผู้สอน (/join หรือ /join/:code จาก QR)
 // ต่างจากหน้าเช็คชื่อ (คีออส): ต้อง join บน "เครื่องของตัวเอง" เพราะ enrollment
@@ -88,6 +89,7 @@ export default function JoinClass() {
 
   return (
     <div className="page-container">
+      <Seo title="เข้าร่วมคลาสเรียน | Jia Training Center" noindex path="/join" />
       <div style={{ marginTop: 8 }}>
         <div className="text-caption">ห้องเรียน</div>
         <div className="text-title">เข้าร่วมคลาสด้วยรหัส</div>

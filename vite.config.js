@@ -22,7 +22,11 @@ const manifest = {
     },
   ],
   icons: [
-    { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+    { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icons/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+    { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ],
 }
 
@@ -35,10 +39,12 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
-      includeAssets: ['favicon.svg', 'icon.svg', 'cert-logo.png'],
+      includeAssets: ['favicon.svg', 'icon.svg', 'cert-logo.png', 'icons/*.png', 'apple-touch-icon.png'],
       manifest,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}'],
+        // og-image ใช้เฉพาะตอนแชร์ลิงก์ — ไม่ต้อง precache ให้เปลืองเน็ตผู้ใช้
+        globIgnores: ['og-image.jpg'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),

@@ -14,10 +14,19 @@ import ProgressBar from '../components/ProgressBar'
 import TheoryCertCard from '../components/TheoryCertCard'
 import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
+import Seo from '../components/Seo'
 
 export default function ExamPage({ kind }) {
   useEnsureLearner()
   const exam = kind === 'pre' ? preTest : postTest
+  // noindex — หน้าสอบเป็นเรื่องเฉพาะคน ไม่มีประโยชน์ใน search results
+  const seo = (
+    <Seo
+      title={`${kind === 'pre' ? 'แบบทดสอบก่อนเรียน (Pre-test)' : 'แบบทดสอบหลังเรียน (Post-test)'} | Jia Training Center`}
+      noindex
+      path={kind === 'pre' ? '/pre-test' : '/post-test'}
+    />
+  )
   const navigate = useNavigate()
   const learner = useLearnerStore((s) => s.learner)
   const readSet = useProgressStore((s) => s.readLessonIds)
@@ -221,6 +230,7 @@ export default function ExamPage({ kind }) {
 
   return (
     <div className="page-container">
+      {seo}
       <button type="button" onClick={() => navigate('/learn')} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
         <ArrowLeft size={16} /> ออก
       </button>

@@ -10,6 +10,8 @@ import { saveSimulationRun } from '../db/database'
 import { flushSync } from '../db/sync'
 import { fetchContentMedia } from '../utils/lessonMediaSteps'
 import { track } from '../utils/analytics'
+import Seo from '../components/Seo'
+import { breadcrumbJsonLd } from '../lib/seo'
 
 export default function SimulationRun() {
   useEnsureLearner()
@@ -28,9 +30,23 @@ export default function SimulationRun() {
     return () => { cancelled = true }
   }, [scenarioId])
 
+  const seo = scenario && (
+    <Seo
+      title={`${scenario.title} — สถานการณ์จำลองปฐมพยาบาล | Jia Training Center`}
+      description={`${scenario.summary} — ฝึกตัดสินใจกับสถานการณ์จำลอง ใช้เวลา ${scenario.minutes} นาที ฟรี โดย Jia Training Center`}
+      path={`/simulation/${scenario.id}`}
+      jsonLd={breadcrumbJsonLd([
+        { name: 'หน้าแรก', path: '/' },
+        { name: 'สถานการณ์จำลอง', path: '/simulation' },
+        { name: scenario.title, path: `/simulation/${scenario.id}` },
+      ])}
+    />
+  )
+
   if (!scenario) {
     return (
       <div className="page-container">
+        <Seo title="ไม่พบฉากจำลอง — FirstAid by Jia Training Center" noindex path="/simulation" />
         <div className="card">ไม่พบฉาก</div>
         <Link to="/simulation" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>กลับ</Link>
       </div>
@@ -59,6 +75,7 @@ export default function SimulationRun() {
   if (result) {
     return (
       <div className="page-container">
+        {seo}
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
           <CheckCircle2 size={48} color={result.passed ? '#10B981' : '#D97706'} style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>
@@ -84,6 +101,7 @@ export default function SimulationRun() {
 
   return (
     <div className="page-container">
+      {seo}
       <Link to="/simulation" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
         <ArrowLeft size={16} /> รายการฉาก
       </Link>

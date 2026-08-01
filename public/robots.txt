@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /auth/
-
-Sitemap: https://firstaid.morroo.com/sitemap.xml

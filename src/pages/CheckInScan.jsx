@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import Seo from '../components/Seo'
 
 export default function CheckInScan() {
   const containerId = 'qr-scan-region'
@@ -50,6 +51,7 @@ export default function CheckInScan() {
 
   return (
     <div className="page-container">
+      <Seo title="สแกน QR เช็คชื่อ | Jia Training Center" noindex path="/checkin/scan" />
       <Link to="/checkin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
         <ArrowLeft size={16} /> กลับ
       </Link>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { OPEN_ADMIN } from '../config/adminAccess'
+import Seo from '../components/Seo'
 
 // ถ้าตั้ง VITE_ADMIN_EMAIL ไว้ → โหมด "รหัสเดียว": ผู้ใช้กรอกแค่รหัสผ่าน
 // email จะถูก fix ไว้เบื้องหลัง (ใช้ล็อกอิน Supabase เพื่อให้ RLS/อัปโหลดทำงานได้)
@@ -36,6 +37,7 @@ export default function AdminLogin() {
 
   return (
     <div className="page-container" style={{ maxWidth: 420 }}>
+      <Seo title="เข้าสู่ระบบครูผู้สอน | Jia Training Center" noindex path="/admin/login" />
       <div style={{ marginTop: 24 }}>
         <div className="text-caption">ครูผู้สอน</div>
         <div className="text-title">เข้าสู่ระบบ</div>

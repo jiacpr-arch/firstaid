@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { chapters } from '../courses/firstaid/lessons'
 import CallEmergencyButton from '../components/CallEmergencyButton'
+import Seo from '../components/Seo'
+import { itemListJsonLd, breadcrumbJsonLd } from '../lib/seo'
 
 // จัดกลุ่มสถานการณ์ตามบท (chapter) เพื่อให้ "ฝึก" เรียงตรงกับ "บทเรียน"
 const grouped = chapters.map((c) => ({
@@ -44,6 +46,18 @@ function ScenarioCard({ s }) {
 export default function SimulationSelect() {
   return (
     <div className="page-container">
+      <Seo
+        title={`สถานการณ์จำลองปฐมพยาบาล ${scenarios.length} ฉาก — ฝึกตัดสินใจฟรี | Jia Training Center`}
+        description={`ฝึกตัดสินใจช่วยชีวิตกับสถานการณ์จำลอง ${scenarios.length} ฉาก ครอบคลุมทุกบทเรียนปฐมพยาบาล — ลองผิดลองถูกได้ ก่อนเจอเหตุการณ์จริง`}
+        path="/simulation"
+        jsonLd={[
+          itemListJsonLd(scenarios.map((s) => `/simulation/${s.id}`)),
+          breadcrumbJsonLd([
+            { name: 'หน้าแรก', path: '/' },
+            { name: 'สถานการณ์จำลอง', path: '/simulation' },
+          ]),
+        ]}
+      />
       <div style={{ marginTop: 8 }}>
         <div className="text-caption">ฝึกตัดสินใจกับสถานการณ์จำลอง</div>
         <div className="text-title">เลือกฉาก</div>

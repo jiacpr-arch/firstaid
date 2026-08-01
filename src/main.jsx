@@ -12,6 +12,10 @@ import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
+// HTML ที่ prerender ไว้ฝังแท็ก meta/JSON-LD ของ <Seo> มาด้วย ([data-seo]) —
+// กวาดทิ้งก่อน mount ไม่งั้นจะซ้ำกับชุดใหม่ที่ React 19 hoist ขึ้น <head>
+document.querySelectorAll('[data-seo]').forEach((el) => el.remove())
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>

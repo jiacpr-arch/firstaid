@@ -6,6 +6,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { saveAttendance, upsertLearner } from '../db/database'
 import { isSupabaseConfigured } from '../config/supabaseClient'
+import Seo from '../components/Seo'
 
 // ถ้ามี sessionCode ใน URL แสดงว่ามาจาก QR → โหมดคีออส (หลายคนใช้อุปกรณ์เดียวกัน)
 // ใช้ fresh UUID ต่อคนเพื่อป้องกัน attendance ชนกัน; ไม่ผูกกับ learner.id ของอุปกรณ์
@@ -109,6 +110,7 @@ export default function CheckIn() {
 
   return (
     <div className="page-container">
+      <Seo title="เช็คชื่อเข้าอบรม | Jia Training Center" noindex path="/checkin" />
       <div style={{ marginTop: 8 }}>
         <div className="text-caption">{isKiosk ? 'ลงทะเบียนที่บูธ' : 'เช็คชื่อภาคปฏิบัติ'}</div>
         <div className="text-title">{isKiosk ? 'กรอกชื่อและเบอร์โทร' : 'กรอกรหัส session'}</div>

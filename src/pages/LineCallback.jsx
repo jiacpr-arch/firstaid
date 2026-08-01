@@ -7,6 +7,7 @@ import { detectInAppBrowser } from '../utils/inAppBrowser'
 import { linkLearnerToAuth } from '../utils/linkLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { phCapture } from '../lib/posthog'
+import Seo from '../components/Seo'
 
 function fbqTrack(...args) {
   try { window.fbq?.(...args) } catch { /* tracking ห้ามพังแอป */ }
@@ -153,6 +154,7 @@ export default function LineCallback() {
 
   return (
     <div className="page-container" style={{ display: 'flex', minHeight: '80vh', alignItems: 'center', justifyContent: 'center' }}>
+      <Seo title="กำลังเข้าสู่ระบบ | Jia Training Center" noindex path="/auth/line/callback" />
       <div className="text-caption">กำลังเข้าสู่ระบบ…</div>
     </div>
   )

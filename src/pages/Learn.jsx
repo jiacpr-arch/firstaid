@@ -13,6 +13,8 @@ import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import { computeBadges } from '../utils/badges'
 import { encourage } from '../utils/encouragement'
+import Seo from '../components/Seo'
+import { itemListJsonLd, breadcrumbJsonLd } from '../lib/seo'
 
 export default function Learn() {
   useEnsureLearner()
@@ -52,6 +54,18 @@ export default function Learn() {
 
   return (
     <div className="page-container">
+      <Seo
+        title={`บทเรียนปฐมพยาบาล ${lessons.length} บท — เรียนฟรีออนไลน์ | Jia Training Center`}
+        description={`รวมบทเรียนปฐมพยาบาลเบื้องต้น ${lessons.length} บท ครอบคลุม CPR, สำลัก, เลือดออก, แผลไฟไหม้ และเหตุฉุกเฉินอื่น ๆ — เรียนฟรี บทละ 5–10 นาที พร้อมสอบรับใบประกาศ`}
+        path="/learn"
+        jsonLd={[
+          itemListJsonLd(lessons.map((l) => `/learn/${l.id}`)),
+          breadcrumbJsonLd([
+            { name: 'หน้าแรก', path: '/' },
+            { name: 'บทเรียน', path: '/learn' },
+          ]),
+        ]}
+      />
       <div style={{ marginTop: 8 }}>
         <div className="text-caption">หลักสูตร</div>
         <div className="text-title">บทเรียน</div>
