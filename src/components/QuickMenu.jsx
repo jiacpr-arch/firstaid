@@ -13,14 +13,14 @@ const QUICK = [
   { to: '/checkin', label: 'เช็คชื่อภาคปฏิบัติ', desc: 'สแกน QR หรือกรอกรหัสจากครูผู้สอน', icon: UserCheck, color: '#0EA5E9' },
 ]
 
-export default function QuickMenu({ style }) {
+export default function QuickMenu({ style, className }) {
   return (
-    <div style={{ display: 'grid', gap: 10, ...style }}>
+    <div className={className} style={{ display: 'grid', gap: 10, ...style }}>
       {QUICK.map(({ to, label, desc, icon: Icon, color }) => (
         <Link
           key={to}
           to={to}
-          className="card"
+          className="card card-hover"
           style={{ display: 'flex', alignItems: 'center', gap: 14 }}
         >
           <div style={{

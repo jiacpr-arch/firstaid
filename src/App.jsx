@@ -185,8 +185,11 @@ export default function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-      {!isAdmin && !isGame && <HouseAdStrip />}
-      {!isAdmin && !isGame && <BottomTabBar />}
+      {/* หน้า landing บนจอใหญ่มี top nav ของตัวเอง — ซ่อน chrome มือถือเฉพาะ lg ขึ้นไป */}
+      <div className={onboarding && location.pathname === '/' ? 'lg:hidden' : undefined}>
+        {!isAdmin && !isGame && <HouseAdStrip />}
+        {!isAdmin && !isGame && <BottomTabBar />}
+      </div>
       {!isAutomated && <Analytics />}
       <MetaPixel />
     </div>
