@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { OPEN_ADMIN } from '../config/adminAccess'
+import Seo from './Seo'
 
 export default function RequireAdmin({ children }) {
   const [status, setStatus] = useState(() => {
@@ -34,5 +35,5 @@ export default function RequireAdmin({ children }) {
     )
   }
   if (status === 'out') return <Navigate to="/admin/login" replace />
-  return children
+  return <><Seo title="Admin | Jia Training Center" noindex path="/admin" />{children}</>
 }

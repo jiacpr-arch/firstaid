@@ -20,6 +20,8 @@ import { getNewBadge } from '../utils/badges'
 import { encourage } from '../utils/encouragement'
 import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
+import Seo from '../components/Seo'
+import { lessonJsonLd, breadcrumbJsonLd } from '../lib/seo'
 
 export default function LessonReader() {
   useEnsureLearner()
@@ -92,9 +94,29 @@ export default function LessonReader() {
     return out
   }, [steps, mediaByStep])
 
+  // Meta ต่อบท — ต้อง render ในทุก return path (รวมหน้า lock/ปลดล็อก) เพื่อให้
+  // prerender เก็บ title/description/JSON-LD ที่ถูกต้องของบทนั้นเสมอ
+  const seo = lesson && (
+    <Seo
+      title={`${lesson.title} — บทเรียนปฐมพยาบาล | Jia Training Center`}
+      description={`${lesson.summary} — บทเรียนปฐมพยาบาลออนไลน์ฟรี ใช้เวลา ${lesson.minutes} นาที โดย Jia Training Center`}
+      path={`/learn/${lesson.id}`}
+      ogType="article"
+      jsonLd={[
+        lessonJsonLd(lesson),
+        breadcrumbJsonLd([
+          { name: 'หน้าแรก', path: '/' },
+          { name: 'บทเรียน', path: '/learn' },
+          { name: lesson.title, path: `/learn/${lesson.id}` },
+        ]),
+      ]}
+    />
+  )
+
   if (!lesson) {
     return (
       <div className="page-container">
+        <Seo title="ไม่พบบทเรียน — FirstAid by Jia Training Center" noindex path="/learn" />
         <div className="card">ไม่พบบทเรียน</div>
         <Link to="/learn" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
           กลับไปหน้าบทเรียน
@@ -108,7 +130,13 @@ export default function LessonReader() {
   if (progressLoaded && !preTestDone && lesson.order !== 1) {
     return (
       <div className="page-container">
-        <div className="card" style={{ textAlign: 'center', padding: 28 }}>
+        {seo}
+        <div style={{ marginTop: 8 }}>
+          <div className="text-caption">บทเรียนปฐมพยาบาล</div>
+          <h1 className="text-title" style={{ margin: 0 }}>{lesson.title}</h1>
+          <div className="text-body text-text-muted" style={{ marginTop: 4 }}>{lesson.summary}</div>
+        </div>
+        <div className="card" style={{ textAlign: 'center', padding: 28, marginTop: 16 }}>
           <Lock size={44} color="var(--color-text-secondary)" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>ยังเข้าบทเรียนไม่ได้</div>
           <div className="text-body" style={{ marginTop: 8 }}>
@@ -131,7 +159,7 @@ export default function LessonReader() {
   // entitlement ผูกกับ learner_id ถาวร ครอบคลุมทั้ง URL ตรง, list ในหน้า Learn และปุ่ม "บทถัดไป"
   // เพราะทุกทางเข้าวิ่งผ่าน route นี้เหมือนกัน
   if (entitlementsLoaded && !isChapterUnlocked(lesson.chapter, unlockedChapters)) {
-    return <ChapterUnlockCard chapter={lesson.chapter} />
+    return <>{seo}<ChapterUnlockCard chapter={lesson.chapter} /></>
   }
 
   const slide = slides[stepIdx]
@@ -209,6 +237,7 @@ export default function LessonReader() {
   if (completed) {
     return (
       <div className="page-container">
+        {seo}
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
           <CheckCircle2 size={48} color="#10B981" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>เรียนจบบทแล้ว!</div>
@@ -258,6 +287,7 @@ export default function LessonReader() {
 
   return (
     <div className="page-container">
+      {seo}
       <button type="button" onClick={() => navigate('/learn')} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
         <ArrowLeft size={16} /> รายการบท
       </button>

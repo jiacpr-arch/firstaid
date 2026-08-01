@@ -2,12 +2,18 @@ import { Newspaper } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import { JiaAedNewsCard } from '../components/JiaAedNewsFeed'
 import { useJiaAedNews } from '../hooks/useJiaAedNews'
+import Seo from '../components/Seo'
 
 export default function News() {
   const items = useJiaAedNews(30)
 
   return (
     <div className="page-container">
+      <Seo
+        title="ข่าวกู้ชีพ/AED — อัปเดตจาก JiaAED | Jia Training Center"
+        description="ข่าวการกู้ชีพ CPR/AED คัดสรรพร้อมมุมให้ความรู้ อัปเดตสม่ำเสมอโดย JiaAED และ Jia Training Center"
+        path="/news"
+      />
       <div style={{ marginTop: 16, marginBottom: 16 }}>
         <div className="text-caption">อัปเดตจาก JiaAED</div>
         <div className="text-display">ข่าวกู้ชีพ/AED</div>

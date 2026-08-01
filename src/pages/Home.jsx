@@ -14,6 +14,8 @@ import { useEnsureProgress } from '../hooks/useProgress'
 import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
 import { lessons } from '../courses/firstaid/lessons'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
+import Seo from '../components/Seo'
+import { courseJsonLd } from '../lib/seo'
 
 // กดแล้วเปิดแชตพร้อมข้อความ "สนใจเรียน + มาจากหน้าแรกแอป" พิมพ์ไว้ให้ ลูกค้าแค่กดส่ง
 const LINE_URL = lineInterestUrl('กดจากหน้าแรกแอป')
@@ -46,6 +48,7 @@ export default function Home() {
 
   return (
     <div className="page-container">
+      <Seo path="/" jsonLd={courseJsonLd()} />
       <div style={{ marginTop: 16, marginBottom: 24 }}>
         <div className="text-caption">หลักสูตร</div>
         <div className="text-display">ปฐมพยาบาลเบื้องต้น</div>

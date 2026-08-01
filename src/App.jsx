@@ -7,13 +7,14 @@ import { useProgressStore } from './stores/progressStore'
 import { useEnsureLearner } from './hooks/useLearner'
 import { initAuthListener } from './stores/authStore'
 import { startBackgroundSync } from './db/sync'
-import { courseMeta } from './config/courseMode'
+import { isAutomated } from './lib/isAutomated'
 import OfflineIndicator from './components/OfflineIndicator'
 import InAppBrowserNotice from './components/InAppBrowserNotice'
 import MetaPixel from './components/MetaPixel'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
 import RequireAdmin from './components/RequireAdmin'
+import Seo from './components/Seo'
 import { initPostHog, identifyLearner, phCapture } from './lib/posthog'
 
 import Home from './pages/Home'
@@ -33,6 +34,7 @@ import JoinClass from './pages/JoinClass'
 import Settings from './pages/Settings'
 import News from './pages/News'
 import LineCallback from './pages/LineCallback'
+import NotFound from './pages/NotFound'
 
 // เกมโหมดโบนัส (FIRST AID HERO) — lazy เพื่อไม่ให้ chunk หลักโตจนชน PWA precache cap
 const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
@@ -98,10 +100,6 @@ export default function App() {
     apply(theme === 'dark')
   }, [theme])
 
-  useEffect(() => {
-    document.title = courseMeta.title
-  }, [])
-
   const isAdmin = location.pathname.startsWith('/admin')
   // เกมเป็นหน้า full-screen มีปุ่มกลับของตัวเอง — ซ่อนแท็บบาร์/แถบโฆษณาเหมือนกันกับฝั่ง admin
   const isGame = location.pathname === '/game'
@@ -128,10 +126,19 @@ export default function App() {
 
         <Route path="/simulation" element={<SimulationSelect />} />
         <Route path="/simulation/:scenarioId" element={<SimulationRun />} />
+        {/* Seo ของเกมอยู่ตรงนี้ (ไม่อยู่ใน FirstAidGame) เพื่อให้ meta พร้อมตั้งแต่
+            ก่อน lazy chunk โหลดเสร็จ — จำเป็นสำหรับ prerender ที่รอ title[data-seo] */}
         <Route path="/game" element={
-          <Suspense fallback={<div className="page-container py-12 text-center text-caption">กำลังโหลดเกม…</div>}>
-            <FirstAidGame />
-          </Suspense>
+          <>
+            <Seo
+              title="FIRST AID HERO — เกมฝึกช่วยชีวิต เล่นฟรี | Jia Training Center"
+              description="เกมจำลองสถานการณ์ช่วยชีวิต 17 เคส — ตัดสินใจ CPR ใช้ AED แข่งกับเวลา พร้อม leaderboard เล่นฟรีบนมือถือ"
+              path="/game"
+            />
+            <Suspense fallback={<div className="page-container py-12 text-center text-caption">กำลังโหลดเกม…</div>}>
+              <FirstAidGame />
+            </Suspense>
+          </>
         } />
 
         <Route path="/certificate" element={<Certification />} />
@@ -175,10 +182,12 @@ export default function App() {
         <Route path="/admin/vouchers" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminVouchers /></RequireAdmin></Suspense>
         } />
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
       {!isAdmin && !isGame && <HouseAdStrip />}
       {!isAdmin && !isGame && <BottomTabBar />}
-      <Analytics />
+      {!isAutomated && <Analytics />}
       <MetaPixel />
     </div>
   )

@@ -1,5 +1,6 @@
 import { useSettingsStore } from '../stores/settingsStore'
 import { HouseAdList } from '../components/HouseAdBanner'
+import Seo from '../components/Seo'
 
 export default function Settings() {
   const theme = useSettingsStore((s) => s.theme)
@@ -7,6 +8,7 @@ export default function Settings() {
 
   return (
     <div className="page-container">
+      <Seo title="ตั้งค่า | Jia Training Center" noindex path="/settings" />
       <div style={{ marginTop: 8 }}>
         <div className="text-caption">ตั้งค่า</div>
         <div className="text-title">การแสดงผล</div>

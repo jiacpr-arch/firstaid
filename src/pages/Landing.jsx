@@ -14,6 +14,8 @@ import { algorithms } from '../courses/firstaid/algorithms'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
+import Seo from '../components/Seo'
+import { courseJsonLd } from '../lib/seo'
 
 // กดแล้วเปิดแชตพร้อมข้อความ "สนใจเรียน + มาจากหน้า landing" พิมพ์ไว้ให้ ลูกค้าแค่กดส่ง
 const LINE_URL = lineInterestUrl('กดจากหน้า landing คนใหม่')
@@ -83,6 +85,7 @@ export default function Landing() {
 
   return (
     <div>
+      <Seo path="/" jsonLd={courseJsonLd()} />
       {/* ═══ Hero ═══ */}
       <div style={{ background: 'linear-gradient(160deg, #0F1A2E 0%, #14532D 100%)', color: '#fff' }}>
         <div className="page-container" style={{ paddingTop: 40, paddingBottom: 36 }}>

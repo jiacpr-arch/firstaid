@@ -1,4 +1,5 @@
 import { Phone } from 'lucide-react'
+import Seo from '../components/Seo'
 
 const TIPS = [
   { label: 'เกิดอะไร', desc: 'อธิบายเหตุการณ์สั้น ๆ เช่น "รถชน ผู้บาดเจ็บ 2 คน หมดสติ 1 คน"' },
@@ -10,6 +11,11 @@ const TIPS = [
 export default function EmergencyCall() {
   return (
     <div className="page-container">
+      <Seo
+        title="โทร 1669 — วิธีแจ้งเหตุฉุกเฉินให้กู้ชีพมาเร็วที่สุด | Jia Training Center"
+        description="สายด่วน 1669 สถาบันการแพทย์ฉุกเฉินแห่งชาติ โทรฟรี 24 ชม. — ข้อมูล 4 ข้อที่ต้องบอก: เกิดอะไร ที่ไหน ใคร-อาการอย่างไร และเบอร์โทรกลับ"
+        path="/call"
+      />
       <div style={{ textAlign: 'center', marginTop: 16 }}>
         <div className="text-caption">เหตุฉุกเฉินทางการแพทย์</div>
         <div className="text-display">โทร 1669</div>

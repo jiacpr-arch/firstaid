@@ -1,10 +1,13 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { isAutomated } from '../lib/isAutomated'
 
 // No hardcoded fallback: when VITE_META_PIXEL_ID is unset (local dev, previews,
 // forks) the pixel stays off so those environments never send events to the real
 // production pixel. Set the env var in production to enable tracking.
-const PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID || ''
+// Automated browsers (build-time prerender) are also excluded to keep the pixel
+// data clean.
+const PIXEL_ID = isAutomated ? '' : import.meta.env.VITE_META_PIXEL_ID || ''
 
 export default function MetaPixel() {
   const location = useLocation()

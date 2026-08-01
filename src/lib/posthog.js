@@ -1,4 +1,5 @@
 import posthog from 'posthog-js'
+import { isAutomated } from './isAutomated'
 
 const KEY = import.meta.env.VITE_POSTHOG_KEY
 const HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com'
@@ -6,7 +7,8 @@ const HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com'
 let initialised = false
 
 export function initPostHog() {
-  if (!KEY || initialised) return
+  // ไม่ init ใน browser อัตโนมัติ (prerender ตอน build) — กัน pageview ปลอม
+  if (isAutomated || !KEY || initialised) return
   posthog.init(KEY, {
     api_host: HOST,
     person_profiles: 'identified_only',
