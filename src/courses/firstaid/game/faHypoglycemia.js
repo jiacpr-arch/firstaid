@@ -7,6 +7,7 @@ export const faHypoglycemia = {
   subtitle: 'ลุงวัย 60 นั่งพิงเสาไฟ พูดเพ้อไม่รู้เรื่อง มือสั่น เหงื่อท่วมทั้งที่อากาศเย็น — เด็กแว้นผ่านมาบอก "ลุงเมาเหล้า ไม่ต้องไปยุ่ง"',
   level: 'intermediate',
   track: 'neuro',
+  bg: 'soi_corner',
   hiddenCause: 'hypoglycemia',
   outcome: { stamp: 'น้ำตาลกลับมา!', win: 'ลุงไม่ได้เมา — และน้ำหวานแก้วเดียวที่คุณกล้าหยิบยื่น เปลี่ยนเรื่องนี้ทั้งเรื่อง' },
   story: [

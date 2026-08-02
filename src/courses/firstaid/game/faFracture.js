@@ -6,6 +6,7 @@ export const faFracture = {
   subtitle: 'แม่บ้านวัย 48 พลาดตกบันไดสองขั้น เอามือยันพื้น — แขนท่อนล่างงอผิดรูป บวมขึ้นเร็ว ปวดจนน้ำตาไหล',
   level: 'basic',
   track: 'trauma',
+  bg: 'home_stairs',
   hiddenCause: null,
   outcome: { stamp: 'ถึงมือหมอ!', win: 'แขนที่ถูกดามนิ่งๆ ตลอดทาง คือแขนที่หมอต่อกลับได้สวยที่สุด' },
   story: [

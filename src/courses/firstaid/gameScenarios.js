@@ -118,6 +118,11 @@ export const BACKGROUNDS = {
   backyard_garden: 'สวนท้ายบ้าน',
   running_event: 'งานวิ่งการกุศล',
   canal_side: 'ริมคลอง',
+  home_room: 'ห้องนั่งเล่น/โต๊ะกินข้าวในบ้าน',
+  home_stairs: 'โถงบันไดในบ้าน',
+  bathroom: 'ห้องน้ำ',
+  soi_corner: 'หน้าปากซอย',
+  buffet_restaurant: 'ร้านบุฟเฟ่ต์',
 };
 
 export function backgroundUrl(s) {

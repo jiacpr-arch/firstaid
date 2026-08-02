@@ -6,6 +6,7 @@ export const faChemical = {
   subtitle: 'แม่บ้านเปิดขวดน้ำยาล้างห้องน้ำแรงไปหน่อย ของเหลวกระเด็นเข้าตาขวา ร้องลั่น "แสบมาก ลืมตาไม่ได้!"',
   level: 'basic',
   track: 'outdoor',
+  bg: 'bathroom',
   hiddenCause: null,
   outcome: { stamp: 'ตารอดแล้ว!', win: 'น้ำสะอาดที่ไหลผ่านตา 20 นาทีเต็ม คือสิ่งเดียวที่หยุดกรดไม่ให้กัดลึกกว่านี้' },
   story: [

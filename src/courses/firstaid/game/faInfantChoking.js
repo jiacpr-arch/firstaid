@@ -6,6 +6,7 @@ export const faInfantChoking = {
   subtitle: 'หลานวัย 8 เดือนคว้าเม็ดองุ่นจากโต๊ะเข้าปาก จู่ๆ ก็ไอแขกๆ แล้วเงียบ หน้าเริ่มเขียว แม่เด็กแทบสติแตก',
   level: 'intermediate',
   track: 'choking',
+  bg: 'home_room',
   hiddenCause: null,
   outcome: { stamp: 'รอดแล้ว!', win: 'เสียงร้องไห้ของน้องคือเสียงที่ไพเราะที่สุด — เพราะร้องได้แปลว่าหายใจได้' },
   story: [
