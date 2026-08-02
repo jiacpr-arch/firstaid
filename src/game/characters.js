@@ -269,6 +269,55 @@ export const CHARACTERS = {
       </svg>`;
     },
   },
+
+  // แม่ของเด็กทารก — ใช้กับเคสทารกสำลัก/เด็กจมน้ำ ตัวละคร generic ใช้แทนแม่ได้ทุกเคส
+  mother_baby: {
+    name: 'คุณแม่',
+    role: 'แม่ผู้ป่วย',
+    plate: ['#D9C24E', '#A8934A'],
+    placeholder(pose) {
+      const skin = '#F1C49E', skinD = '#DDA97E', shirt = '#E8D97A', shirtD = '#C9B84F', hair = '#33222E';
+      return `<svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+      <path d="M26,250 L26,206 Q26,170 100,168 Q174,170 174,206 L174,250 Z" fill="${shirt}" stroke="${OUT}" stroke-width="4"/>
+      <path d="M80,170 Q100,182 120,170 Q114,184 100,184 Q86,184 80,170 Z" fill="${shirtD}" stroke="${OUT}" stroke-width="3"/>
+      <rect x="88" y="150" width="24" height="26" fill="${skin}" stroke="${OUT}" stroke-width="3.4"/>
+      <path d="M46,120 Q40,180 50,212 L64,204 Q56,170 62,124 Z" fill="${hair}" stroke="${OUT}" stroke-width="3.6"/>
+      <path d="M154,120 Q160,180 150,212 L136,204 Q144,170 138,124 Z" fill="${hair}" stroke="${OUT}" stroke-width="3.6"/>
+      <path d="M52,100 Q52,42 100,40 Q148,42 148,100 Q148,140 128,152 Q114,161 100,161 Q86,161 72,152 Q52,140 52,100 Z" fill="${skin}" stroke="${OUT}" stroke-width="4"/>
+      <path d="M46,108 Q40,42 100,32 Q160,42 154,108 Q152,78 136,68 Q118,84 100,62 Q82,84 64,68 Q48,78 46,108 Z" fill="${hair}" stroke="${OUT}" stroke-width="4"/>
+      ${faceBase(skinD)}
+      ${blush(pose)}
+      ${brows(pose, 80, 120, 92)}
+      ${eyes(pose, 80, 120, 104, '#4A3728')}
+      ${mouthGroups(pose, 100, 132)}
+      ${emotionFx(pose)}
+      </svg>`;
+    },
+  },
+
+  // ป้าแม่ค้า — ใช้กับเคสมีดบาด/สำลัก/แขนหัก/น้ำร้อนลวกในตลาด
+  victim_auntie: {
+    name: 'ป้าแม่ค้า',
+    role: 'แม่ค้า',
+    plate: ['#8E4A6E', '#5C2E45'],
+    placeholder(pose) {
+      const skin = '#E0A97C', skinD = '#C88A5C', shirt = '#8E4A6E', shirtD = '#5C2E45', apron = '#2A4A3A', hair = '#171420';
+      return `<svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+      <path d="M26,250 L26,206 Q26,170 100,168 Q174,170 174,206 L174,250 Z" fill="${shirt}" stroke="${OUT}" stroke-width="4"/>
+      <path d="M46,196 L46,250 L154,250 L154,196 Q154,182 100,180 Q46,182 46,196 Z" fill="${apron}" stroke="${OUT}" stroke-width="3.4"/>
+      <path d="M80,174 L100,198 L120,174 L114,168 L100,186 L86,168 Z" fill="${shirtD}" stroke="${OUT}" stroke-width="3"/>
+      <rect x="88" y="150" width="24" height="26" fill="${skin}" stroke="${OUT}" stroke-width="3.4"/>
+      <path d="M52,102 Q52,46 100,44 Q148,46 148,102 Q148,140 128,152 Q114,160 100,160 Q86,160 72,152 Q52,140 52,102 Z" fill="${skin}" stroke="${OUT}" stroke-width="4"/>
+      <path d="M50,94 Q52,42 100,34 Q148,42 150,94 L140,90 Q138,64 120,60 Q104,72 100,62 Q96,72 80,60 Q62,64 60,90 Z" fill="${hair}" stroke="${OUT}" stroke-width="4"/>
+      <rect x="46" y="46" width="108" height="16" rx="4" fill="${shirtD}" stroke="${OUT}" stroke-width="2.6"/>
+      ${faceBase(skinD)}
+      ${brows(pose, 80, 120, 96)}
+      ${eyes(pose, 80, 120, 107, '#33261B')}
+      ${mouthGroups(pose, 100, 134)}
+      ${emotionFx(pose)}
+      </svg>`;
+    },
+  },
 };
 
 // SVG placeholder กลาง — เผื่อโจทย์อ้าง charId ที่ยังไม่มีใน registry (กัน "หน้าหาย")
