@@ -123,6 +123,8 @@ export const BACKGROUNDS = {
   bathroom: 'ห้องน้ำ',
   soi_corner: 'หน้าปากซอย',
   buffet_restaurant: 'ร้านบุฟเฟ่ต์',
+  flag_yard: 'ลานหน้าเสาธงตอนเช้า',
+  party_hall: 'งานเลี้ยง',
 };
 
 export function backgroundUrl(s) {

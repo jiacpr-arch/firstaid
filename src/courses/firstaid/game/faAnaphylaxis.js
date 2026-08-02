@@ -6,6 +6,7 @@ export const faAnaphylaxis = {
   subtitle: 'เพื่อนร่วมงานวัย 27 กินไปได้ครึ่งจาน ผื่นแดงขึ้นทั้งตัว ปากเริ่มบวม เสียงแหบ บอกว่า "แน่นคอ หายใจไม่ค่อยออก"',
   level: 'basic',
   track: 'medical',
+  bg: 'party_hall',
   hiddenCause: null,
   outcome: { stamp: 'ปลอดภัย!', win: 'เข็ม EpiPen ที่ฉีดทันเวลา คือเส้นแบ่งระหว่างผื่นแพ้กับโศกนาฏกรรม' },
   story: [
