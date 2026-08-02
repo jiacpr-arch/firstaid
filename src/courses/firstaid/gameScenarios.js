@@ -7,6 +7,7 @@
 // แต่ละเคสมี field:
 //   id, title, subtitle, level ('basic'|'intermediate'|'megacode'),
 //   track (หมวดในหน้าเลือกเคส — key ของ TRACK_META, ไม่ระบุ = 'other'),
+//   bg (ฉากพื้นหลัง — key ของ BACKGROUNDS ท้ายไฟล์นี้, ไม่ระบุ = ฉาก gradient เดิม),
 //   hiddenCause (เคสที่ต้องจับสัญญาณอาการเอง — ใช้ปลดเหรียญ 🔍), story[]
 //
 // หมายเหตุ: เกมนี้เป็น "โหมดโบนัส" แยกจากสถานการณ์จำลองหลัก (/simulation)
@@ -103,4 +104,22 @@ export const TRACK_META = {
 // เคสที่ไม่ระบุ track ตกหมวด 'other'
 export function trackOf(s) {
   return TRACK_META[s.track] ? s.track : 'other';
+}
+
+// ── ฉากพื้นหลังบนเวที ──────────────────────────────────────────────────
+// ไฟล์อยู่ที่ public/images/backgrounds/{key}.webp (แนวนอน 1536x1024)
+// ฉากใช้ร่วมกันหลายเคส — เคสที่ไม่ระบุ bg (หรือ key ที่ไม่รู้จัก) ใช้ฉาก
+// gradient เดิมของเวที จึงไม่มีทางได้เวทีที่ภาพหาย
+export const BACKGROUNDS = {
+  fresh_market: 'ตลาดสด',
+  noodle_shop: 'ร้านก๋วยเตี๋ยว/ร้านอาหาร',
+  road_intersection: 'แยกถนน (อุบัติเหตุรถล้ม)',
+  office_room: 'ออฟฟิศ',
+  backyard_garden: 'สวนท้ายบ้าน',
+  running_event: 'งานวิ่งการกุศล',
+  canal_side: 'ริมคลอง',
+};
+
+export function backgroundUrl(s) {
+  return s && BACKGROUNDS[s.bg] ? `/images/backgrounds/${s.bg}.webp` : null;
 }

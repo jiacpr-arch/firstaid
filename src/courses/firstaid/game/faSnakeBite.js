@@ -6,6 +6,7 @@ export const faSnakeBite = {
   subtitle: 'ลุงข้างบ้านตัดหญ้าท้ายสวนแล้วร้องลั่น — โดนงูฉกที่น่อง เห็นตัวลายๆ เลื้อยหนีเข้าพงหญ้า',
   level: 'basic',
   track: 'outdoor',
+  bg: 'backyard_garden',
   hiddenCause: null,
   outcome: { stamp: 'ส่งถึงมือหมอ!', win: 'พิษเดินช้าเพราะลุงนิ่งสนิท — ข้อมูลงูที่คุณจำไว้ช่วยหมอเลือกเซรุ่มถูกตัว' },
   story: [

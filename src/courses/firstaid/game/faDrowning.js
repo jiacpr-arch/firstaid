@@ -7,6 +7,7 @@ export const faDrowning = {
   subtitle: 'เด็กชายวัย 9 ขวบเล่นน้ำกับเพื่อนแล้วจมหาย เพื่อนวิ่งมาตะโกนเรียก — ตัวคุณว่ายน้ำไม่แข็ง',
   level: 'megacode',
   track: 'cpr',
+  bg: 'canal_side',
   hiddenCause: null,
   outcome: { stamp: 'ฟื้นแล้ว!', win: 'น้องกลับมาหายใจ — คุณช่วยเขาโดยไม่กลายเป็นผู้ประสบภัยคนที่สอง' },
   story: [

@@ -6,6 +6,7 @@ export const faBleeding = {
   subtitle: 'แม่ค้าหั่นหมูพลาด มีดบาดลึกที่แขน เลือดสีแดงสดไหลทะลักไม่หยุด หน้าเริ่มซีด',
   level: 'basic',
   track: 'trauma',
+  bg: 'fresh_market',
   hiddenCause: null,
   outcome: { stamp: 'พ้นวิกฤต!', win: 'เลือดหยุดทัน — สองมือที่กดแผลไว้คือสิ่งที่ช่วยชีวิตเธอ' },
   story: [

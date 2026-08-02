@@ -7,6 +7,7 @@ export const faHeatStroke = {
   subtitle: 'นักวิ่งวัย 35 เดินเซออกนอกเส้นทางแล้วทรุดลง เพื่อนนักวิ่งบอก "เป็นลมน่ะ พัดๆ เดี๋ยวก็ฟื้น"',
   level: 'intermediate',
   track: 'outdoor',
+  bg: 'running_event',
   hiddenCause: 'heatstroke',
   outcome: { stamp: 'อุณหภูมิลง!', win: 'คุณมองออกว่าไม่ใช่ลมธรรมดา — การลดความร้อนทุกนาทีที่เร็วขึ้น คือสมองและไตที่รอดเพิ่ม' },
   story: [
