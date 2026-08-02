@@ -7,6 +7,7 @@ export const faChestPain = {
   subtitle: 'ลุงวัย 58 กินบุฟเฟ่ต์เสร็จ นั่งกุมอก เหงื่อแตกท่วมหน้า บอกว่า "กรดไหลย้อนน่ะ กินยาลดกรดเดี๋ยวก็หาย"',
   level: 'intermediate',
   track: 'medical',
+  bg: 'buffet_restaurant',
   hiddenCause: 'heart-attack',
   outcome: { stamp: 'ทันเวลา!', win: 'กล้ามเนื้อหัวใจที่รอดเพิ่มทุกนาที — เพราะคุณไม่เชื่อคำว่า "แค่กรดไหลย้อน"' },
   story: [

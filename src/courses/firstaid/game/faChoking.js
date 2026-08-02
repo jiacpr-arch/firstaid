@@ -6,6 +6,7 @@ export const faChoking = {
   subtitle: 'หญิงวัย 50 กินลูกชิ้นอยู่ดีๆ ก็ลุกขึ้นเอามือกุมคอ พูดไม่ออก หน้าเริ่มเขียว',
   level: 'basic',
   track: 'choking',
+  bg: 'noodle_shop',
   hiddenCause: null,
   outcome: { stamp: 'รอดแล้ว!', win: 'เธอกลับมาหายใจได้ — คุณคือฮีโร่ของร้านนี้' },
   story: [

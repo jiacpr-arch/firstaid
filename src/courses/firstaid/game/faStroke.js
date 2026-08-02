@@ -7,6 +7,7 @@ export const faStroke = {
   subtitle: 'คุณป้าวัย 62 กินข้าวอยู่ดีๆ ก็วางช้อน พูดอ้อแอ้ มุมปากตก ญาติบอก "แกเพลียน่ะ เดี๋ยวก็หาย"',
   level: 'intermediate',
   track: 'neuro',
+  bg: 'home_room',
   hiddenCause: 'stroke',
   outcome: { stamp: 'ทันเวลา!', win: 'ถึงมือหมอในชั่วโมงทอง — สมองของป้ารอดเพราะคุณไม่ยอมรอ "เดี๋ยวก็หาย"' },
   story: [

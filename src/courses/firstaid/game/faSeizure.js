@@ -6,6 +6,7 @@ export const faSeizure = {
   subtitle: 'เพื่อนร่วมงานวัย 28 ล้มลงข้างโต๊ะ ตัวเกร็งกระตุกทั้งตัว น้ำลายฟูมปาก ทั้งออฟฟิศแตกตื่น',
   level: 'basic',
   track: 'neuro',
+  bg: 'office_room',
   hiddenCause: null,
   outcome: { stamp: 'ปลอดภัย!', win: 'เขาฟื้นโดยไม่บาดเจ็บสักแผล — เพราะคุณรู้ว่าอะไร "ไม่ต้องทำ"' },
   story: [

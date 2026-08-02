@@ -6,6 +6,7 @@ export const faBurn = {
   subtitle: 'พนักงานร้านสะดุดสายไฟ หม้อก๋วยเตี๋ยวเดือดๆ ราดเต็มแขนขวา ร้องลั่นครัว ผิวแดงเริ่มพอง',
   level: 'basic',
   track: 'trauma',
+  bg: 'noodle_shop',
   hiddenCause: null,
   outcome: { stamp: 'เอาอยู่!', win: 'ระบายความร้อนถูกวิธี แผลไม่ลุกลาม — 20 นาทีใต้สายน้ำของคุณคือยาที่ดีที่สุด' },
   story: [

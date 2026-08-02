@@ -6,6 +6,7 @@ export const faFainting = {
   subtitle: 'พนักงานสาววัย 22 ยืนเข้าแถวเคารพธงชาติกลางแดด บ่นหน้ามืดวูบแล้วเข่าอ่อนทรุดลง เพื่อนรับตัวไว้ทัน',
   level: 'basic',
   track: 'neuro',
+  bg: 'flag_yard',
   hiddenCause: null,
   outcome: { stamp: 'ฟื้นสบาย!', win: 'เคสเบาๆ ที่จบสวย เพราะคุณรู้ทั้งวิธีช่วย และรู้ว่าสัญญาณไหนที่ "ไม่ธรรมดา"' },
   story: [

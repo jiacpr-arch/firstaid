@@ -6,6 +6,7 @@ export const faCprAed = {
   subtitle: 'ชายวัย 55 เดินอยู่ดีๆ ก็ทรุดลงกองกับพื้น ไม่ขยับ คนมุงเต็มไปหมดแต่ไม่มีใครกล้าเข้าไป',
   level: 'basic',
   track: 'cpr',
+  bg: 'fresh_market',
   hiddenCause: null,
   outcome: { stamp: 'ฟื้นแล้ว!', win: 'เขากลับมาหายใจอีกครั้ง — มือของคุณคือเครื่องปั๊มหัวใจที่ช่วยชีวิตเขาไว้' },
   story: [

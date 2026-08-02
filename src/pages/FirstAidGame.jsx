@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Home, Volume2, VolumeX } from 'lucide-react';
 import {
-  scenarios, LEVEL_META, TRACK_META, trackOf, getScenarioById,
+  scenarios, LEVEL_META, TRACK_META, trackOf, getScenarioById, backgroundUrl,
 } from '../courses/firstaid/gameScenarios';
 import { lessons } from '../courses/firstaid/lessons';
 import { useProgressStore } from '../stores/progressStore';
@@ -222,6 +222,12 @@ export default function FirstAidGame() {
     }, 0);
     return () => clearTimeout(t);
   }, [searchParams, setSearchParams]);
+
+  // อุ่นรูปฉากของเคสที่เลือกไว้ล่วงหน้า — กันเวที gradient วาบก่อนภาพจริงโหลดเสร็จ
+  useEffect(() => {
+    const url = backgroundUrl(sc);
+    if (url && typeof Image !== 'undefined') { new Image().src = url; }
+  }, [sc]);
 
   const [speaker, setSpeaker] = useState(null); // { who, pose, popN }
   const [plate, setPlate] = useState(null); // { name } override (time-skip)
@@ -1141,7 +1147,10 @@ export default function FirstAidGame() {
   return (
     <div className={`cbs-app ${shaking ? 'cbs-shake' : ''}`}>
       <section className="cbs-game">
-        <div className={`cbs-stage ${drama === 'red' ? 'cbs-drama-red' : drama === 'white' ? 'cbs-drama' : ''}`}>
+        <div
+          className={`cbs-stage ${drama === 'red' ? 'cbs-drama-red' : drama === 'white' ? 'cbs-drama' : ''}`}
+          style={backgroundUrl(sc) ? { '--cbs-stage-bg': `url('${backgroundUrl(sc)}')` } : undefined}
+        >
           <div className="cbs-hud">
             <div className="cbs-hud-monitor">
               {st.aed ? (
