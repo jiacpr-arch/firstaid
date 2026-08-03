@@ -177,6 +177,7 @@ export const CHARACTERS = {
     name: 'จนท. 1669',
     role: 'ศูนย์สั่งการฉุกเฉิน',
     plate: ['#8E4FC8', '#5B2E86'],
+    phoneFrame: 'สายด่วน 1669', // คุยผ่านสาย — แสดงในกรอบวิดีโอคอล
     placeholder(pose) {
       const skin = '#EDBE96', skinD = '#D19C6E', shirt = '#3C4C86', shirtD = '#283765', shirtL = '#5A6CAC', hair = '#3A3F4B', hairL = '#6B7280', gear = '#20242E';
       return `<svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
