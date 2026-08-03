@@ -44,7 +44,10 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}'],
         // og-image ใช้เฉพาะตอนแชร์ลิงก์ — ไม่ต้อง precache ให้เปลืองเน็ตผู้ใช้
-        globIgnores: ['og-image.jpg'],
+        // รูปเกม (ฉาก+ตัวละคร) หลาย MB ไม่เข้า precache เช่นกัน — ไม่งั้น SW เวอร์ชันใหม่
+        // ต้องโหลดทั้งชุดก่อน activate ทำให้ผู้ใช้เน็ตช้าค้างเวอร์ชันเก่านานมาก
+        // (เกมใช้ runtime cache ใน sw.js แทน — โหลดเมื่อเล่นแล้วเก็บไว้ออฟไลน์ได้)
+        globIgnores: ['og-image.jpg', 'images/backgrounds/**', 'images/characters/**'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
