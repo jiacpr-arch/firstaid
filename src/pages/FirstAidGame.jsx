@@ -478,7 +478,8 @@ export default function FirstAidGame() {
     const hintTgt = diff.hints && hintUsedRef.current
       ? (c.options.find((o) => o.ok)?.tgt || null)
       : null;
-    setChoice({ q: c.q, options: shuffled(c.options), hintTgt });
+    // snapshot ชุดข้อผิดเข้า state — อ่าน ref ระหว่าง render ไม่ได้ (react-hooks/refs)
+    setChoice({ q: c.q, options: shuffled(c.options), hintTgt, tried: new Set(wrongPicksRef.current) });
     sfx(playChoiceAppear); // มีคำถามเด้งขึ้น — เรียกสมาธิ
     setDecisionLeft(diff.decisionTime);
     decisionLeftRef.current = diff.decisionTime;
@@ -1230,7 +1231,7 @@ export default function FirstAidGame() {
                 <div className="cbs-hint">💡 ลองเลือกแนว <b>{choice.hintTgt}</b> ดูสิ</div>
               )}
               {choice.options.map((o, i) => {
-                const tried = wrongPicksRef.current.has(o.label);
+                const tried = choice.tried && choice.tried.has(o.label);
                 const dim = !tried && choice.hintTgt && o.tgt !== choice.hintTgt;
                 const glow = choice.hintTgt && o.tgt === choice.hintTgt;
                 return (
