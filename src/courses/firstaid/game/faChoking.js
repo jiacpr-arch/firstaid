@@ -12,7 +12,7 @@ export const faChoking = {
   story: [
     { say: { who: 'friend_pim', pose: 'panic', text: 'ป้าโต๊ะข้างๆ เอามือกุมคอ! พูดไม่ออก <span class="cbs-em">ไอไม่มีเสียงเลย!</span>' }, t: 4 },
     { inter: 'สำลักรุนแรง!', drama: 'red', t: 0 },
-    { say: { who: 'opr_1669', pose: 'stern', text: 'มือกุมคอคือ<span class="cbs-em">สัญญาณสากลของการสำลัก</span> — เธอยังรู้ตัวอยู่ คุณจะทำอะไรก่อน?' }, t: 3 },
+    { say: { who: 'kru_fah', pose: 'stern', text: 'มือกุมคอคือ<span class="cbs-em">สัญญาณสากลของการสำลัก</span> — เธอยังรู้ตัวอยู่ คุณจะทำอะไรก่อน?' }, t: 3 },
     {
       choice: {
         q: 'ป้าสำลัก ยังรู้สึกตัว ไอไม่มีเสียง',
@@ -33,7 +33,7 @@ export const faChoking = {
         q: 'กระตุกหลายครั้งแล้วยังไม่หลุด — ป้าเริ่มตัวอ่อน ทรุดลง',
         options: [
           {
-            tgt: 'ช่วยเหลือ', label: 'ประคองลงพื้น สั่งคน "โทร 1669! ตามหา AED!" แล้วเริ่มปั๊มหัวใจ', ok: true,
+            tgt: 'ช่วยเหลือ', label: 'ประคองลงพื้น สั่งคน "โทร 1669! ตามหา AED!" แล้วเริ่มปั๊มหัวใจ', ok: true, call1669: true,
             then: [
               { inter: 'หมดสติแล้ว!', drama: 'red', t: 5, fx: { alarm: true } },
               { say: { who: 'lung_chai', pose: 'talk', text: 'เริ่มกดหน้าอกเลย! <span class="cbs-em">กดครบชุดแล้วเปิดปากดูทุกครั้ง</span> เห็นของค่อยเขี่ยออก', fx: { cpr: true, firstCPR: true } }, t: 8 },
