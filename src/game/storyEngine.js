@@ -4,7 +4,9 @@
 //   { say: { who, pose, text, fx? }, t? }   — บทพูด (text เป็น HTML จำกัดแค่ <span class="cbs-em">)
 //   { inter: 'ข้อความ!!', drama?, green?, fx?, t? } — จังหวะตะโกนเต็มจอ
 //   { skip: 'คำบรรยาย', t }                — time-skip (เช่น CPR 2 นาที)
-//   { choice: { q, options: [{ tgt, label, ok, why?, worsen?, then?[] }] } }
+//   { choice: { q, options: [{ tgt, label, ok, why?, worsen?, then?[], call1669? }] } }
+//   call1669: true บนตัวเลือกที่ถูก = จุดที่ผู้เล่นสั่งโทร 1669 — ก่อนจุดนี้เสียง mentor
+//   เป็นครูฟ้า (เสียงจากบทเรียนในหัว) หลังจุดนี้ จนท. 1669 ปลายสายจึงเข้ามาแนะนำได้
 //   { end: true }
 // ตอบถูก → node ใน then ของตัวเลือกถูก run ก่อนแล้วไปข้อถัดไป
 // ตอบผิด → หัก stability, เล่นจุดตัดสินใจเดิมซ้ำ (สภาพแย่ลงแล้ว)
@@ -61,6 +63,7 @@ export function createInitialState(difficultyId = DEFAULT_DIFFICULTY) {
     speedCount: 0,  // จำนวนจุดตัดสินใจที่ตอบถูก (ใช้หารเป็นค่าเฉลี่ย)
     combo: 0,       // สตรีคปัจจุบัน — ตอบถูกติดกันกี่ครั้ง (รีเซ็ตเมื่อผิด)
     maxCombo: 0,    // สตรีคยาวสุดในเคส (ใช้คิดตัวคูณคะแนน + โชว์ debrief)
+    called1669: false, // โทร 1669 ไปแล้วหรือยัง — จนท. 1669 โผล่ได้เฉพาะหลังโทร (ก่อนหน้านั้น mentor คือครูฟ้า)
   };
 }
 
@@ -112,6 +115,7 @@ export function nextNode(state, story) {
 // speedFrac = สัดส่วนเวลาที่ยังเหลือตอนตอบถูก (0 = ตอบตอนหมดเวลาพอดี, 1 = ตอบทันที)
 // ตอบเร็ว → speedFrac สูง → โบนัสความไวมากขึ้น
 export function recordCorrect(state, option, speedFrac) {
+  if (option.call1669) state.called1669 = true;
   state.timeline.push({ t: state.simTime, ok: true, text: option.label });
   state.simTime += 8;
   if (Number.isFinite(speedFrac)) {

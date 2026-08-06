@@ -549,7 +549,8 @@ export default function FirstAidGame() {
       busyRef.current = true;
       setDrama(null);
       popCounter.current += 1;
-      setSpeaker({ who: 'opr_1669', pose: 'idle', popN: popCounter.current });
+      // ก่อนโทร 1669 เสียง mentor คือครูฟ้า — จนท. 1669 โผล่ได้เฉพาะหลังผู้เล่นสั่งโทรแล้ว
+      setSpeaker({ who: st.called1669 ? 'opr_1669' : 'kru_fah', pose: 'idle', popN: popCounter.current });
       setPlate({ name: '— เวลาเดินต่อ —' });
       setAwaitTap(false);
       typeText(`⏩ ${node.skip}…`, () => {
@@ -621,7 +622,8 @@ export default function FirstAidGame() {
     syncView();
 
     popCounter.current += 1;
-    setSpeaker({ who: 'opr_1669', pose: 'stern', popN: popCounter.current });
+    // คนดุเมื่อตอบผิด: ก่อนโทร 1669 คือครูฟ้า หลังโทรแล้วคือ จนท. 1669 ปลายสาย
+    setSpeaker({ who: st.called1669 ? 'opr_1669' : 'kru_fah', pose: 'stern', popN: popCounter.current });
     setPlate(null);
     setDrama('red');
 
