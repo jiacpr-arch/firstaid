@@ -12,6 +12,7 @@ export const faBleeding = {
   story: [
     { say: { who: 'friend_pim', pose: 'panic', text: 'พี่เขาโดนมีดบาดแขน! <span class="cbs-em">เลือดพุ่งแรงมาก</span> ไหลนองพื้นเลย!' }, t: 4 },
     { inter: 'เลือดออกมาก!', drama: 'red', t: 0 },
+    { say: { who: 'victim_auntie', pose: 'panic', text: 'โอ๊ยย มือลื่นแป๊บเดียวเอง… <span class="cbs-em">เลือดไม่หยุดเลยหนู</span> ช่วยป้าที!' }, t: 4 },
     { say: { who: 'kru_fah', pose: 'stern', text: 'เลือดออกมากขนาดนี้ <span class="cbs-em">ทุกวินาทีมีค่า</span> — ระวังของมีคมรอบตัว แล้วจัดการที่แผลก่อน' }, t: 3 },
     {
       choice: {
@@ -60,6 +61,7 @@ export const faBleeding = {
         ],
       },
     },
+    { say: { who: 'victim_auntie', pose: 'panic', text: 'หนู… ป้าหนาว… <span class="cbs-em">ตาเริ่มลายแล้ว…</span>' }, t: 4 },
     {
       choice: {
         q: 'คนเจ็บพูดเบาลง หนาวสั่น หน้าซีดเหงื่อแตก — สัญญาณช็อกจากการเสียเลือด',
@@ -86,6 +88,7 @@ export const faBleeding = {
             tgt: 'ส่งต่อ', label: 'เล่าให้ครบ: บาดแผลตรงไหน เลือดออกนานเท่าไร กดห้ามเลือดไว้ตั้งแต่เมื่อไร', ok: true,
             then: [
               { inter: 'พ้นวิกฤต!', green: true, t: 5, fx: { rosc: true } },
+              { say: { who: 'victim_auntie', pose: 'happy', text: 'ขอบใจมากนะหนู… <span class="cbs-em">สองมือที่กดแผลไว้ให้ป้า</span> ป้าจะไม่ลืมเลย' }, t: 4 },
               { say: { who: 'kru_fah', pose: 'happy', text: 'เยี่ยมมาก! สูตรห้ามเลือด: <span class="cbs-em">กดตรงๆ · ชุ่มแล้วทับ · ห้ามดึงผ้าเดิม · เฝ้าอาการช็อก</span>' }, t: 5 },
             ],
           },
