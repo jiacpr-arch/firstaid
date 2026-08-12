@@ -25,6 +25,7 @@ import ExamPage from './pages/ExamPage'
 import AlgorithmIndex from './pages/AlgorithmIndex'
 import AlgorithmDetail from './pages/AlgorithmDetail'
 import SimulationSelect from './pages/SimulationSelect'
+import SimulationRandom from './pages/SimulationRandom'
 import SimulationRun from './pages/SimulationRun'
 import Certification from './pages/Certification'
 import EmergencyCall from './pages/EmergencyCall'
@@ -125,6 +126,7 @@ export default function App() {
         <Route path="/algorithms/:topic" element={<AlgorithmDetail />} />
 
         <Route path="/simulation" element={<SimulationSelect />} />
+        <Route path="/simulation/random" element={<SimulationRandom />} />
         <Route path="/simulation/:scenarioId" element={<SimulationRun />} />
         {/* Seo ของเกมอยู่ตรงนี้ (ไม่อยู่ใน FirstAidGame) เพื่อให้ meta พร้อมตั้งแต่
             ก่อน lazy chunk โหลดเสร็จ — จำเป็นสำหรับ prerender ที่รอ title[data-seo] */}
