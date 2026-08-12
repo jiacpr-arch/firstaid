@@ -205,9 +205,19 @@ export default function FirstAidGame() {
   // เปิดมาแล้วสุ่มเคสที่ปลดล็อกให้ทันที — ลบ param ทิ้งกัน refresh กลางเกมแล้วสุ่มซ้ำ
   // ผูกกับ searchParams (ไม่ใช่ mount-only) ให้ลิงก์ทำงานแม้หน้าเกมเปิดค้างอยู่แล้ว
   // เช่นกดลิงก์ซ้ำใน PWA ที่แอปยังเปิดอยู่
+  //
+  // /game?random=play (ใช้กับการ์ด Games Hub ที่ game.morroo.com) — สุ่มเคส
+  // แบบเดียวกัน แต่ข้ามจอ title ต่อไปเข้าเกมทันทีด้วย ไม่ต้องกดเริ่มเอง
   const [searchParams, setSearchParams] = useSearchParams();
+  // เก็บว่าจะกดเริ่มให้อัตโนมัติหลังสุ่มเคสไหม — เป็น counter (ไม่ใช่ boolean)
+  // เพราะ startGame() ต้องรอ sc อัพเดต/re-render ก่อนถึงจะอ่านค่าที่ถูกต้อง
+  // (เรียก startGame() ในเอฟเฟกต์เดียวกับ setSc จะได้ closure ของ sc ค่าเก่า)
+  // ใช้ตัวนับแทนอ้างอิงจาก sc โดยตรง กัน edge case ที่สุ่มได้เคสเดิมกับ sc ปัจจุบัน
+  // (setSc ค่าเดิม React จะไม่ re-render ทำให้เอฟเฟกต์ที่ผูกกับ sc ไม่ทำงาน)
+  const [autoStartTick, setAutoStartTick] = useState(0);
   useEffect(() => {
     if (!searchParams.has('random')) return undefined;
+    const wantsPlay = searchParams.get('random') === 'play';
     // ทำงานใน callback (ไม่ setState ตรงๆ ใน effect body — react-hooks/set-state-in-effect)
     // และลบ param ใน callback เดียวกัน: ถ้าลบใน effect body ตรงๆ deps จะเปลี่ยน
     // แล้ว cleanup มา clearTimeout ทิ้งก่อนได้สุ่ม
@@ -215,9 +225,10 @@ export default function FirstAidGame() {
       setSearchParams({}, { replace: true });
       const chosen = randomUnlockedCase(readCleared(), pool);
       if (chosen) {
-        track('game_random_link', { scenario_id: chosen.id });
+        track('game_random_link', { scenario_id: chosen.id, autostart: wantsPlay });
         setSc(chosen);
         setScreen('title'); // ข้ามหน้าเลือกเคส ไปหน้า title ของเคสที่สุ่มได้เลย
+        if (wantsPlay) setAutoStartTick((n) => n + 1);
       }
     }, 0);
     return () => clearTimeout(t);
@@ -695,6 +706,18 @@ export default function FirstAidGame() {
     track('game_started', { scenario_id: sc.id, difficulty });
     later(() => advance(), reducedMotion ? 100 : 400);
   }
+
+  // กดเริ่มให้อัตโนมัติหลัง /game?random=play — แยกเป็นเอฟเฟกต์ที่สอง (วางไว้หลัง
+  // startGame ประกาศ ให้ปิดด้วย closure ของ render ปัจจุบัน) ให้ทำงานหลัง sc
+  // อัพเดต/re-render แล้วเท่านั้น (ดูคอมเมนต์ที่ autoStartTick ด้านบน)
+  useEffect(() => {
+    if (autoStartTick === 0) return undefined;
+    // เลื่อนไป setTimeout เช่นเดียวกับเอฟเฟกต์ ?random ด้านบน — กัน lint
+    // react-hooks/set-state-in-effect (startGame เรียก setState หลายตัวตรงๆ)
+    const t = setTimeout(() => startGame(), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartTick]);
 
   function pickScenario(chosen) {
     setSc(chosen);
