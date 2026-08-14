@@ -139,6 +139,14 @@ export const houseAds = [
     color: '#059669',
     tags: ['training', 'cpr', 'aed'],
   },
+  {
+    id: 'jiaclass',
+    name: 'จองคอร์สอบรม CPR / ACLS',
+    tagline: 'ดูรอบเรียนที่เปิดรับ แล้วจองออนไลน์ได้เลยที่ class.morroo.com',
+    url: 'https://class.morroo.com/?utm_source=firstaid_ad',
+    color: '#B45309',
+    tags: ['training', 'cpr', 'aed'],
+  },
 ]
 
 // จับคู่ path ของหน้า → tag ที่อยากดันขึ้นก่อน (เรียงตามลำดับความสำคัญ)

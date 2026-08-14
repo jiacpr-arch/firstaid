@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Phone, MessageCircle, Sparkles, Users, Award, ClipboardList } from 'lucide-react'
 import PracticalInterestForm from './PracticalInterestForm'
+import UpcomingClassBanner from './UpcomingClassBanner'
 import { lineInterestUrl, LINE_OA_ID as LINE_DISPLAY } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
 
@@ -92,6 +93,10 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
             รับใบรับรองผ่านการอบรมภาคปฏิบัติ
           </li>
         </ul>
+
+        {/* รอบที่เปิดจองจริงจากระบบจองกลาง — จองพร้อมจ่ายได้เลย ไม่ต้องรอติดต่อกลับ
+            (ดึงข้อมูลไม่ได้/ไม่มีรอบว่าง = ไม่แสดง แล้วเหลือช่องทาง โทร/LINE/ฝากชื่อ ตามเดิม) */}
+        <UpcomingClassBanner source={source} />
 
         <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginTop: 14 }}>
           สนใจสอบถาม / จัดอบรมโดย {ORG_NAME}
