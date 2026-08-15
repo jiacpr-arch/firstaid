@@ -34,6 +34,7 @@ import CheckInScan from './pages/CheckInScan'
 import JoinClass from './pages/JoinClass'
 import Settings from './pages/Settings'
 import News from './pages/News'
+import Schedule from './pages/Schedule'
 import LineCallback from './pages/LineCallback'
 import NotFound from './pages/NotFound'
 
@@ -152,6 +153,7 @@ export default function App() {
         <Route path="/join/:code" element={<JoinClass />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/news" element={<News />} />
+        <Route path="/schedule" element={<Schedule />} />
         <Route path="/auth/line/callback" element={<LineCallback />} />
 
         <Route path="/admin/login" element={
