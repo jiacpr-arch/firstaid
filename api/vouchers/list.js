@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   const { data, error } = await admin
     .from('vouchers')
-    .select('code, chapter, status, price_thb, redeemed_by, redeemed_at, created_at')
+    .select('code, chapter, status, price_thb, valid_days, max_uses, use_count, redeemed_by, redeemed_at, created_at')
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE)
   if (error) { res.status(500).json({ error: error.message }); return }
