@@ -19,12 +19,29 @@ const defaultPriceFor = (chapter) =>
 const statusLabel = { active: 'ยังไม่ใช้', redeemed: 'ใช้แล้ว', void: 'ยกเลิก' }
 const statusClass = { active: 'badge-brand', redeemed: 'badge-success', void: 'badge-muted' }
 
+// ตัวเลือกรูปแบบโค้ด — โค้ดครั้งเดียว (ขายรายคน) หรือโค้ดคลาส (แชร์ได้หลายคน)
+const KIND_SINGLE = 'single'
+const KIND_CLASS = 'class'
+
+// สรุปสั้น ๆ ว่าโค้ดใบนี้เป็นแบบไหน/เหลือกี่สิทธิ์/อายุเท่าไร (max_uses = null คือของเดิม ใช้ครั้งเดียว)
+function codeMeta(v) {
+  const parts = []
+  if (v.max_uses == null) parts.push('ใช้ครั้งเดียว')
+  else if (v.max_uses === 0) parts.push(`โค้ดคลาส • ใช้แล้ว ${v.use_count ?? 0} คน (ไม่จำกัด)`)
+  else parts.push(`โค้ดคลาส • ${v.use_count ?? 0}/${v.max_uses} คน`)
+  parts.push(v.valid_days ? `หมดอายุใน ${v.valid_days} วัน` : 'ไม่มีวันหมดอายุ')
+  return parts.join(' • ')
+}
+
 // สร้าง/ดูโค้ดปลดล็อกบทเรียน (Phase 1) — ขายมือผ่าน PromptPay/LINE แล้วส่งโค้ดให้ลูกค้า
 // redeem เองในแอป (/api/entitlements/redeem)
 export default function AdminVouchers() {
   const [chapter, setChapter] = useState(CHAPTER_OPTIONS[0].value)
   const [count, setCount] = useState(1)
   const [priceThb, setPriceThb] = useState(defaultPriceFor(CHAPTER_OPTIONS[0].value))
+  const [kind, setKind] = useState(KIND_SINGLE)
+  const [validDays, setValidDays] = useState('')   // ว่าง = ไม่มีวันหมดอายุ
+  const [maxUses, setMaxUses] = useState('')       // ว่าง = ไม่จำกัดจำนวนคน (สำหรับโค้ดคลาส)
   const [vouchers, setVouchers] = useState([])
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
@@ -53,9 +70,19 @@ export default function AdminVouchers() {
     setBusy(true)
     setError('')
     try {
+      // โค้ดคลาส = โค้ดเดียวแชร์หลายคน → บังคับ count = 1 (ออกใบเดียว)
+      // maxUses: ว่าง = ไม่จำกัด (ส่ง 0), มีตัวเลข = จำกัดจำนวนคน
+      const isClass = kind === KIND_CLASS
+      const body = {
+        chapter,
+        count: isClass ? 1 : Number(count) || 1,
+        priceThb: priceThb ? Number(priceThb) : null,
+        validDays: validDays ? Number(validDays) : null,
+        maxUses: isClass ? (maxUses ? Number(maxUses) : 0) : null,
+      }
       const res = await adminFetch('/api/vouchers/create', {
         method: 'POST',
-        body: JSON.stringify({ chapter, count: Number(count) || 1, priceThb: priceThb ? Number(priceThb) : null }),
+        body: JSON.stringify(body),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || 'สร้างโค้ดไม่สำเร็จ'); return }
@@ -110,11 +137,30 @@ export default function AdminVouchers() {
           ))}
         </select>
 
+        <label className="label" style={{ marginTop: 10 }}>รูปแบบโค้ด</label>
+        <select className="input" value={kind} onChange={(e) => setKind(e.target.value)}>
+          <option value={KIND_SINGLE}>โค้ดครั้งเดียว — ขายรายคน (1 โค้ด = 1 คน)</option>
+          <option value={KIND_CLASS}>โค้ดคลาส — แชร์ให้นักเรียนหลายคน (1 โค้ดใช้ได้หลายคน)</option>
+        </select>
+
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          {kind === KIND_SINGLE ? (
+            <div style={{ flex: 1 }}>
+              <label className="label">จำนวนโค้ด</label>
+              <input className="input" type="number" min={1} max={100} value={count}
+                onChange={(e) => setCount(e.target.value)} />
+            </div>
+          ) : (
+            <div style={{ flex: 1 }}>
+              <label className="label">จำกัดจำนวนคน</label>
+              <input className="input" type="number" min={1} placeholder="ว่าง = ไม่จำกัด" value={maxUses}
+                onChange={(e) => setMaxUses(e.target.value)} />
+            </div>
+          )}
           <div style={{ flex: 1 }}>
-            <label className="label">จำนวนโค้ด</label>
-            <input className="input" type="number" min={1} max={100} value={count}
-              onChange={(e) => setCount(e.target.value)} />
+            <label className="label">อายุ (วัน)</label>
+            <input className="input" type="number" min={1} placeholder="ว่าง = ถาวร" value={validDays}
+              onChange={(e) => setValidDays(e.target.value)} />
           </div>
           <div style={{ flex: 1 }}>
             <label className="label">ราคา (บาท)</label>
@@ -122,6 +168,11 @@ export default function AdminVouchers() {
               onChange={(e) => setPriceThb(e.target.value)} />
           </div>
         </div>
+        {kind === KIND_CLASS && (
+          <div className="text-caption" style={{ marginTop: 6 }}>
+            เช่น เรียนไม่อั้น 1 เดือน = อายุ 30 วัน + เว้นจำนวนคนว่างไว้ (ใครมีโค้ดก็เข้าได้ นับ 30 วันจากวันที่กรอกของแต่ละคน)
+          </div>
+        )}
 
         {error && <div className="callout callout-warning" style={{ marginTop: 10 }}>{error}</div>}
 
@@ -150,8 +201,12 @@ export default function AdminVouchers() {
                 {v.chapter === COURSE_BUNDLE_CHAPTER ? 'ทั้งคอร์ส' : `หมวด ${v.chapter}`}
                 {v.price_thb ? ` • ฿${v.price_thb}` : ''}
               </div>
+              <div className="text-caption" style={{ color: 'var(--color-text-muted)' }}>{codeMeta(v)}</div>
             </div>
-            <span className={`badge ${statusClass[v.status] || 'badge-muted'}`}>{statusLabel[v.status] || v.status}</span>
+            {/* โค้ดคลาสไม่มีสถานะ active/redeemed รายใบ — โชว์ badge เฉพาะโค้ดครั้งเดียว */}
+            {v.max_uses == null && (
+              <span className={`badge ${statusClass[v.status] || 'badge-muted'}`}>{statusLabel[v.status] || v.status}</span>
+            )}
             <button type="button" className="btn btn-secondary" onClick={() => copy(v.code)}>
               {copied === v.code ? <Check size={14} /> : <Copy size={14} />}
             </button>

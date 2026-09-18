@@ -7,8 +7,10 @@ import Seo from '../components/Seo'
 // ถ้าตั้ง VITE_ADMIN_EMAIL ไว้ → โหมด "รหัสเดียว": ผู้ใช้กรอกแค่รหัสผ่าน
 // email จะถูก fix ไว้เบื้องหลัง (ใช้ล็อกอิน Supabase เพื่อให้ RLS/อัปโหลดทำงานได้)
 // ถ้าไม่ตั้ง → ใช้ฟอร์ม email + password ตามเดิม
+// ต้องเป็นอีเมลจริง (มี @) เท่านั้น — เคยมีเคสตั้งค่าเป็นชื่อเฉย ๆ ("jiacpr") แล้วล็อกอิน
+// ไม่ได้เลยทั้งระบบเพราะ Supabase ปฏิเสธ email ที่ไม่ valid → ค่าเพี้ยนให้ถอยไปฟอร์มเต็ม
 const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || '').trim()
-const PASSCODE_MODE = ADMIN_EMAIL !== ''
+const PASSCODE_MODE = ADMIN_EMAIL.includes('@')
 
 export default function AdminLogin() {
   const navigate = useNavigate()
