@@ -19,6 +19,7 @@ export function buildRoutes() {
     ...scenarios.map((s) => ({ path: `/simulation/${s.id}`, source: 'src/courses/firstaid/scenarios.js' })),
     { path: '/call', source: null },
     { path: '/news', source: null },
+    { path: '/schedule', source: null },
     { path: '/game', source: null },
     { path: '/certificate', source: null },
   ]

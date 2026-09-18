@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CalendarDays, ArrowRight } from 'lucide-react'
 import { fetchUpcoming, bookingUrl, thShortDate, CONSUMER_COURSE_KEY, UTM_SOURCE } from '../config/jiaBookingHub'
 import { phCapture } from '../lib/posthog'
@@ -66,6 +67,15 @@ export default function UpcomingClassBanner({ source = 'unknown' }) {
           </a>
         ))}
       </div>
+      <Link
+        to="/schedule"
+        style={{
+          display: 'block', marginTop: 8, textAlign: 'center',
+          fontSize: 12, fontWeight: 700, color: '#047857', textDecoration: 'none',
+        }}
+      >
+        ดูตารางสอนทุกรอบ →
+      </Link>
     </div>
   )
 }
