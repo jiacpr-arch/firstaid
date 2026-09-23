@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
+import { checkHubIdentityLinked } from '../_lib/hubIdentity.js'
 
 const LINE_TOKEN_URL = 'https://api.line.me/oauth2/v2.1/token'
 const LINE_VERIFY_URL = 'https://api.line.me/oauth2/v2.1/verify'
@@ -84,10 +85,13 @@ export default async function handler(req, res) {
 
     let authEmail
     let canonicalLearnerId
+    let hubAccountLinked = false
     if (existingMap) {
       authEmail = existingMap.email
       canonicalLearnerId = existingMap.learner_id
     } else {
+      // See api/_lib/hubIdentity.js — read-only dupe-detection, does not change what happens below.
+      hubAccountLinked = await checkHubIdentityLinked(admin, lineUserId)
       // Synthesize a stable email when LINE doesn't share one (email scope needs review).
       authEmail = lineEmail || `line_${lineUserId}@line.firstaid.local`
       canonicalLearnerId = learnerId || randomUUID()
@@ -136,6 +140,7 @@ export default async function handler(req, res) {
       pictureUrl,
       lineEmail,
       learnerId: canonicalLearnerId,
+      hubAccountLinked, // telemetry only for now (Phase 6) — see comment above; not acted on by the client yet
     })
   } catch (err) {
     console.error('LINE auth bridge error', err)
