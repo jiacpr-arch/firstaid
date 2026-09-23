@@ -4,7 +4,7 @@ import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
 import { notifyCertIssued } from '../_lib/certNotify.js'
 import { scoreExam, POST_PASSING as PASSING } from '../_lib/examKey.js'
-import { learnerIdFromToken, reconcileLearner } from '../_lib/authLearner.js'
+import { learnerIdFromToken, reconcileLearner, isLearnerIdBound } from '../_lib/authLearner.js'
 import { rateLimited } from '../_lib/rateLimit.js'
 
 export default async function handler(req, res) {
@@ -38,15 +38,12 @@ export default async function handler(req, res) {
   if (forbidden) { res.status(403).json({ error: 'learnerId does not match session' }); return }
 
   // Anonymous issuance is allowed (offline-first learners who never logged in),
-  // but a learnerId that is bound to a LINE account can only be used with that
-  // account's token — otherwise anyone could mint/block the cert of a known id.
-  if (!tokenLearnerId) {
-    const { data: bound } = await admin
-      .from('line_identities')
-      .select('learner_id')
-      .eq('learner_id', learnerId)
-      .maybeSingle()
-    if (bound) { res.status(403).json({ error: 'Login required for this learnerId' }); return }
+  // but a learnerId that is bound to a real account (LINE, or a Hub SSO login that adopted with
+  // no LINE linked) can only be used with that account's own token — otherwise anyone could
+  // mint/block the cert of a known id.
+  if (!tokenLearnerId && await isLearnerIdBound(admin, learnerId)) {
+    res.status(403).json({ error: 'Login required for this learnerId' })
+    return
   }
 
   // Idempotent: a learner gets exactly one theory certificate. Return the existing

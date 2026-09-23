@@ -53,3 +53,41 @@
   ให้ย้าย state/nonce ไปเก็บใน cookie (ดูคอมเมนต์ใน `src/utils/lineAuth.js`)
 - **ความก้าวหน้าผู้เรียน** ผูกกับ `learner.id` (UUID) เหมือนเดิม — การล็อกอินแค่ "ผูก" บัญชีเข้ากับ id นี้
   ผ่านตาราง `line_identities` จึงไม่ต้องย้ายข้อมูลเดิม
+
+## 5) ทางเลือกสำรอง: เข้าสู่ระบบด้วยบัญชี JIA กลาง (Hub SSO, ไม่มี LINE) — 23 กันยายน 2569
+
+ด่านล็อกอินหลังบทแรก (`LineLoginGate.jsx`) **ปิดไม่ได้** — เดิมมีแค่ทาง LINE ทางเดียว คนไม่มี/ไม่อยาก
+ใช้ LINE จะเรียนต่อไม่ได้เลย ตอนนี้มีปุ่มที่สอง **"ไม่มี LINE? เข้าสู่ระบบด้วยบัญชี JIA"** ส่ง browser
+ไปที่หน้า `/sso` ของ Hub (`class.jiacpr.com`, repo `jia-learning-hub`) — ดูภาพรวมทั้งระบบที่
+`jia-learning-hub`, `docs/unified-identity.md`
+
+- `src/utils/hubAuth.js` (คู่กับ `src/utils/lineAuth.js`): PKCE (S256) — `state`/`code_verifier` เก็บ
+  ทั้ง sessionStorage และ cookie เหมือนของ LINE
+- `src/pages/HubCallback.jsx` (route `/auth/hub/callback`): แลก `code` ที่ `/api/auth/hub` แล้ว
+  `supabase.auth.verifyOtp()` เหมือน `LineCallback.jsx`
+- `api/auth/hub.js`: เรียก `public.jia_sso('consume')` **ตรง** (ไม่ผ่าน Edge Function `sso-auth`ของ
+  Hub) เพราะ firstaid อยู่ Supabase โปรเจกต์เดียวกับ Hub — service role ของ firstaid เองก็ทำแทนได้
+  ทุกอย่างที่ `sso-auth` ทำ (consume code + mint magiclink) แล้วยังได้ `userId` กลับมาตรงๆ ด้วย (ซึ่ง
+  response ของ `sso-auth` เองไม่คืนให้) จากนั้นเรียก `public.jia_firstaid_hub_adopt` เพื่อได้
+  `learner_id` ตัวจริง (คนละบัญชีจะ merge ไม่ได้ ถ้าชนกับ `learnerId` ของคนอื่นจะถูกปฏิเสธ)
+- `api/_lib/authLearner.js`: `learnerIdFromToken`/ตัวเช็ค "learnerId นี้ผูกกับบัญชีจริงหรือยัง" (ใช้ใน
+  `api/certificates/issue-theory.js`) ตอนนี้เช็คทั้ง `line_identities` และ (ตัวใหม่)
+  `public.jia_firstaid_hub_learner` (สำหรับบัญชีที่ adopt แบบไม่มี LINE) — ตัวหลังเป็น best-effort
+  (เรียกไม่ได้ก็แค่ถือว่ายังไม่ผูก ไม่บล็อกล็อกอินอื่น)
+
+**ต้องตั้งค่าก่อนใช้งานจริง (ฝั่ง Hub, `jia-learning-hub`):**
+1. Apply migration ทั้งชุด unified-identity (ดูเช็คลิสต์ใน `docs/unified-identity.md` ของ repo นั้น)
+2. เพิ่มแถว `sso_clients` ให้ firstaid:
+   ```sql
+   insert into learning_hub.sso_clients(client_id,name,kind,redirect_uris) values
+    ('firstaid','FirstAid Morroo','supabase',array[
+     'https://firstaid.morroo.com/auth/hub/callback',
+     'http://localhost:5173/auth/hub/callback']);
+   ```
+   (`kind='supabase'` ไม่ต้องมี secret — เชื่อด้วย `client_id`+`redirect_uri` ตรงเป๊ะเท่านั้น เพราะ
+   `api/auth/hub.js` เรียก RPC ตรงด้วย service role ของ firstaid เอง ไม่ผ่าน CORS จาก browser)
+
+**ทดสอบ:** เปิดในเบราว์เซอร์ปกติ (ไม่ใช่ LINE) → เรียนจบบทแรก → กด "ไม่มี LINE? เข้าสู่ระบบด้วยบัญชี
+JIA" → เด้งไปหน้า `/sso` ของ Hub → login (LINE หรืออีเมลที่ Hub) → กรอกชื่อถ้ายังไม่มี → กลับมาที่
+`/auth/hub/callback` → ได้ session จริง → เรียนต่อ/ออกใบเซอร์ได้ปกติ; ล็อกอินซ้ำจากเครื่องอื่นด้วย
+บัญชี Hub เดิม → ต้องได้ `learner_id` เดิม (progress/ใบเซอร์เดิม) ไม่ใช่ผู้เรียนคนใหม่
