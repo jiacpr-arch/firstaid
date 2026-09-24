@@ -36,6 +36,7 @@ import Settings from './pages/Settings'
 import News from './pages/News'
 import Schedule from './pages/Schedule'
 import LineCallback from './pages/LineCallback'
+import HubCallback from './pages/HubCallback'
 import NotFound from './pages/NotFound'
 
 // เกมโหมดโบนัส (FIRST AID HERO) — lazy เพื่อไม่ให้ chunk หลักโตจนชน PWA precache cap
@@ -155,6 +156,7 @@ export default function App() {
         <Route path="/news" element={<News />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/auth/line/callback" element={<LineCallback />} />
+        <Route path="/auth/hub/callback" element={<HubCallback />} />
 
         <Route path="/admin/login" element={
           <Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>

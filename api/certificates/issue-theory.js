@@ -4,7 +4,8 @@ import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
 import { notifyCertIssued } from '../_lib/certNotify.js'
 import { scoreExam, POST_PASSING as PASSING } from '../_lib/examKey.js'
-import { learnerIdFromToken, reconcileLearner } from '../_lib/authLearner.js'
+import { authFromToken, reconcileLearner, isLearnerIdBound } from '../_lib/authLearner.js'
+import { recordExamsAtHub } from '../_lib/hubResults.js'
 import { rateLimited } from '../_lib/rateLimit.js'
 
 export default async function handler(req, res) {
@@ -33,20 +34,18 @@ export default async function handler(req, res) {
   // Bind to the authenticated learner when a LINE session token is present, so a
   // cert can't be minted against someone else's learnerId. All DB operations
   // below must use the reconciled id, never the raw body value.
-  const tokenLearnerId = await learnerIdFromToken(admin, req)
+  const auth = await authFromToken(admin, req)
+  const tokenLearnerId = auth?.learnerId || null
   const { learnerId, forbidden } = reconcileLearner(bodyLearnerId, tokenLearnerId)
   if (forbidden) { res.status(403).json({ error: 'learnerId does not match session' }); return }
 
   // Anonymous issuance is allowed (offline-first learners who never logged in),
-  // but a learnerId that is bound to a LINE account can only be used with that
-  // account's token — otherwise anyone could mint/block the cert of a known id.
-  if (!tokenLearnerId) {
-    const { data: bound } = await admin
-      .from('line_identities')
-      .select('learner_id')
-      .eq('learner_id', learnerId)
-      .maybeSingle()
-    if (bound) { res.status(403).json({ error: 'Login required for this learnerId' }); return }
+  // but a learnerId that is bound to a real account (LINE, or a Hub SSO login that adopted with
+  // no LINE linked) can only be used with that account's own token — otherwise anyone could
+  // mint/block the cert of a known id.
+  if (!tokenLearnerId && await isLearnerIdBound(admin, learnerId)) {
+    res.status(403).json({ error: 'Login required for this learnerId' })
+    return
   }
 
   // Idempotent: a learner gets exactly one theory certificate. Return the existing
@@ -64,7 +63,7 @@ export default async function handler(req, res) {
   // isn't one yet, score the submitted answers here against the real key.
   const { data: attempts } = await admin
     .from('exam_attempts')
-    .select('score, passed')
+    .select('uuid, kind, score, correct, total, passed, finished_at')
     .eq('learner_id', learnerId)
     .eq('kind', 'post')
     .order('score', { ascending: false })
@@ -85,7 +84,7 @@ export default async function handler(req, res) {
           passed: true,
           finished_at: new Date().toISOString(),
         })
-        .select('score, passed')
+        .select('uuid, kind, score, correct, total, passed, finished_at')
         .single()
       best = inserted
     }
@@ -94,6 +93,9 @@ export default async function handler(req, res) {
     res.status(409).json({ error: 'Post-test not passed' })
     return
   }
+  // The attempt this certificate rests on also goes to the Hub's central exam record (a no-op if
+  // sync already sent it). Logged-in learners only; never blocks issuance.
+  if (tokenLearnerId) await recordExamsAtHub(admin, auth.userId, [best])
 
   const cert = {
     learner_id: learnerId,

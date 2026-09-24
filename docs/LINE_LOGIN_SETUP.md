@@ -53,3 +53,66 @@
   ให้ย้าย state/nonce ไปเก็บใน cookie (ดูคอมเมนต์ใน `src/utils/lineAuth.js`)
 - **ความก้าวหน้าผู้เรียน** ผูกกับ `learner.id` (UUID) เหมือนเดิม — การล็อกอินแค่ "ผูก" บัญชีเข้ากับ id นี้
   ผ่านตาราง `line_identities` จึงไม่ต้องย้ายข้อมูลเดิม
+
+## 5) ทางเลือกสำรอง: เข้าสู่ระบบด้วยบัญชี JIA กลาง (Hub SSO, ไม่มี LINE) — 23 กันยายน 2569
+
+ด่านล็อกอินหลังบทแรก (`LineLoginGate.jsx`) **ปิดไม่ได้** — เดิมมีแค่ทาง LINE ทางเดียว คนไม่มี/ไม่อยาก
+ใช้ LINE จะเรียนต่อไม่ได้เลย ตอนนี้มีปุ่มที่สอง **"ไม่มี LINE? เข้าสู่ระบบด้วยบัญชี JIA"** ส่ง browser
+ไปที่หน้า `/sso` ของ Hub (`class.jiacpr.com`, repo `jia-learning-hub`) — ดูภาพรวมทั้งระบบที่
+`jia-learning-hub`, `docs/unified-identity.md`
+
+- `src/utils/hubAuth.js` (คู่กับ `src/utils/lineAuth.js`): PKCE (S256) — `state`/`code_verifier` เก็บ
+  ทั้ง sessionStorage และ cookie เหมือนของ LINE
+- `src/pages/HubCallback.jsx` (route `/auth/hub/callback`): แลก `code` ที่ `/api/auth/hub` แล้ว
+  `supabase.auth.verifyOtp()` เหมือน `LineCallback.jsx`
+- `api/auth/hub.js`: เรียก `public.jia_sso('consume')` **ตรง** (ไม่ผ่าน Edge Function `sso-auth`ของ
+  Hub) เพราะ firstaid อยู่ Supabase โปรเจกต์เดียวกับ Hub — service role ของ firstaid เองก็ทำแทนได้
+  ทุกอย่างที่ `sso-auth` ทำ (consume code + mint magiclink) แล้วยังได้ `userId` กลับมาตรงๆ ด้วย (ซึ่ง
+  response ของ `sso-auth` เองไม่คืนให้) จากนั้นเรียก `public.jia_firstaid_hub_adopt` เพื่อได้
+  `learner_id` ตัวจริง (คนละบัญชีจะ merge ไม่ได้ ถ้าชนกับ `learnerId` ของคนอื่นจะถูกปฏิเสธ)
+- `api/_lib/authLearner.js`: `learnerIdFromToken`/ตัวเช็ค "learnerId นี้ผูกกับบัญชีจริงหรือยัง" (ใช้ใน
+  `api/certificates/issue-theory.js`) ตอนนี้เช็คทั้ง `line_identities` และ (ตัวใหม่)
+  `public.jia_firstaid_hub_learner` (สำหรับบัญชีที่ adopt แบบไม่มี LINE) — ตัวหลังเป็น best-effort
+  (เรียกไม่ได้ก็แค่ถือว่ายังไม่ผูก ไม่บล็อกล็อกอินอื่น)
+
+**ต้องตั้งค่าก่อนใช้งานจริง (ฝั่ง Hub, `jia-learning-hub`):**
+1. Apply migration ทั้งชุด unified-identity (ดูเช็คลิสต์ใน `docs/unified-identity.md` ของ repo นั้น)
+2. เพิ่มแถว `sso_clients` ให้ firstaid:
+   ```sql
+   insert into learning_hub.sso_clients(client_id,name,kind,redirect_uris,allowed_courses) values
+    ('firstaid','FirstAid Morroo','supabase',array[
+     'https://firstaid.morroo.com/auth/hub/callback',
+     'http://localhost:5173/auth/hub/callback'],array['firstaid']);
+   ```
+   (`allowed_courses` = คอร์สที่ firstaid ส่งผลสอบเข้า "ผลสอบกลาง" ของ Hub ได้ — ดูหัวข้อ 6)
+   (`kind='supabase'` ไม่ต้องมี secret — เชื่อด้วย `client_id`+`redirect_uri` ตรงเป๊ะเท่านั้น เพราะ
+   `api/auth/hub.js` เรียก RPC ตรงด้วย service role ของ firstaid เอง ไม่ผ่าน CORS จาก browser)
+
+**ทดสอบ:** เปิดในเบราว์เซอร์ปกติ (ไม่ใช่ LINE) → เรียนจบบทแรก → กด "ไม่มี LINE? เข้าสู่ระบบด้วยบัญชี
+JIA" → เด้งไปหน้า `/sso` ของ Hub → login (LINE หรืออีเมลที่ Hub) → กรอกชื่อถ้ายังไม่มี → กลับมาที่
+`/auth/hub/callback` → ได้ session จริง → เรียนต่อ/ออกใบเซอร์ได้ปกติ; ล็อกอินซ้ำจากเครื่องอื่นด้วย
+บัญชี Hub เดิม → ต้องได้ `learner_id` เดิม (progress/ใบเซอร์เดิม) ไม่ใช่ผู้เรียนคนใหม่
+
+## 6) ผลสอบเข้า "ผลสอบกลาง" ของ Hub — 24 กันยายน 2569
+
+ผลสอบ pre/post ที่ server ตรวจแล้ว ส่งเข้า `learning_hub.exam_results` ของ Hub ผ่าน `public.jia_results('record')`
+ด้วย service role ของ firstaid เอง (DB เดียวกัน) — `api/_lib/hubResults.js`:
+- **เฉพาะผู้เรียนที่ login อยู่** (bearer token → บัญชี + learner ที่ผูกกันจริง) ผลของผู้เรียนนิรนามไม่ถูกส่ง
+- ส่งจาก `api/sync/push.js` (ทุก attempt ที่ sync ขึ้นมา — ตรวจใหม่ที่ server แล้ว) และ `api/certificates/issue-theory.js`
+  (attempt ที่ใช้ออกใบ theory) — `attemptRef` = uuid ของ `exam_attempts` จึงส่งซ้ำได้ผลเดิม
+- Hub คิดคะแนน/ผ่าน-ไม่ผ่านเองจาก correct/total (เกณฑ์คอร์ส `firstaid` ของ Hub) — Hub ล่ม/ปฏิเสธ แค่ log ไม่กระทบ sync/ใบเซอร์
+- ต้องมีแถว `sso_clients` `firstaid` ที่ `allowed_courses` มี `firstaid` (ข้อ 2 ของหัวข้อ 5) และ apply
+  `20261016100000_exam_results.sql` ของ Hub ก่อน ผลถึงจะเข้า
+
+**แก้ช่องโหว่ไปพร้อมกัน:** `api/sync/push.js` เดิมให้ผู้เรียกที่ไม่มี token sync ข้อมูลเข้า `learnerId` ของใครก็ได้ รวมถึง
+learner ที่ผูกกับบัญชีจริงแล้ว (Hub อ่าน `exam_attempts`/`lesson_progress` ของ learner นั้นเป็นหลักฐานความพร้อม) — ตอนนี้
+ปฏิเสธ (403) เหมือน `issue-theory` แล้ว; เครื่องที่ logout อยู่ไม่เสียข้อมูล (แถวค้างในเครื่องแล้วส่งพร้อม token หลัง login)
+
+## 7) ใบประกาศออนไลน์กลาง JIA บนหน้าใบประกาศ — 24 กันยายน 2569
+
+การ์ดใบประกาศภาคทฤษฎีแสดง "ใบประกาศออนไลน์กลาง JIA" **เพิ่ม** จากใบของแอปนี้ (ใบ FA- เดิมไม่เปลี่ยน ตามที่ตัดสินใจ) —
+`src/components/HubCertificateCard.jsx` เรียก `public.jia_person_certificates('mine')` ด้วย Supabase session ของแอปนี้ (DB เดียวกับ Hub):
+- มีใบแล้ว → เลขที่ `JIA-FIRSTAID-ONL-…` + วันหมดอายุ + ลิงก์ตรวจสอบ `https://class.jiacpr.com/portal?verify=<token>`
+- ผลสอบหลังเรียน (ที่ส่งเข้า Hub ตามหัวข้อ 6) ผ่านและได้รับรองแล้วแต่ยังไม่มีใบ → ปุ่ม "ขอรับใบประกาศกลาง"
+- ยังไม่ login / ยังไม่มีผลที่รับรอง / Hub ยังไม่ apply migration → ไม่แสดงอะไร
+ใบกลางออกเมื่อผลสอบได้รับรองที่ Hub (อัตโนมัติถ้าเปิด `auto_accept` ของคอร์ส `firstaid` หรือเจ้าหน้าที่กดรับรอง)

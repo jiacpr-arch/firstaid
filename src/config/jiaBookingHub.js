@@ -1,5 +1,7 @@
-// ระบบจองกลาง class.morroo.com (repo JIA-CLASS, edge function bcpr-api) — คนละ
-// Supabase โปรเจกต์กับของ firstaid จึง hardcode ที่นี่ได้ตาม pattern ของ houseAds
+// ระบบจองกลาง class.morroo.com (repo JIA-CLASS, edge function bcpr-api) — อยู่ Supabase โปรเจกต์
+// เดียวกับ firstaid จริงๆ (jia-unified/tpoiyykbgsgnrdwzgzvn — ดู jia-learning-hub,
+// docs/unified-identity.md) เพียงแต่เป็น edge function/โดเมนคนละตัว hardcode ที่นี่ได้เพราะเป็น
+// anon key สาธารณะ (ปลอดภัยฝังในบันเดิลหน้าเว็บเสมอ ไม่ว่าจะคนละโปรเจกต์หรือไม่) ตาม pattern ของ houseAds
 // สัญญา API + ทะเบียน utm_source: docs/WIDGET-API.md ใน repo JIA-CLASS
 
 const HUB_API = 'https://tpoiyykbgsgnrdwzgzvn.supabase.co/functions/v1/bcpr-api'

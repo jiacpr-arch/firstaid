@@ -1,7 +1,8 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { scoreExam } from '../_lib/examKey.js'
-import { learnerIdFromToken, reconcileLearner } from '../_lib/authLearner.js'
+import { authFromToken, reconcileLearner, isLearnerIdBound } from '../_lib/authLearner.js'
+import { recordExamsAtHub } from '../_lib/hubResults.js'
 import { rateLimited } from '../_lib/rateLimit.js'
 
 // Batch sync of offline-first learner progress from the client's Dexie store to
@@ -11,8 +12,12 @@ import { rateLimited } from '../_lib/rateLimit.js'
 //
 // Identity: when a LINE session token is present the rows are bound to the
 // authenticated learner (a mismatching learnerId is rejected); anonymous learners
-// (no login) sync best-effort under their local learnerId. Exam attempts are
-// always re-scored from the submitted answers here — the client score is ignored.
+// (no login) sync best-effort under their local learnerId — but never under a
+// learnerId already bound to a real account (same rule as issue-theory), or anyone
+// who knew a bound id could write progress/exam rows into that learner's record,
+// which the Hub reads as the learner's firstaid evidence. Exam attempts are
+// always re-scored from the submitted answers here — the client score is ignored —
+// and, for an authenticated learner, also sent to the Hub's central exam record.
 const MAX_ROWS = 500
 
 function cap(arr) {
@@ -28,10 +33,17 @@ export default async function handler(req, res) {
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const body = req.body || {}
-  const tokenLearnerId = await learnerIdFromToken(admin, req)
+  const auth = await authFromToken(admin, req)
+  const tokenLearnerId = auth?.learnerId || null
   const { learnerId, forbidden } = reconcileLearner(body.learnerId, tokenLearnerId)
   if (forbidden) { res.status(403).json({ error: 'learnerId does not match session' }); return }
   if (!learnerId) { res.status(400).json({ error: 'Missing learnerId' }); return }
+  // The client keeps unsynced rows and retries, so a learner who is simply logged out on this
+  // device loses nothing — the rows go up with their token after the next login.
+  if (!tokenLearnerId && await isLearnerIdBound(admin, learnerId)) {
+    res.status(403).json({ error: 'Login required for this learnerId' })
+    return
+  }
 
   const lessonProgress = cap(body.lessonProgress)
   const quizAttempts = cap(body.quizAttempts)
@@ -103,6 +115,7 @@ export default async function handler(req, res) {
       if (rows.length) {
         const { error } = await admin.from('exam_attempts').upsert(rows, { onConflict: 'uuid' })
         if (error) throw error
+        if (tokenLearnerId) await recordExamsAtHub(admin, auth.userId, rows)
       }
     }
 

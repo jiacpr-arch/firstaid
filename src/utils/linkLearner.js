@@ -21,8 +21,15 @@ export async function linkLearnerToAuth({ session, lineUserId, displayName, pict
     name: displayName || learner?.name || '',
     email: lineEmail || learner?.email || '',
     pictureUrl: pictureUrl || learner?.pictureUrl || '',
-    lineUserId,
+    // Omitted (Hub SSO login, no LINE involved) keeps whatever LINE identity this learner already
+    // had rather than clobbering it with nothing — this function's LINE caller always passes a
+    // real value here, so that path is unaffected.
+    lineUserId: lineUserId ?? learner?.lineUserId ?? null,
     authUserId: session?.user?.id || null,
+    // NB: `lineAdded` really means "has satisfied the mandatory post-lesson-1 login gate"
+    // (LessonReader.jsx's needLoginGate) more than it literally means "added the LINE OA" — a
+    // pre-existing overload, not something this change introduces. A Hub SSO (email) login must
+    // also clear that gate, so this stays unconditional regardless of which provider logged in.
     lineAdded: true,
   }
 
