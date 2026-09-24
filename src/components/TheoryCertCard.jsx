@@ -6,6 +6,7 @@ import { CERT_KINDS, evaluateTheoryEligibility } from '../courses/firstaid/cert'
 import { issueTheoryCertificate } from '../utils/certIssue'
 import CertificatePreview from './CertificatePreview'
 import LineGateCard from './LineGateCard'
+import HubCertificateCard from './HubCertificateCard'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
 import { track } from '../utils/analytics'
 
@@ -203,6 +204,9 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
           )}
         </div>
       )}
+
+      {/* The Hub's central online certificate, alongside this one (renders nothing until there is one) */}
+      <HubCertificateCard />
     </div>
   )
 }
