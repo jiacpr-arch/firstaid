@@ -12,6 +12,7 @@
 // sessionStorage but not a same-domain cookie.
 
 const HUB_SSO_URL = 'https://class.jiacpr.com/sso'
+const HUB_LOGOUT_URL = 'https://class.jiacpr.com/sso/logout'
 const CLIENT_ID = 'firstaid'
 const SS_KEY = 'firstaid.hubAuth'
 const COOKIE_MAX_AGE = 600 // 10 minutes — matches the Hub's own sso_codes lifetime being short-lived
@@ -84,4 +85,16 @@ export function readHubAuthState() {
 export function clearHubAuthState() {
   sessionStorage.removeItem(SS_KEY)
   deleteCookie(SS_KEY)
+}
+
+// The Hub's "log out everywhere" page: it ends the JIA session at class.jiacpr.com (so the next
+// person on a shared device isn't carried into this account by "เข้าสู่ระบบด้วยบัญชี JIA") and
+// sends the browser back to returnPath here — only for this app's registered callback, and only to
+// a same-site path (the Hub checks both; an unknown pair just stays on the Hub's "logged out" page).
+export function hubLogoutUrl(returnPath = '/') {
+  const path = typeof returnPath === 'string' && returnPath.startsWith('/') && !returnPath.startsWith('//') && !returnPath.includes('\\')
+    ? returnPath
+    : '/'
+  const params = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: hubCallbackUri(), return_path: path })
+  return `${HUB_LOGOUT_URL}?${params.toString()}`
 }
