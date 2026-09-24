@@ -8,6 +8,7 @@ import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
 import TheoryCertCard from '../components/TheoryCertCard'
 import Seo from '../components/Seo'
+import AccountCard from '../components/AccountCard'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
 
 function fmtDate(iso) {
@@ -87,6 +88,8 @@ export default function Certification() {
         <div className="text-caption">ใบประกาศของฉัน</div>
         <div className="text-title">ทฤษฎี + ปฏิบัติ</div>
       </div>
+
+      <AccountCard style={{ marginTop: 12 }} />
 
       {/* Theory — self-service issuance (name + phone + email + PDPA consent) */}
       <TheoryCertCard postAttempt={postAttempt} onIssued={onTheoryIssued} />

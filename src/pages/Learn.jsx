@@ -14,6 +14,7 @@ import CallEmergencyButton from '../components/CallEmergencyButton'
 import { computeBadges } from '../utils/badges'
 import { encourage } from '../utils/encouragement'
 import Seo from '../components/Seo'
+import AccountCard from '../components/AccountCard'
 import { itemListJsonLd, breadcrumbJsonLd } from '../lib/seo'
 
 export default function Learn() {
@@ -70,6 +71,8 @@ export default function Learn() {
         <div className="text-caption">หลักสูตร</div>
         <div className="text-title">บทเรียน</div>
       </div>
+
+      <AccountCard style={{ marginTop: 12 }} />
 
       <div className="card" style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
