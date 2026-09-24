@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { reconcileLearner, learnerIdFromToken, isLearnerIdBound } from './authLearner.js'
+import { reconcileLearner, learnerIdFromToken, isLearnerIdBound, authFromToken } from './authLearner.js'
 
 test('reconcileLearner: authenticated learner wins over body when they match', () => {
   assert.deepEqual(reconcileLearner('L1', 'L1'), { learnerId: 'L1', forbidden: false })
@@ -112,4 +112,19 @@ test('isLearnerIdBound: fails safe (false) if the Hub resolver call throws', asy
     async rpc() { throw new Error('network down') },
   }
   assert.equal(await isLearnerIdBound(admin, 'L4'), false)
+})
+
+test('authFromToken returns the account id alongside the learner (line_identities, Hub fallback, unlinked)', async () => {
+  const admin = (lineRow, hub) => ({
+    auth: { async getUser(t) { return t === 'good' ? { data: { user: { id: 'auth-7' } } } : { error: 'bad' } } },
+    from() { return { select() { return this }, eq() { return this }, async maybeSingle() { return { data: lineRow } } } },
+    async rpc() { if (hub instanceof Error) throw hub; return { data: hub } },
+  })
+  const req = { headers: { authorization: 'Bearer good' } }
+  assert.deepEqual(await authFromToken(admin({ learner_id: 'L-line' }, null), req), { userId: 'auth-7', learnerId: 'L-line' })
+  assert.deepEqual(await authFromToken(admin(null, { learnerId: 'L-hub' }), req), { userId: 'auth-7', learnerId: 'L-hub' })
+  assert.deepEqual(await authFromToken(admin(null, { learnerId: null }), req), { userId: 'auth-7', learnerId: null })
+  assert.deepEqual(await authFromToken(admin(null, new Error('rpc down')), req), { userId: 'auth-7', learnerId: null })
+  assert.equal(await authFromToken(admin(null, null), { headers: { authorization: 'Bearer bad' } }), null)
+  assert.equal(await authFromToken(admin(null, null), { headers: {} }), null)
 })

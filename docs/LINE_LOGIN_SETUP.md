@@ -79,11 +79,12 @@
 1. Apply migration ทั้งชุด unified-identity (ดูเช็คลิสต์ใน `docs/unified-identity.md` ของ repo นั้น)
 2. เพิ่มแถว `sso_clients` ให้ firstaid:
    ```sql
-   insert into learning_hub.sso_clients(client_id,name,kind,redirect_uris) values
+   insert into learning_hub.sso_clients(client_id,name,kind,redirect_uris,allowed_courses) values
     ('firstaid','FirstAid Morroo','supabase',array[
      'https://firstaid.morroo.com/auth/hub/callback',
-     'http://localhost:5173/auth/hub/callback']);
+     'http://localhost:5173/auth/hub/callback'],array['firstaid']);
    ```
+   (`allowed_courses` = คอร์สที่ firstaid ส่งผลสอบเข้า "ผลสอบกลาง" ของ Hub ได้ — ดูหัวข้อ 6)
    (`kind='supabase'` ไม่ต้องมี secret — เชื่อด้วย `client_id`+`redirect_uri` ตรงเป๊ะเท่านั้น เพราะ
    `api/auth/hub.js` เรียก RPC ตรงด้วย service role ของ firstaid เอง ไม่ผ่าน CORS จาก browser)
 
@@ -91,3 +92,18 @@
 JIA" → เด้งไปหน้า `/sso` ของ Hub → login (LINE หรืออีเมลที่ Hub) → กรอกชื่อถ้ายังไม่มี → กลับมาที่
 `/auth/hub/callback` → ได้ session จริง → เรียนต่อ/ออกใบเซอร์ได้ปกติ; ล็อกอินซ้ำจากเครื่องอื่นด้วย
 บัญชี Hub เดิม → ต้องได้ `learner_id` เดิม (progress/ใบเซอร์เดิม) ไม่ใช่ผู้เรียนคนใหม่
+
+## 6) ผลสอบเข้า "ผลสอบกลาง" ของ Hub — 24 กันยายน 2569
+
+ผลสอบ pre/post ที่ server ตรวจแล้ว ส่งเข้า `learning_hub.exam_results` ของ Hub ผ่าน `public.jia_results('record')`
+ด้วย service role ของ firstaid เอง (DB เดียวกัน) — `api/_lib/hubResults.js`:
+- **เฉพาะผู้เรียนที่ login อยู่** (bearer token → บัญชี + learner ที่ผูกกันจริง) ผลของผู้เรียนนิรนามไม่ถูกส่ง
+- ส่งจาก `api/sync/push.js` (ทุก attempt ที่ sync ขึ้นมา — ตรวจใหม่ที่ server แล้ว) และ `api/certificates/issue-theory.js`
+  (attempt ที่ใช้ออกใบ theory) — `attemptRef` = uuid ของ `exam_attempts` จึงส่งซ้ำได้ผลเดิม
+- Hub คิดคะแนน/ผ่าน-ไม่ผ่านเองจาก correct/total (เกณฑ์คอร์ส `firstaid` ของ Hub) — Hub ล่ม/ปฏิเสธ แค่ log ไม่กระทบ sync/ใบเซอร์
+- ต้องมีแถว `sso_clients` `firstaid` ที่ `allowed_courses` มี `firstaid` (ข้อ 2 ของหัวข้อ 5) และ apply
+  `20261016100000_exam_results.sql` ของ Hub ก่อน ผลถึงจะเข้า
+
+**แก้ช่องโหว่ไปพร้อมกัน:** `api/sync/push.js` เดิมให้ผู้เรียกที่ไม่มี token sync ข้อมูลเข้า `learnerId` ของใครก็ได้ รวมถึง
+learner ที่ผูกกับบัญชีจริงแล้ว (Hub อ่าน `exam_attempts`/`lesson_progress` ของ learner นั้นเป็นหลักฐานความพร้อม) — ตอนนี้
+ปฏิเสธ (403) เหมือน `issue-theory` แล้ว; เครื่องที่ logout อยู่ไม่เสียข้อมูล (แถวค้างในเครื่องแล้วส่งพร้อม token หลัง login)

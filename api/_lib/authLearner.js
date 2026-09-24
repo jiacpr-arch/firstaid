@@ -7,23 +7,31 @@
 // the token is valid but resolves to no learner_id in either place — the app still supports
 // anonymous, offline-first learners who never logged in at all.
 export async function learnerIdFromToken(admin, req) {
+  return (await authFromToken(admin, req))?.learnerId || null
+}
+
+// Same resolution, but also returns the Supabase Auth user id behind the token — the account the
+// Hub's central exam record (learning_hub.exam_results) is keyed on. null when there is no valid
+// token; { userId, learnerId: null } when the token is valid but resolves to no learner.
+export async function authFromToken(admin, req) {
   const auth = req.headers?.authorization || ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null
   if (!token) return null
   const { data, error } = await admin.auth.getUser(token)
   if (error || !data?.user) return null
+  const userId = data.user.id
   const { data: idn } = await admin
     .from('line_identities')
     .select('learner_id')
-    .eq('auth_user_id', data.user.id)
+    .eq('auth_user_id', userId)
     .maybeSingle()
-  if (idn?.learner_id) return idn.learner_id
+  if (idn?.learner_id) return { userId, learnerId: idn.learner_id }
   try {
-    const { data: hub } = await admin.rpc('jia_firstaid_hub_learner', { payload: { userId: data.user.id } })
-    return hub?.learnerId || null
+    const { data: hub } = await admin.rpc('jia_firstaid_hub_learner', { payload: { userId } })
+    return { userId, learnerId: hub?.learnerId || null }
   } catch (err) {
     console.error('jia_firstaid_hub_learner resolve failed (non-fatal)', err)
-    return null
+    return { userId, learnerId: null }
   }
 }
 
