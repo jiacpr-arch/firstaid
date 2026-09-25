@@ -156,8 +156,8 @@ export default function FirstAidGame() {
   // ชี้ไปบทถัดไปที่ยังไม่อ่าน (คนใหม่ = บทแรก) ถ้าเรียนครบแล้วไม่ต้องโชว์
   const readLessonIds = useProgressStore((s) => s.readLessonIds);
   const nextLesson = lessons.find((l) => !readLessonIds.has(l.id));
-  const goLearn = (sc) => {
-    track('game_learn_cta_click', { scenario_id: sc?.id, lesson_id: nextLesson?.id });
+  const goLearn = (sc, placement) => {
+    track('game_learn_cta_click', { scenario_id: sc?.id, lesson_id: nextLesson?.id, placement });
     navigate(`/learn/${nextLesson.id}`);
   };
   const [reducedMotion] = useState(
@@ -198,6 +198,8 @@ export default function FirstAidGame() {
   const [screen, setScreen] = useState(pool.length > 1 ? 'select' : 'title'); // select | title | game | debrief
   const [selectFilter, setSelectFilter] = useState('all'); // all | <track id>
   const [quitMenu, setQuitMenu] = useState(false); // เมนูออก/เล่นใหม่ ระหว่างเล่น
+  // ส่ง game_abandoned ได้ครั้งเดียวต่อเกม — รู้ว่าคนออกกลางเคสตอนไหน (เดิมหายเงียบหลัง game_started)
+  const abandonSentRef = useRef(true);
   const [freshAwards, setFreshAwards] = useState([]); // เหรียญที่เพิ่งปลดล็อก (โชว์ใน debrief)
   const [awardsTick, setAwardsTick] = useState(0); // บังคับ re-read เหรียญหลังจบเคส
 
@@ -459,6 +461,7 @@ export default function FirstAidGame() {
         finishedAt: new Date().toISOString(),
       });
     }
+    abandonSentRef.current = true;
     track('game_completed', {
       scenario_id: sc.id,
       difficulty: st.difficulty,
@@ -678,6 +681,19 @@ export default function FirstAidGame() {
     advance();
   }
 
+  function reportAbandon(reason) {
+    if (abandonSentRef.current) return;
+    abandonSentRef.current = true;
+    const st = S.current;
+    track('game_abandoned', {
+      scenario_id: sc.id,
+      difficulty: st.difficulty,
+      reason,
+      steps: st.timeline.length,
+      sim_time: Math.round(st.simTime),
+    });
+  }
+
   function startGame() {
     clearAllTimers();
     setQuitMenu(false);
@@ -703,6 +719,7 @@ export default function FirstAidGame() {
     setScreen('game');
     // สอนเฉพาะคนที่ไม่เคยเล่น — คนเล่นซ้ำไม่ต้องเจอซ้ำ
     try { setTapCoach(localStorage.getItem(TAP_COACH_KEY) !== '1'); } catch { setTapCoach(false); }
+    abandonSentRef.current = false;
     track('game_started', { scenario_id: sc.id, difficulty });
     later(() => advance(), reducedMotion ? 100 : 400);
   }
@@ -719,6 +736,23 @@ export default function FirstAidGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStartTick]);
 
+  // ปิดแท็บ/สลับแอปกลางเคส → game_abandoned (reason: left_page)
+  // pagehide ยิงตอนออกจริง, visibilitychange=hidden จับเคสสลับแอปบนมือถือที่ pagehide ไม่มา
+  useEffect(() => {
+    if (screen !== 'game') return undefined;
+    const onHide = () => reportAbandon('left_page');
+    const onVisibility = () => { if (document.visibilityState === 'hidden') onHide(); };
+    window.addEventListener('pagehide', onHide);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', onHide);
+      document.removeEventListener('visibilitychange', onVisibility);
+      // ออกจากจอเกมทางอื่น (เปลี่ยน route ใน SPA) — จบเคส/เมนูออก ตั้ง guard ไว้แล้วจึงไม่ยิงซ้ำ
+      reportAbandon('left_route');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, sc]);
+
   function pickScenario(chosen) {
     setSc(chosen);
     setScreen('title');
@@ -726,6 +760,7 @@ export default function FirstAidGame() {
   }
 
   function backToSelect() {
+    if (screen === 'game') reportAbandon('quit_menu');
     clearAllTimers();
     stopMetronome();
     setQuitMenu(false);
@@ -1078,6 +1113,20 @@ export default function FirstAidGame() {
               </div>
             </div>
           )}
+          {/* ชวนเรียนต่อไว้บนสุดของสรุปผล — เดิมอยู่ใต้ timeline ยาว คนบนมือถือเลื่อนไม่ถึง */}
+          {nextLesson && (
+            <div className="cbs-learn-cta">
+              <div className="cbs-learn-cta-head">
+                💚 อยากช่วยคนตรงหน้าได้จริง ไม่ใช่แค่ในเกม?
+              </div>
+              <div className="cbs-learn-cta-sub">
+                เรียนปฐมพยาบาลออนไลน์ฟรี บทละ 5–10 นาที จบหลักสูตรสอบรับใบเซอร์ได้เลย
+              </div>
+              <button type="button" className="cbs-btn-learn" onClick={() => goLearn(sc, 'debrief_top')}>
+                เรียนฟรี รับใบเซอร์ →
+              </button>
+            </div>
+          )}
           <div className="cbs-grade-row">
             <div className="cbs-grade-box">
               <span className={`cbs-grade cbs-g-${result.grade.toLowerCase()}`}>{result.grade}</span>
@@ -1126,19 +1175,6 @@ export default function FirstAidGame() {
               </div>
             ))}
           </div>
-          {nextLesson && (
-            <div className="cbs-learn-cta">
-              <div className="cbs-learn-cta-head">
-                💚 อยากช่วยคนตรงหน้าได้จริง ไม่ใช่แค่ในเกม?
-              </div>
-              <div className="cbs-learn-cta-sub">
-                เรียนปฐมพยาบาลออนไลน์ฟรี บทละ 5–10 นาที จบหลักสูตรสอบรับใบเซอร์ได้เลย
-              </div>
-              <button type="button" className="cbs-btn-learn" onClick={() => goLearn(sc)}>
-                เรียนฟรี รับใบเซอร์ →
-              </button>
-            </div>
-          )}
           <div className="cbs-debrief-actions">
             <button type="button" className="cbs-btn-main" onClick={startGame}>
               <RefreshCw size={16} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 8 }} />
