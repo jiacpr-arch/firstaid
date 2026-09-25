@@ -3,7 +3,8 @@
 // LINE_USER_ID และแนะนำ CRON_SECRET เพื่อกันคนนอกยิง endpoint นี้เอง
 
 const AD_ACCOUNT = 'act_10153192786713173'
-const AD_IDS = ['52556568346197', '52556568357197']
+// ดึงทุก ad ในแคมเปญ (ไม่ fix ad id) — ad ที่เพิ่มทีหลังจะติดมาด้วยอัตโนมัติ
+const CAMPAIGN_ID = '52556567918797'
 const AD_LABELS = { 52556568346197: 'Ad A (4 นาที)', 52556568357197: 'Ad B (เรียนฟรี)' }
 const CAMPAIGN_START = '2026-06-11'
 const GRAPH = 'https://graph.facebook.com/v23.0'
@@ -20,7 +21,7 @@ async function fetchInsights(token, rangeParam) {
   const params = new URLSearchParams({
     level: 'ad',
     fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,ctr,cpm,frequency',
-    filtering: JSON.stringify([{ field: 'ad.id', operator: 'IN', value: AD_IDS }]),
+    filtering: JSON.stringify([{ field: 'campaign.id', operator: 'EQUAL', value: CAMPAIGN_ID }]),
     access_token: token,
     ...rangeParam,
   })
@@ -36,21 +37,20 @@ function buildMessage(yesterday, total) {
   const yClicks = sum(yesterday, 'clicks')
 
   const lines = ['📊 ผลแอด FirstAid เมื่อวาน']
-  if (!yesterday.length || (ySpend === 0 && yClicks === 0)) {
-    lines.push('ยังไม่มีการใช้จ่าย (แอดอาจยังอยู่ระหว่าง review หรือถูกปิดอยู่)')
-  } else {
-    lines.push(`💸 ใช้ไป ${baht(ySpend)} | 🖱️ ${yClicks} คลิก`)
-    for (const r of yesterday) {
-      const cpc = num(r.cpc)
-      const ctr = num(r.ctr)
-      const cpm = num(r.cpm)
-      lines.push(
-        `${AD_LABELS[r.ad_id] || r.ad_name}: CPC ${baht(cpc)} ${cpcEmoji(cpc)} | ` +
-          `CTR ${ctr.toFixed(2)}% ${ctrEmoji(ctr)} | CPM ${baht(cpm)} ${cpmEmoji(cpm)}`
-      )
-    }
-    const ranked = [...yesterday].filter((r) => num(r.clicks) > 0).sort((a, b) => num(a.cpc) - num(b.cpc))
-    if (ranked.length === 2) lines.push(`🏆 ${AD_LABELS[ranked[0].ad_id]} ชนะ (CPC ถูกกว่า)`)
+  lines.push(`💸 ใช้ไป ${baht(ySpend)} | 🖱️ ${yClicks} คลิก`)
+  for (const r of yesterday) {
+    const cpc = num(r.cpc)
+    const ctr = num(r.ctr)
+    const cpm = num(r.cpm)
+    lines.push(
+      `${AD_LABELS[r.ad_id] || r.ad_name}: CPC ${baht(cpc)} ${cpcEmoji(cpc)} | ` +
+        `CTR ${ctr.toFixed(2)}% ${ctrEmoji(ctr)} | CPM ${baht(cpm)} ${cpmEmoji(cpm)}`
+    )
+  }
+  const ranked = [...yesterday].filter((r) => num(r.clicks) > 0).sort((a, b) => num(a.cpc) - num(b.cpc))
+  if (ranked.length >= 2) {
+    const top = ranked[0]
+    lines.push(`🏆 ${AD_LABELS[top.ad_id] || top.ad_name} ชนะ (CPC ถูกกว่า)`)
   }
 
   const tSpend = sum(total, 'spend')
@@ -96,6 +96,9 @@ export default async function handler(req, res) {
         time_range: JSON.stringify({ since: CAMPAIGN_START, until: today }),
       }),
     ])
+    // แคมเปญปิดอยู่/ไม่มีการใช้จ่าย → ไม่ต้องส่ง LINE ทุกเช้าว่า "ไม่มีอะไร"
+    const spent = yesterday.some((r) => num(r.spend) > 0 || num(r.clicks) > 0)
+    if (!spent) return res.status(200).json({ ok: true, skipped: 'no spend yesterday' })
     const text = buildMessage(yesterday, total)
     await pushLine(LINE_CHANNEL_ACCESS_TOKEN, LINE_USER_ID, text)
     return res.status(200).json({ ok: true, sent: text })
