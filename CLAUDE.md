@@ -25,7 +25,7 @@ default `1524889459310260`) — track PageView ทุกครั้งที่
 |---|---|
 | Ad account | `10153192786713173` (Jiacpr, THB) |
 | Campaign | `52556567918797` — FirstAid - Traffic - Jun 2026, OUTCOME_TRAFFIC, CBO ฿180/วัน (ตอนรัน) |
-| Ad set | `52556568123397` — FirstAid - TH Broad 20+, LINK_CLICKS, ไทยทั้งประเทศ อายุ 20+ |
+| Ad set | `52556568123397` — FirstAid - TH Broad 20+, ไทยทั้งประเทศ อายุ 20+ — optimization เปลี่ยนจาก LINK_CLICKS เป็น **LANDING_PAGE_VIEWS** แล้ว (25 ก.ย. 2026), ad set PAUSED |
 | Ad A | `52556568346197` — รูป "4 นาที คือเส้นแบ่งชีวิต" (แนวเหตุฉุกเฉิน) — **ตัวชนะ** |
 | Ad B | `52556568357197` — รูป "เรียนฟรี 1 ชม. + ใบเซอร์" (แนวเรียนง่าย/ฟรี) — แพ้ (CTR 0.96%) |
 | Ad C | `52566474664197` — "FirstAid CPR ออนไลน์ฟรี (Jia CPR + IG)" เพิ่มทีหลัง |
@@ -69,8 +69,8 @@ Ad ไหนชนะ (CPC ถูกกว่า), และ action ที่แ
 ### ถ้าจะเปิดแคมเปญรอบใหม่ (ทำทีละ action ผู้ใช้ยืนยันทีละข้อ)
 
 1. ปิด Ad B ไว้ (แพ้แล้ว) — เปิดเฉพาะ Ad A (+ Ad C ถ้าต้องการ)
-2. เปลี่ยน optimization_goal ของ ad set เป็น LANDING_PAGE_VIEWS (`ads_update_entity` ที่ ad set)
-3. เปิด campaign (งบเดิม ฿180/วัน)
+2. ~~เปลี่ยน optimization_goal ของ ad set เป็น LANDING_PAGE_VIEWS~~ ✅ ทำแล้ว 25 ก.ย. 2026
+3. เปิด ad set + campaign (งบเดิม ฿180/วัน) — ต้องเปิดทั้งสองชั้น เพราะ ad set ถูกตั้ง PAUSED ตอนแก้
 4. วันที่ 7: เทียบต้นทุนต่อ `lesson_start` ใน PostHog กับรอบแรก (~฿49/คน) ก่อนคิดเพิ่มงบ
 5. ถ้าคุ้มและอยาก scale → เพิ่มงบทีละ ~20%
    (`ads_update_entity` แก้ `campaign_daily_budget` ที่ campaign, หน่วยเป็นสตางค์ เช่น 21600 = ฿216)
