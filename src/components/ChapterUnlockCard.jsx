@@ -67,7 +67,7 @@ export default function ChapterUnlockCard({ chapter }) {
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
-          <CheckCircle2 size={44} color="#10B981" style={{ margin: '0 auto' }} />
+          <CheckCircle2 size={44} color="#347053" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>ปลดล็อกสำเร็จ!</div>
           <div className="text-body" style={{ marginTop: 8 }}>รีเฟรชหน้านี้เพื่อเริ่มเรียนต่อ</div>
           <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 16 }}

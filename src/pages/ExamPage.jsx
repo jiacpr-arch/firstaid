@@ -115,7 +115,7 @@ export default function ExamPage({ kind }) {
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {allLessonsDone
-                ? <CheckCircle2 size={18} color="#10B981" />
+                ? <CheckCircle2 size={18} color="#347053" />
                 : <Lock size={16} color="var(--color-text-secondary)" />}
               <span className="text-body">
                 เรียนให้ครบทุกบท{allLessonsDone ? '' : ` (เหลืออีก ${lessonsRemaining} บท)`}
@@ -123,7 +123,7 @@ export default function ExamPage({ kind }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {practiceDone
-                ? <CheckCircle2 size={18} color="#10B981" />
+                ? <CheckCircle2 size={18} color="#347053" />
                 : <Lock size={16} color="var(--color-text-secondary)" />}
               <span className="text-body">
                 ฝึกสถานการณ์ให้ผ่านอย่างน้อย 1 ฉากทุกบท
@@ -145,9 +145,9 @@ export default function ExamPage({ kind }) {
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
           {done.passed ? (
-            <CheckCircle2 size={48} color="#10B981" style={{ margin: '0 auto' }} />
+            <CheckCircle2 size={48} color="#347053" style={{ margin: '0 auto' }} />
           ) : (
-            <XCircle size={48} color="#DC2626" style={{ margin: '0 auto' }} />
+            <XCircle size={48} color="#A0392F" style={{ margin: '0 auto' }} />
           )}
           <div className="text-title" style={{ marginTop: 12 }}>
             คะแนน {done.score}%
@@ -175,7 +175,7 @@ export default function ExamPage({ kind }) {
                   {i + 1}. {qq.question}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {correct ? <CheckCircle2 size={16} color="#10B981" /> : <XCircle size={16} color="#DC2626" />}
+                  {correct ? <CheckCircle2 size={16} color="#347053" /> : <XCircle size={16} color="#A0392F" />}
                   <span className="text-body">
                     ตอบ: {qq.choices.find((c) => c.id === selected)?.text || '—'}
                   </span>

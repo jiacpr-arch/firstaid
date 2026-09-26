@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Phone, MessageCircle, ChevronRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import LearningPathCard from '../components/LearningPathCard'
@@ -42,6 +42,7 @@ export default function Home() {
   const allLessonsDone = lessons.length > 0 && lessonsDone === lessons.length
   const practiceDone = isPracticeDone(passedScenarioIds)
   const practiceRemaining = practiceChaptersRemaining(passedScenarioIds)
+  const progressPct = lessons.length ? Math.round((lessonsDone / lessons.length) * 100) : 0
 
   const nextLesson = preTestDone ? lessons.find((l) => !readLessonIds.has(l.id)) : null
   const studiedToday = localStorage.getItem('lastStudyDate') === new Date().toISOString().slice(0, 10)
@@ -49,39 +50,51 @@ export default function Home() {
   return (
     <div className="page-container">
       <Seo path="/" jsonLd={courseJsonLd()} />
-      <div style={{ marginTop: 16, marginBottom: 24 }}>
-        <div className="text-caption">หลักสูตร</div>
-        <div className="text-display">ปฐมพยาบาลเบื้องต้น</div>
-        <div className="text-body text-text-muted" style={{ marginTop: 4 }}>
+
+      <header style={{ marginTop: 8, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 32 }}>
+          <span className="text-eyebrow">My learning</span>
+          <StreakBadge />
+        </div>
+        <h1 className="text-display" style={{ margin: '2px 0 0' }}>ปฐมพยาบาลเบื้องต้น</h1>
+        <div className="text-body" style={{ color: 'var(--color-text-muted)' }}>
           สำหรับประชาชนทั่วไป — เรียนทฤษฎีออนไลน์ ฝึกปฏิบัติกับครูผู้สอน
         </div>
-      </div>
+      </header>
 
-      <a
-        href="tel:1669"
-        className="card"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          background: '#FEF2F2',
-          border: '1.5px solid #FCA5A5',
-          marginBottom: 16,
-        }}
-      >
-        <div style={{
-          width: 48, height: 48, borderRadius: 12, background: '#DC2626',
-          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Phone size={22} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div className="text-headline" style={{ color: '#991B1B' }}>เหตุฉุกเฉิน — โทร 1669</div>
-          <div className="text-caption" style={{ color: '#7F1D1D' }}>กดเพื่อโทรทันที</div>
-        </div>
-      </a>
-
-      <StreakBadge />
+      {/* ═══ เรียนต่อ — การ์ดเด่นที่สุดของหน้า ═══ */}
+      {nextLesson && (
+        <Link
+          to={`/learn/${nextLesson.id}`}
+          className="card-hover"
+          style={{
+            display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16,
+            padding: 20, borderRadius: 15, background: '#163D3A', color: '#F8FBF8',
+          }}
+        >
+          <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <span className="text-eyebrow" style={{ color: '#BFDDB3' }}>
+              Continue · บทที่ {String(nextLesson.order).padStart(2, '0')}
+            </span>
+            <span style={{ fontSize: 12, color: '#C9DCD4' }}>
+              {nextLesson.minutes} นาที{studiedToday ? ' · เรียนวันนี้แล้ว' : ''}
+            </span>
+          </span>
+          <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.35 }}>{nextLesson.title}</span>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ height: 6, borderRadius: 999, background: '#30544D', overflow: 'hidden' }}>
+              <span style={{ display: 'block', height: '100%', width: `${progressPct}%`, borderRadius: 999, background: '#BFDDB3' }} />
+            </span>
+            <span style={{ fontSize: 12, color: '#C9DCD4' }}>เรียนแล้ว {lessonsDone} จาก {lessons.length} บท</span>
+          </span>
+          <span style={{
+            height: 46, borderRadius: 9, background: '#FAFAF5', color: '#163D3A',
+            fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            เรียนต่อ <ArrowRight size={18} strokeWidth={1.8} />
+          </span>
+        </Link>
+      )}
 
       <LearningPathCard
         preTestDone={preTestDone}
@@ -93,32 +106,11 @@ export default function Home() {
         postTestDone={postTestDone}
       />
 
-      {nextLesson && (
-        <Link
-          to={`/learn/${nextLesson.id}`}
-          className="card"
-          style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, background: '#EFF6FF', border: '1.5px solid #BFDBFE', textDecoration: 'none' }}
-        >
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#2563EB20', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BookOpen size={22} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div className="text-headline" style={{ color: '#1D4ED8' }}>
-              เรียนต่อ — บทที่ {nextLesson.order}
-            </div>
-            <div className="text-caption">
-              {nextLesson.title}{studiedToday ? ' · 🔥 เรียนวันนี้แล้ว' : ''}
-            </div>
-          </div>
-          <ChevronRight size={18} color="#2563EB" />
-        </Link>
-      )}
-
       <DailyQuiz />
 
-      <GamePromoCard source="home_game_click" style={{ marginBottom: 16 }} />
+      <QuickMenu style={{ marginBottom: 16 }} />
 
-      <QuickMenu />
+      <GamePromoCard source="home_game_click" style={{ marginBottom: 16 }} />
 
       <a
         href={LINE_URL}
@@ -129,32 +121,19 @@ export default function Home() {
           source: 'home_line_button',
           channel: 'line',
         })}
-        className="card"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          marginTop: 10,
-          background: '#F0FDF4',
-          border: '1.5px solid #BBF7D0',
-          textDecoration: 'none',
-        }}
+        className="card card-hover"
+        style={{ display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none' }}
       >
-        <div style={{
-          width: 44, height: 44, borderRadius: 12, background: '#06C755',
-          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <MessageCircle size={22} />
-        </div>
         <div style={{ flex: 1 }}>
-          <div className="text-headline">แอด LINE {LINE_ID} — สนใจเรียน</div>
-          <div className="text-caption">กดแล้วส่งข้อความที่พิมพ์ไว้ให้ ทีมงานติดต่อกลับ</div>
+          <div className="text-body-strong">อยากฝึกปฏิบัติกับผู้สอน?</div>
+          <div className="text-caption">ทัก LINE OA {LINE_ID} ดูรอบอบรม CPR &amp; AED — ทีมงานตอบเอง</div>
         </div>
+        <span aria-hidden="true" style={{ fontSize: 18, color: 'var(--color-brand)' }}>↗</span>
       </a>
 
       <JiaAedNewsFeed />
 
-      <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)' }}>
+      <div className="text-caption" style={{ marginTop: 24, textAlign: 'center', fontSize: 12 }}>
         {learner?.name ? `กำลังเรียนในชื่อ ${learner.name}` : 'ยังไม่ได้ตั้งชื่อ — แตะ "ใบประกาศของฉัน" เพื่อกรอกชื่อ'}
         {learner?.cohortName ? ` · คลาส ${learner.cohortName}` : ''}
       </div>

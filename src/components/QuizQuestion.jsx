@@ -21,8 +21,8 @@ export default function QuizQuestion({ question, choices, correctId, explanation
           const isWrong = revealed && isSelected && c.id !== correctId
           let bg = 'var(--color-bg-secondary)'
           let border = 'var(--color-border)'
-          if (isCorrect) { bg = '#D1FAE5'; border = '#10B981' }
-          else if (isWrong) { bg = '#FEE2E2'; border = '#EF4444' }
+          if (isCorrect) { bg = '#E4F2E8'; border = '#347053' }
+          else if (isWrong) { bg = '#FBEBE8'; border = '#A0392F' }
           else if (isSelected) { bg = 'var(--color-brand-soft)'; border = 'var(--color-brand)' }
           return (
             <button
@@ -42,8 +42,8 @@ export default function QuizQuestion({ question, choices, correctId, explanation
               }}
             >
               <span style={{ flex: 1 }}>{c.text}</span>
-              {isCorrect && <CheckCircle2 size={18} color="#10B981" />}
-              {isWrong && <XCircle size={18} color="#EF4444" />}
+              {isCorrect && <CheckCircle2 size={18} color="#347053" />}
+              {isWrong && <XCircle size={18} color="#A0392F" />}
             </button>
           )
         })}

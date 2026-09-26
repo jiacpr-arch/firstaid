@@ -87,7 +87,7 @@ export default function CheckIn() {
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
-          <CheckCircle2 size={48} color="#10B981" style={{ margin: '0 auto' }} />
+          <CheckCircle2 size={48} color="#347053" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>เช็คชื่อสำเร็จ!</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
             {isKiosk

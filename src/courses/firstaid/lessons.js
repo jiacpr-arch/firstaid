@@ -26,10 +26,10 @@
 // Lessons จัดกลุ่มเป็น 4 บทตามต้นฉบับ
 
 export const chapters = [
-  { id: 1, title: 'ความรู้พื้นฐานการปฐมพยาบาล', color: '#16A34A', icon: 'BookOpen' },
-  { id: 2, title: 'เจ็บป่วยฉุกเฉิน', color: '#DC2626', icon: 'HeartPulse' },
-  { id: 3, title: 'บาดเจ็บฉุกเฉิน', color: '#D97706', icon: 'Bandage' },
-  { id: 4, title: 'อุบัติเหตุรอบตัวและสารเคมี', color: '#7C3AED', icon: 'Skull' },
+  { id: 1, title: 'ความรู้พื้นฐานการปฐมพยาบาล', color: '#23736A', icon: 'BookOpen' },
+  { id: 2, title: 'เจ็บป่วยฉุกเฉิน', color: '#A0392F', icon: 'HeartPulse' },
+  { id: 3, title: 'บาดเจ็บฉุกเฉิน', color: '#946A25', icon: 'Bandage' },
+  { id: 4, title: 'อุบัติเหตุรอบตัวและสารเคมี', color: '#6B5A86', icon: 'Skull' },
 ]
 
 export const lessons = [

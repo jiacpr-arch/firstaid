@@ -44,13 +44,13 @@ export default function PracticalInterestForm({ source = 'unknown' }) {
     return (
       <div style={{
         marginTop: 12, padding: '14px 16px', borderRadius: 12,
-        background: '#F0FDF4', border: '1px solid #BBF7D0',
+        background: '#EDF4EF', border: '1px solid #C4D8C4',
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
-        <CheckCircle2 size={20} color="#16A34A" style={{ flexShrink: 0 }} />
+        <CheckCircle2 size={20} color="#23736A" style={{ flexShrink: 0 }} />
         <div>
-          <div className="text-body-strong" style={{ color: '#15803D' }}>รับทราบแล้ว ขอบคุณ!</div>
-          <div className="text-caption" style={{ color: '#166534' }}>ทีมงานจะติดต่อกลับที่เบอร์ที่ให้ไว้</div>
+          <div className="text-body-strong" style={{ color: '#1B5D54' }}>รับทราบแล้ว ขอบคุณ!</div>
+          <div className="text-caption" style={{ color: '#266B44' }}>ทีมงานจะติดต่อกลับที่เบอร์ที่ให้ไว้</div>
         </div>
       </div>
     )
@@ -80,7 +80,7 @@ export default function PracticalInterestForm({ source = 'unknown' }) {
             maxLength={20}
           />
         </div>
-        {error && <div className="text-caption" style={{ color: '#DC2626' }}>{error}</div>}
+        {error && <div className="text-caption" style={{ color: '#A0392F' }}>{error}</div>}
         <button type="submit" className="btn btn-primary" disabled={loading} style={{ borderRadius: 10 }}>
           <Send size={15} /> {loading ? 'กำลังส่ง…' : 'ฝากชื่อสนใจคลาสปฏิบัติ'}
         </button>

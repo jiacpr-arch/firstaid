@@ -12,16 +12,16 @@ export function JiaAedNewsCard({ item }) {
       href={item.source_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="card"
+      className="card card-hover"
       onClick={() => trackNewsClick(item)}
       style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}
     >
       <div style={{
-        width: 36, height: 36, borderRadius: 10, background: '#D9770615',
-        color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 36, height: 36, borderRadius: 10, background: '#F4EAD3',
+        color: '#8A6D2F', display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}>
-        <Newspaper size={18} />
+        <Newspaper size={18} strokeWidth={1.6} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="text-body-strong">{item.source_title}</div>
@@ -50,8 +50,8 @@ export default function JiaAedNewsFeed() {
 
   return (
     <div style={{ marginTop: 20 }}>
-      <div className="text-caption" style={{ marginBottom: 6, paddingLeft: 4 }}>
-        ข่าวกู้ชีพ/AED จาก JiaAED
+      <div className="text-eyebrow" style={{ marginBottom: 8 }}>
+        News · ข่าวกู้ชีพ/AED จาก JiaAED
       </div>
       <div style={{ display: 'grid', gap: 10 }}>
         {items.map((item) => (
@@ -59,7 +59,7 @@ export default function JiaAedNewsFeed() {
         ))}
       </div>
       <div style={{ marginTop: 8, textAlign: 'center' }}>
-        <Link to="/news" className="text-caption" style={{ color: 'var(--color-text-muted)' }}>
+        <Link to="/news" style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-brand)' }}>
           ดูข่าวทั้งหมด →
         </Link>
       </div>

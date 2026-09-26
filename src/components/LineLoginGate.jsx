@@ -58,7 +58,7 @@ export default function LineLoginGate() {
     >
       <div
         className="card"
-        style={{ width: '100%', maxWidth: 400, border: '1px solid #BBF7D0' }}
+        style={{ width: '100%', maxWidth: 400, border: '1px solid #C4D8C4' }}
       >
         <div style={{ textAlign: 'center' }}>
           <div style={{

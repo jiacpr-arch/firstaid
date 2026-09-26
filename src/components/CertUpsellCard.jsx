@@ -44,7 +44,7 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
         color: '#fff',
         position: 'relative',
         overflow: 'hidden',
-        background: 'linear-gradient(135deg, #16A34A 0%, #059669 55%, #047857 100%)',
+        background: 'linear-gradient(135deg, #23736A 0%, #366749 55%, #1B5D54 100%)',
         border: 'none',
       }}
     >
@@ -107,7 +107,7 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
             onClick={() => onCtaClick('phone')}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '11px 12px', borderRadius: 10, background: '#fff', color: '#047857',
+              padding: '11px 12px', borderRadius: 10, background: '#fff', color: '#1B5D54',
               fontWeight: 800, fontSize: 13, textDecoration: 'none',
             }}
           >
@@ -143,7 +143,7 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
 
         {showForm && (
           <div style={{ marginTop: 8, background: 'rgba(255,255,255,0.95)', borderRadius: 12, padding: '12px 14px' }}>
-            <div className="text-caption" style={{ color: '#166534', marginBottom: 6, fontWeight: 700 }}>
+            <div className="text-caption" style={{ color: '#266B44', marginBottom: 6, fontWeight: 700 }}>
               กรอกข้อมูลเพื่อให้ทีมงานติดต่อกลับ
             </div>
             <PracticalInterestForm source={source} />
