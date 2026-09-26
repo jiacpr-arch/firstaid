@@ -19,29 +19,31 @@ export default function AlgorithmIndex() {
           ]),
         ]}
       />
-      <div style={{ marginTop: 8 }}>
-        <div className="text-caption">ใช้ในเหตุฉุกเฉิน</div>
-        <div className="text-title">Algorithm ปฐมพยาบาล</div>
-        <div className="text-caption" style={{ marginTop: 4 }}>
-          แตะหัวข้อเพื่อดู flowchart แบบกดทีละขั้น
+      <header style={{ marginTop: 8 }}>
+        <div className="text-eyebrow">Emergency · {algorithms.length} ผัง</div>
+        <h1 className="text-display" style={{ margin: 0 }}>ผังช่วยชีวิต</h1>
+        <div className="text-body" style={{ color: 'var(--color-text-muted)' }}>
+          แตะหัวข้อเพื่อดูขั้นตอนแบบกดตอบทีละข้อ — ใช้ได้ตอนเกิดเหตุจริง
         </div>
-      </div>
+      </header>
 
-      <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-        {algorithms.map((a) => (
+      <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+        {algorithms.map((a, i) => (
           <Link
             key={a.id}
             to={`/algorithms/${a.id}`}
-            className="card"
+            className="card card-hover"
             style={{
-              padding: 14,
-              borderLeft: `4px solid ${a.color}`,
+              padding: 16,
               display: 'flex',
               flexDirection: 'column',
-              gap: 4,
+              gap: 6,
             }}
           >
-            <div className="text-body-strong">{a.title}</div>
+            <span style={{ fontFamily: 'Georgia, serif', fontSize: 20, lineHeight: 1, color: a.color }}>
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <div className="text-body-strong" style={{ lineHeight: 1.4 }}>{a.title}</div>
             <div className="text-caption">{a.summary}</div>
           </Link>
         ))}

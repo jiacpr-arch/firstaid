@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Lock, Activity } from 'lucide-react'
+import { BookOpen, Check, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Lock, Activity } from 'lucide-react'
 import { lessons, lessonsByChapter } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -67,10 +67,10 @@ export default function Learn() {
           ]),
         ]}
       />
-      <div style={{ marginTop: 8 }}>
-        <div className="text-caption">หลักสูตร</div>
-        <div className="text-title">บทเรียน</div>
-      </div>
+      <header style={{ marginTop: 8 }}>
+        <div className="text-eyebrow">{total} lessons · {lessonsByChapter.length} chapters</div>
+        <h1 className="text-display" style={{ margin: 0 }}>บทเรียน</h1>
+      </header>
 
       <AccountCard style={{ marginTop: 12 }} />
 
@@ -124,7 +124,7 @@ export default function Learn() {
         {earnedBadges.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
             {earnedBadges.map((b) => (
-              <span key={b.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: '#92400E' }}>
+              <span key={b.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F7EFDF', border: '1px solid #E9D9B7', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: '#7A5A1F' }}>
                 {b.emoji} {b.label}
               </span>
             ))}
@@ -135,79 +135,76 @@ export default function Learn() {
       {lessonsByChapter.map((ch) => {
         const chTotal = ch.lessons.length
         const chDone = ch.lessons.filter((l) => readSet.has(l.id)).length
+        const chMinutes = ch.lessons.reduce((sum, l) => sum + l.minutes, 0)
         // ราคาปลดล็อกคิดต่อ "หมวด" ไม่ใช่ต่อบท — โชว์ครั้งเดียวที่หัวหมวด ไม่ติดซ้ำทุกบทข้างล่าง
         const chapterPaidLocked = !lessonsLocked && !isChapterUnlocked(ch.id, unlockedChapters)
+        const chComplete = chTotal > 0 && chDone === chTotal
         return (
-          <div key={ch.id} style={{ marginTop: 20 }}>
+          <section key={ch.id} className="card" style={{ marginTop: 16, padding: 0, overflow: 'hidden' }}>
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '8px 4px',
+              display: 'flex', alignItems: 'center', gap: 14,
+              padding: '16px 18px', borderBottom: '1px solid var(--color-border)',
+              background: chComplete ? '#E5F0E5' : undefined,
             }}>
-              <div>
-                <div className="text-caption" style={{ color: ch.color, fontWeight: 600 }}>
-                  บทที่ {ch.id}
+              <span style={{ fontFamily: 'Georgia, serif', fontSize: 26, lineHeight: 1, color: chComplete ? '#366749' : 'var(--color-brand)' }}>
+                {ch.id}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 className="text-body-strong" style={{ margin: 0 }}>{ch.title}</h2>
+                <div className="text-caption" style={{ fontSize: 12, color: chComplete ? '#366749' : undefined }}>
+                  {chComplete ? `เรียนครบ ${chTotal} บทแล้ว` : `${chDone} / ${chTotal} บท · ${chMinutes} นาที`}
                 </div>
-                <div className="text-body-strong">{ch.title}</div>
               </div>
-              {chapterPaidLocked
-                ? <span className="badge badge-brand">฿{CHAPTER_PRICES[ch.id]} ทั้งหมวด</span>
-                : <span className="text-caption">{chDone}/{chTotal}</span>}
+              {chapterPaidLocked && <span className="badge badge-brand">฿{CHAPTER_PRICES[ch.id]} ทั้งหมวด</span>}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {ch.lessons.map((l) => {
+            <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {ch.lessons.map((l, i) => {
                 const isRead = readSet.has(l.id)
                 // ปลดล็อกด้วยการซื้อ (แยกจาก lessonsLocked ที่ล็อกด้วยลำดับ Pre-test) — หมวด 1 ฟรีเสมอ
                 const paidLocked = !lessonsLocked && !isChapterUnlocked(l.chapter, unlockedChapters)
                 const locked = lessonsLocked || paidLocked
+                const rowStyle = {
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 18px',
+                  borderTop: i === 0 ? 'none' : '1px solid #EDF1EC',
+                }
                 const inner = (
                   <>
-                    <div style={{
-                      width: 38, height: 38, borderRadius: 10,
-                      background: locked
-                        ? 'var(--color-bg-tertiary)'
-                        : isRead ? '#D1FAE5' : 'var(--color-bg-tertiary)',
-                      color: locked
-                        ? 'var(--color-text-secondary)'
-                        : isRead ? '#065F46' : 'var(--color-text-secondary)',
+                    <span style={{
+                      width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                      background: isRead && !locked ? '#E2F0E3' : '#F0F1EB',
+                      color: isRead && !locked ? '#407048' : '#5F6F5D',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700,
+                      fontSize: 13, fontWeight: 700,
                     }}>
                       {locked
-                        ? <Lock size={18} />
-                        : isRead ? <CheckCircle2 size={20} /> : <BookOpen size={18} />}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="text-body-strong">{l.order}. {l.title}</div>
-                      <div className="text-caption">{l.summary} • {l.minutes} นาที</div>
-                    </div>
-                    {!locked && isRead && <span className="badge badge-success">เรียนแล้ว</span>}
+                        ? <Lock size={15} strokeWidth={1.8} aria-label="ล็อกอยู่" />
+                        : isRead ? <Check size={16} strokeWidth={2.4} aria-label="เรียนแล้ว" /> : String(l.order).padStart(2, '0')}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.45 }}>{l.title}</span>
+                      <span className="text-caption" style={{ fontSize: 12 }}>{l.summary} · {l.minutes} นาที</span>
+                    </span>
+                    {!locked && <ChevronRight size={18} strokeWidth={1.6} color="var(--color-brand)" style={{ flexShrink: 0 }} />}
                   </>
                 )
                 if (lessonsLocked) {
                   return (
-                    <div
-                      key={l.id}
-                      className="card"
-                      style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 0.55, cursor: 'not-allowed' }}
-                      aria-disabled="true"
-                    >
+                    <li key={l.id} style={{ ...rowStyle, color: 'var(--color-text-secondary)', cursor: 'not-allowed' }} aria-disabled="true">
                       {inner}
-                    </div>
+                    </li>
                   )
                 }
                 return (
-                  <Link
-                    key={l.id}
-                    to={`/learn/${l.id}`}
-                    className="card"
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: paidLocked ? 0.85 : 1 }}
-                  >
-                    {inner}
-                  </Link>
+                  <li key={l.id}>
+                    <Link to={`/learn/${l.id}`} style={{ ...rowStyle, opacity: paidLocked ? 0.8 : 1 }}>
+                      {inner}
+                    </Link>
+                  </li>
                 )
               })}
-            </div>
-          </div>
+            </ol>
+          </section>
         )
       })}
 

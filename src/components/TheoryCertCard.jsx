@@ -54,7 +54,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     setEmail(learner.email || '')
   }
 
-  const accent = CERT_KINDS.theory.accent
+  const accent = '#546A50' // โทนใบประกาศ (cert-title) ของ JIA Learning Hub — PDF ยังใช้สีตาม CERT_KINDS
   const theoryEval = evaluateTheoryEligibility({ postTestAttempt: postAttempt })
   const lineAdded = !!learner?.lineAdded
 
@@ -120,9 +120,9 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
   }
 
   return (
-    <div className="card" style={{ marginTop: 16, borderTop: `4px solid ${accent}` }}>
+    <div className="card" style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Award size={22} color={accent} />
+        <Award size={22} strokeWidth={1.6} color={accent} />
         <div style={{ flex: 1 }}>
           <div className="text-body-strong">ใบประกาศภาคทฤษฎี</div>
           <div className="text-caption">ออกเมื่อผ่าน Post-test ≥ 80%</div>

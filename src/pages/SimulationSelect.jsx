@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Activity, ChevronRight, Gamepad2 } from 'lucide-react'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { chapters } from '../courses/firstaid/lessons'
 import CallEmergencyButton from '../components/CallEmergencyButton'
@@ -17,9 +18,16 @@ function ScenarioCard({ s }) {
   return (
     <Link
       to={`/simulation/${s.id}`}
-      className="card"
-      style={{ display: 'flex', flexDirection: 'column', gap: 4, borderLeft: `4px solid ${s.color}` }}
+      className="card card-hover"
+      style={{ display: 'flex', alignItems: 'center', gap: 14 }}
     >
+      <span style={{
+        width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: `${s.color}14`, color: s.color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Activity size={20} strokeWidth={1.6} />
+      </span>
+      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
       <div className="text-body-strong" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         {s.title}
         {s.bonus && (
@@ -38,7 +46,9 @@ function ScenarioCard({ s }) {
         )}
       </div>
       <div className="text-caption">{s.summary}</div>
-      <div className="text-caption" style={{ marginTop: 2 }}>{s.minutes} นาที • {s.steps.length} ข้อตัดสินใจ</div>
+      <div className="text-caption" style={{ fontSize: 12 }}>{s.minutes} นาที · {s.steps.length} ข้อตัดสินใจ</div>
+      </span>
+      <ChevronRight size={18} strokeWidth={1.6} color="var(--color-brand)" style={{ flexShrink: 0 }} />
     </Link>
   )
 }
@@ -58,19 +68,20 @@ export default function SimulationSelect() {
           ]),
         ]}
       />
-      <div style={{ marginTop: 8 }}>
-        <div className="text-caption">ฝึกตัดสินใจกับสถานการณ์จำลอง</div>
-        <div className="text-title">เลือกฉาก</div>
-        <div className="text-caption" style={{ marginTop: 4 }}>
-          {scenarios.length} ฉาก ครอบคลุมครบทุกบทเรียน
+      <header style={{ marginTop: 8 }}>
+        <div className="text-eyebrow">Practice · {scenarios.length} ฉาก</div>
+        <h1 className="text-display" style={{ margin: 0 }}>สถานการณ์จำลอง</h1>
+        <div className="text-body" style={{ color: 'var(--color-text-muted)' }}>
+          ฝึกตัดสินใจก่อนเจอเหตุจริง — ครอบคลุมครบทุกบทเรียน
         </div>
-      </div>
+      </header>
 
       {grouped.map((c) => (
         c.scenarios.length > 0 && (
           <div key={c.id} style={{ marginTop: 20 }}>
-            <div className="text-body-strong" style={{ color: c.color, marginBottom: 10 }}>
-              บทที่ {c.id} — {c.title}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+              <span style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: 'var(--color-brand)' }}>{c.id}</span>
+              <h2 className="text-body-strong" style={{ margin: 0 }}>{c.title}</h2>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {c.scenarios.map((s) => <ScenarioCard key={s.id} s={s} />)}
@@ -84,14 +95,19 @@ export default function SimulationSelect() {
         className="card"
         style={{
           display: 'flex', alignItems: 'center', gap: 12, marginTop: 24,
-          background: 'linear-gradient(135deg, #1B2340, #2A1B40)',
-          border: '1.5px solid #4A3D7A',
+          background: '#163D3A',
+          border: '1px solid #163D3A',
         }}
       >
-        <div style={{ fontSize: 28 }}>🎮</div>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12, background: '#30544D', color: '#BFDDB3',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <Gamepad2 size={22} strokeWidth={1.6} />
+        </div>
         <div style={{ flex: 1 }}>
-          <div className="text-body-strong" style={{ color: '#F2C14E' }}>โหมดเกม — FIRST AID HERO</div>
-          <div className="text-caption" style={{ color: '#B8C2E0' }}>
+          <div className="text-body-strong" style={{ color: '#F8FBF8' }}>โหมดเกม — FIRST AID HERO</div>
+          <div className="text-caption" style={{ color: '#C9DCD4' }}>
             ฝึกแบบเกม: จับเวลา เก็บคอมโบ ปลดล็อกเหรียญ (ของแถมสนุกๆ ไม่มีผลต่อใบเซอร์)
           </div>
         </div>

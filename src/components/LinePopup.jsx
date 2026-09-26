@@ -72,7 +72,7 @@ export default function LinePopup({ onConfirm, onSkip }) {
           maxWidth: 400,
           maxHeight: '90vh',
           overflowY: 'auto',
-          border: '1px solid #BBF7D0',
+          border: '1px solid #C4D8C4',
         }}
       >
         <div style={{ textAlign: 'center' }}>

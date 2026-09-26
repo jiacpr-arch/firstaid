@@ -95,9 +95,9 @@ export default function Certification() {
       <TheoryCertCard postAttempt={postAttempt} onIssued={onTheoryIssued} />
 
       {/* Practical */}
-      <div className="card" style={{ marginTop: 16, borderTop: `4px solid ${CERT_KINDS.practical.accent}` }}>
+      <div className="card" style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Award size={22} color={CERT_KINDS.practical.accent} />
+          <Award size={22} strokeWidth={1.6} color="#546A50" />
           <div style={{ flex: 1 }}>
             <div className="text-body-strong">ใบประกาศภาคปฏิบัติ</div>
             <div className="text-caption">ครูผู้สอนจะอนุมัติให้หลังเรียนปฏิบัติเสร็จ</div>

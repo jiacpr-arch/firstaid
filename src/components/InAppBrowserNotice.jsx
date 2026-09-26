@@ -33,9 +33,9 @@ export default function InAppBrowserNotice() {
     <div
       role="alert"
       style={{
-        background: '#FEF3C7',
-        borderBottom: '1px solid #FDE68A',
-        color: '#92400E',
+        background: '#F7EFDF',
+        borderBottom: '1px solid #E9D9B7',
+        color: '#7A5A1F',
         padding: '10px 14px',
         display: 'flex',
         alignItems: 'flex-start',
@@ -56,8 +56,8 @@ export default function InAppBrowserNotice() {
           onClick={copyLink}
           style={{
             marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 10px', borderRadius: 8, border: '1px solid #D97706',
-            background: '#fff', color: '#92400E', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+            padding: '6px 10px', borderRadius: 8, border: '1px solid #946A25',
+            background: '#fff', color: '#7A5A1F', fontWeight: 700, fontSize: 12, cursor: 'pointer',
           }}
         >
           {copied ? <><Check size={14} /> คัดลอกลิงก์แล้ว</> : <><Copy size={14} /> คัดลอกลิงก์</>}
@@ -67,7 +67,7 @@ export default function InAppBrowserNotice() {
         type="button"
         aria-label="ปิด"
         onClick={() => setDismissed(true)}
-        style={{ flexShrink: 0, background: 'none', border: 'none', color: '#92400E', cursor: 'pointer', padding: 2 }}
+        style={{ flexShrink: 0, background: 'none', border: 'none', color: '#7A5A1F', cursor: 'pointer', padding: 2 }}
       >
         <X size={18} />
       </button>

@@ -77,7 +77,7 @@ export default function SimulationRun() {
       <div className="page-container">
         {seo}
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
-          <CheckCircle2 size={48} color={result.passed ? '#10B981' : '#D97706'} style={{ margin: '0 auto' }} />
+          <CheckCircle2 size={48} color={result.passed ? '#347053' : '#946A25'} style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>
             ตอบถูก {result.score} / {result.total}
           </div>

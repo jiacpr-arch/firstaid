@@ -104,14 +104,14 @@ export default function HubCallback() {
     return (
       <div className="page-container" style={{ display: 'flex', minHeight: '80vh', alignItems: 'center', justifyContent: 'center' }}>
         <div className="card" style={{ maxWidth: 360, textAlign: 'center' }}>
-          <AlertTriangle size={40} color="#DC2626" style={{ margin: '0 auto' }} />
+          <AlertTriangle size={40} color="#A0392F" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>เข้าสู่ระบบไม่สำเร็จ</div>
           <div className="text-body text-text-muted" style={{ marginTop: 6 }}>{error}</div>
           {inAppSource && (
             <div
               style={{
                 marginTop: 12, padding: '10px 12px', borderRadius: 10, textAlign: 'left',
-                background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', fontSize: 13, lineHeight: 1.45,
+                background: '#F7EFDF', border: '1px solid #E9D9B7', color: '#7A5A1F', fontSize: 13, lineHeight: 1.45,
               }}
             >
               คุณกำลังเปิดผ่านแอป {inAppSource === 'facebook' ? 'Facebook' : inAppSource === 'instagram' ? 'Instagram' : 'LINE'} —
@@ -122,8 +122,8 @@ export default function HubCallback() {
                 onClick={copyLoginLink}
                 style={{
                   marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '6px 10px', borderRadius: 8, border: '1px solid #D97706',
-                  background: '#fff', color: '#92400E', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                  padding: '6px 10px', borderRadius: 8, border: '1px solid #946A25',
+                  background: '#fff', color: '#7A5A1F', fontWeight: 700, fontSize: 12, cursor: 'pointer',
                 }}
               >
                 {copied ? <><Check size={14} /> คัดลอกลิงก์แล้ว</> : <><Copy size={14} /> คัดลอกลิงก์</>}

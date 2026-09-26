@@ -36,7 +36,7 @@ export default function UpcomingClassBanner({ source = 'unknown' }) {
 
   return (
     <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.95)', borderRadius: 12, padding: '12px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#166534', fontWeight: 800, fontSize: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#266B44', fontWeight: 800, fontSize: 13 }}>
         <CalendarDays size={15} style={{ flexShrink: 0 }} />
         รอบอบรมที่เปิดรับ — จองออนไลน์ได้เลย
       </div>
@@ -51,16 +51,16 @@ export default function UpcomingClassBanner({ source = 'unknown' }) {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
               padding: '9px 12px', borderRadius: 10, textDecoration: 'none',
-              background: '#F0FDF4', border: '1px solid #BBF7D0',
+              background: '#EDF4EF', border: '1px solid #C4D8C4',
             }}
           >
             <span style={{ fontSize: 13, color: '#14532D' }}>
               <b>{thShortDate(c.date)}</b> · {c.time_slot} น.
-              <span style={{ color: '#16A34A', marginLeft: 6 }}>เหลือ {c.seats_left} ที่</span>
+              <span style={{ color: '#23736A', marginLeft: 6 }}>เหลือ {c.seats_left} ที่</span>
             </span>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-              fontSize: 12, fontWeight: 800, color: '#047857',
+              fontSize: 12, fontWeight: 800, color: '#1B5D54',
             }}>
               จอง ({Number(c.price).toLocaleString()} ฿) <ArrowRight size={13} />
             </span>
@@ -71,7 +71,7 @@ export default function UpcomingClassBanner({ source = 'unknown' }) {
         to="/schedule"
         style={{
           display: 'block', marginTop: 8, textAlign: 'center',
-          fontSize: 12, fontWeight: 700, color: '#047857', textDecoration: 'none',
+          fontSize: 12, fontWeight: 700, color: '#1B5D54', textDecoration: 'none',
         }}
       >
         ดูตารางสอนทุกรอบ →

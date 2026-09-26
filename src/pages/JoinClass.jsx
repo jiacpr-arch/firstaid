@@ -74,7 +74,7 @@ export default function JoinClass() {
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
-          <CheckCircle2 size={48} color="#10B981" style={{ margin: '0 auto' }} />
+          <CheckCircle2 size={48} color="#347053" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>เข้าร่วมคลาสแล้ว!</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
             {joined.cohortName} — ครูผู้สอนจะเห็นความคืบหน้าการเรียนของคุณ

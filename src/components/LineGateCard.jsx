@@ -49,12 +49,12 @@ export default function LineGateCard({ onConfirm }) {
         marginTop: 12,
         padding: 16,
         borderRadius: 14,
-        background: '#F0FDF4',
-        border: '1px solid #BBF7D0',
+        background: '#EDF4EF',
+        border: '1px solid #C4D8C4',
       }}
     >
       <div style={{
-        fontSize: 11, fontWeight: 800, color: '#047857',
+        fontSize: 11, fontWeight: 800, color: '#1B5D54',
         textTransform: 'uppercase', letterSpacing: '0.04em',
       }}>
         อีกขั้นเดียว

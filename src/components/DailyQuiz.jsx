@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Sparkles, Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import { lessons } from '../courses/firstaid/lessons'
 
 // ควิซประจำวัน — วันละ 1 ข้อจากคลังควิซในบทเรียน (ข้อเดิมทั้งวัน หมุนทุกวัน)
@@ -60,29 +60,23 @@ export default function DailyQuiz() {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 16, border: '1.5px solid #DDD6FE' }}>
+    <section className="card" style={{ marginBottom: 16, padding: 18, background: '#EFF3EA', border: '1px solid #E4E9DD' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, background: '#7C3AED20', color: '#7C3AED',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Sparkles size={14} />
-        </div>
-        <div className="text-body-strong">ควิซประจำวัน</div>
-        <div className="text-caption" style={{ marginLeft: 'auto' }}>จากบท: {question.lessonTitle}</div>
+        <span className="text-eyebrow">Daily quiz · 1 ข้อ</span>
+        <span className="text-caption" style={{ marginLeft: 'auto', textAlign: 'right' }}>จากบท: {question.lessonTitle}</span>
       </div>
 
-      <div className="text-body" style={{ marginBottom: 10 }}>{question.question}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.55, marginBottom: 12 }}>{question.question}</div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {question.choices.map((c) => {
           const isPicked = answered?.choiceId === c.id
           const isCorrect = c.id === question.correctId
-          let style = { justifyContent: 'flex-start', textAlign: 'left' }
+          let style = { justifyContent: 'flex-start', textAlign: 'left', fontWeight: 400, minHeight: 48 }
           if (answered) {
-            if (isCorrect) style = { ...style, background: '#DCFCE7', border: '1.5px solid #86EFAC', color: '#166534' }
-            else if (isPicked) style = { ...style, background: '#FEE2E2', border: '1.5px solid #FCA5A5', color: '#991B1B' }
-            else style = { ...style, opacity: 0.5 }
+            if (isCorrect) style = { ...style, background: '#E4F2E8', border: '1.5px solid #266B44', color: '#266B44', fontWeight: 700 }
+            else if (isPicked) style = { ...style, background: '#FBEBE8', border: '1.5px solid #A0392F', color: '#A0392F', fontWeight: 700 }
+            else style = { ...style, opacity: 0.55 }
           }
           return (
             <button
@@ -93,8 +87,8 @@ export default function DailyQuiz() {
               disabled={!!answered}
               onClick={() => handleAnswer(c.id)}
             >
-              {answered && isCorrect && <Check size={14} />}
-              {answered && isPicked && !isCorrect && <X size={14} />}
+              {answered && isCorrect && <Check size={16} strokeWidth={2.4} />}
+              {answered && isPicked && !isCorrect && <X size={16} strokeWidth={2.4} />}
               {c.text}
             </button>
           )
@@ -103,20 +97,18 @@ export default function DailyQuiz() {
 
       {answered && (
         <div
-          className="text-caption"
           style={{
-            marginTop: 10, padding: 10, borderRadius: 10,
-            background: answered.correct ? '#F0FDF4' : '#FEF2F2',
-            color: answered.correct ? '#166534' : '#991B1B',
+            marginTop: 12, padding: 14, borderRadius: 9, background: '#FFFFFF',
+            fontSize: 14, lineHeight: 1.7,
           }}
         >
-          <div className="text-body-strong" style={{ marginBottom: 2 }}>
-            {answered.correct ? '🎉 ถูกต้อง!' : 'ยังไม่ถูก — ดูเฉลยด้านล่าง'}
+          <div className="text-body-strong" style={{ marginBottom: 2, color: answered.correct ? '#266B44' : '#A0392F' }}>
+            {answered.correct ? 'ถูกต้อง' : 'ยังไม่ถูก — ดูเฉลยด้านล่าง'}
           </div>
           {question.explanation}
-          <div style={{ marginTop: 6, opacity: 0.7 }}>ข้อใหม่ปลดล็อกพรุ่งนี้ — กลับมาต่อสตรีคนะ 🔥</div>
+          <div className="text-caption" style={{ marginTop: 6 }}>ข้อใหม่ปลดล็อกพรุ่งนี้ — กลับมาเรียนต่อให้ครบทุกวัน</div>
         </div>
       )}
-    </div>
+    </section>
   )
 }

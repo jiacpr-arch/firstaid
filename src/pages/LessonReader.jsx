@@ -239,7 +239,7 @@ export default function LessonReader() {
       <div className="page-container">
         {seo}
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
-          <CheckCircle2 size={48} color="#10B981" style={{ margin: '0 auto' }} />
+          <CheckCircle2 size={48} color="#347053" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>เรียนจบบทแล้ว!</div>
           <div className="text-caption" style={{ marginTop: 4 }}>{lesson.title}</div>
           {quizCount > 0 && (
@@ -258,7 +258,7 @@ export default function LessonReader() {
           </div>
         </div>
         {earnedBadge && (
-          <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 20, background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
+          <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 20, background: '#F7EFDD', border: '1.5px solid #E9D9B7' }}>
             <div style={{ fontSize: 40 }}>{earnedBadge.emoji}</div>
             <div className="text-body-strong" style={{ marginTop: 8 }}>ปลดล็อกแล้ว: {earnedBadge.label}</div>
             <div className="text-caption" style={{ marginTop: 4 }}>{earnedBadge.desc}</div>

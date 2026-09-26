@@ -7,7 +7,7 @@ export const algorithms = [
     id: 'cpr',
     title: 'CPR ผู้ใหญ่ (Hands-only)',
     icon: 'Heart',
-    color: '#DC2626',
+    color: '#A0392F',
     summary: 'การช่วยฟื้นคืนชีพแบบกดหน้าอกอย่างเดียว',
     steps: [
       { id: 's1', kind: 'check', text: 'ปลอดภัยพอที่จะเข้าใกล้หรือไม่?',
@@ -31,7 +31,7 @@ export const algorithms = [
     id: 'aed',
     title: 'การใช้ AED',
     icon: 'Zap',
-    color: '#2563EB',
+    color: '#3F6F8A',
     summary: 'เครื่องกระตุกหัวใจอัตโนมัติ',
     steps: [
       { id: 's1', kind: 'action', text: 'เปิดเครื่อง AED — ปฏิบัติตามเสียง', nextId: 's2' },
@@ -47,7 +47,7 @@ export const algorithms = [
     id: 'choking',
     title: 'สำลัก (Choking)',
     icon: 'AlertCircle',
-    color: '#D97706',
+    color: '#946A25',
     summary: 'อุดกั้นทางเดินหายใจจากสิ่งแปลกปลอม',
     steps: [
       { id: 's1', kind: 'check', text: 'ผู้ป่วยไอออกได้ดีหรือพูดได้หรือไม่?',
@@ -71,7 +71,7 @@ export const algorithms = [
     id: 'bleeding',
     title: 'ห้ามเลือด',
     icon: 'Droplet',
-    color: '#DC2626',
+    color: '#A0392F',
     summary: 'จัดการบาดแผลและเลือดออก',
     steps: [
       { id: 's1', kind: 'action', text: 'ใส่ถุงมือ/ถุงพลาสติกป้องกันตัวเอง', nextId: 's2' },
@@ -87,7 +87,7 @@ export const algorithms = [
     id: 'burns',
     title: 'แผลไหม้',
     icon: 'Flame',
-    color: '#EA580C',
+    color: '#A5553A',
     summary: 'น้ำร้อนลวก ไฟไหม้ เคมี',
     steps: [
       { id: 's1', kind: 'action', text: 'ย้ายผู้ป่วยออกจากแหล่งความร้อน', nextId: 's2' },
@@ -105,7 +105,7 @@ export const algorithms = [
     id: 'fracture',
     title: 'กระดูกหัก',
     icon: 'Bone',
-    color: '#7C3AED',
+    color: '#6B5A86',
     summary: 'ดามและจัดท่าก่อนนำส่ง',
     steps: [
       { id: 's1', kind: 'action', tone: 'warning', text: 'ห้ามดึงให้กระดูกเข้าที่', nextId: 's2' },
@@ -122,7 +122,7 @@ export const algorithms = [
     id: 'fainting',
     title: 'เป็นลม/หมดสติชั่วคราว',
     icon: 'User',
-    color: '#0EA5E9',
+    color: '#3E7C8C',
     summary: 'จัดท่านอนและประเมินอาการ',
     steps: [
       { id: 's1', kind: 'action', text: 'จัดให้นอนหงาย ยกขาสูง 30 ซม.', nextId: 's2' },
@@ -137,7 +137,7 @@ export const algorithms = [
     id: 'seizure',
     title: 'ชัก',
     icon: 'Activity',
-    color: '#7C3AED',
+    color: '#6B5A86',
     summary: 'ระหว่างชักและหลังชัก',
     steps: [
       { id: 's1', kind: 'action', text: 'เคลียร์ของแข็งรอบตัว รองหัวด้วยของนุ่ม', nextId: 's2' },
@@ -153,7 +153,7 @@ export const algorithms = [
     id: 'drowning',
     title: 'จมน้ำ',
     icon: 'Wind',
-    color: '#0EA5E9',
+    color: '#3E7C8C',
     summary: 'การช่วยเหลือผู้จมน้ำ',
     steps: [
       { id: 's1', kind: 'action', tone: 'warning',
@@ -169,7 +169,7 @@ export const algorithms = [
     id: 'snake-bite',
     title: 'งูกัด',
     icon: 'Shield',
-    color: '#15803D',
+    color: '#1B5D54',
     summary: 'การปฐมพยาบาลผู้ถูกงูกัด',
     steps: [
       { id: 's1', kind: 'action', text: 'ให้ผู้ป่วยอยู่นิ่ง ๆ ระดับแผลต่ำกว่าหัวใจ', nextId: 's2' },
@@ -184,7 +184,7 @@ export const algorithms = [
     id: 'heat-stroke',
     title: 'ลมแดด',
     icon: 'Sun',
-    color: '#D97706',
+    color: '#946A25',
     summary: 'Heat Stroke — ภาวะฉุกเฉิน',
     steps: [
       { id: 's1', kind: 'check',
@@ -203,7 +203,7 @@ export const algorithms = [
     id: 'anaphylaxis',
     title: 'แพ้รุนแรง / EpiPen',
     icon: 'AlertTriangle',
-    color: '#DC2626',
+    color: '#A0392F',
     summary: 'Anaphylaxis — นาทีชีวิต',
     steps: [
       { id: 's1', kind: 'check',
@@ -231,7 +231,7 @@ export const algorithms = [
     id: 'chest-pain',
     title: 'เจ็บหน้าอก / Heart Attack',
     icon: 'Heart',
-    color: '#DC2626',
+    color: '#A0392F',
     summary: 'หัวใจขาดเลือดเฉียบพลัน',
     steps: [
       { id: 's1', kind: 'check',
@@ -258,7 +258,7 @@ export const algorithms = [
     id: 'stroke',
     title: 'อัมพาต (Stroke)',
     icon: 'Brain',
-    color: '#7C3AED',
+    color: '#6B5A86',
     summary: 'ชั่วโมงทอง — จดเวลาเริ่มอาการ',
     steps: [
       { id: 's1', kind: 'check',
@@ -280,7 +280,7 @@ export const algorithms = [
     id: 'hypoglycemia',
     title: 'น้ำตาลตก',
     icon: 'Candy',
-    color: '#F59E0B',
+    color: '#A48442',
     summary: 'ผู้ป่วยเบาหวานที่สับสน/เหงื่อแตก',
     steps: [
       { id: 's1', kind: 'check',
@@ -305,7 +305,7 @@ export const algorithms = [
     id: 'spine',
     title: 'บาดเจ็บคอ/หลัง',
     icon: 'Bone',
-    color: '#0EA5E9',
+    color: '#3E7C8C',
     summary: 'ระวังไขสันหลัง — ห้ามขยับ',
     steps: [
       { id: 's1', kind: 'check',
@@ -330,7 +330,7 @@ export const algorithms = [
     id: 'chemical',
     title: 'สารเคมีอันตราย',
     icon: 'Skull',
-    color: '#7C3AED',
+    color: '#6B5A86',
     summary: 'สูดดม/สัมผัสผิวหนัง/เข้าตา/กลืน',
     steps: [
       { id: 's1', kind: 'check', text: 'พื้นที่ปลอดภัยสำหรับผู้ช่วยหรือไม่?',

@@ -12,10 +12,10 @@ function StepIcon({ kind, tone }) {
 }
 
 function toneToColor(tone) {
-  if (tone === 'danger') return { bg: '#FEF2F2', border: '#FCA5A5', fg: '#991B1B' }
-  if (tone === 'warning') return { bg: '#FFFBEB', border: '#FCD34D', fg: '#92400E' }
-  if (tone === 'info') return { bg: '#EFF6FF', border: '#93C5FD', fg: '#1E40AF' }
-  return { bg: '#F0FDF4', border: '#86EFAC', fg: '#166534' }
+  if (tone === 'danger') return { bg: '#FBEBE8', border: '#EFC9C3', fg: '#7E2C24' }
+  if (tone === 'warning') return { bg: '#F7EFDD', border: '#D9C28E', fg: '#7A5A1F' }
+  if (tone === 'info') return { bg: '#E4EDF0', border: '#A9C2CD', fg: '#2F5870' }
+  return { bg: '#EDF4EF', border: '#9CC3AB', fg: '#266B44' }
 }
 
 export default function AlgorithmFlowchart({ algorithm, media = [] }) {

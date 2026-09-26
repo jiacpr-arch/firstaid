@@ -118,12 +118,12 @@ export default function Schedule() {
                       </div>
                     ) : null}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
-                      <span className="text-caption" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#16A34A' }}>
+                      <span className="text-caption" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#23736A' }}>
                         <Users size={13} /> เหลือ {c.seats_left} ที่
                       </span>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
-                        fontSize: 13, fontWeight: 800, color: '#047857',
+                        fontSize: 13, fontWeight: 800, color: '#1B5D54',
                       }}>
                         จอง ({Number(c.price).toLocaleString()} ฿) <ArrowRight size={13} />
                       </span>
