@@ -35,6 +35,34 @@
   --shadow-1: 0 1px 2px rgba(15, 26, 46, 0.04), 0 1px 1px rgba(15, 26, 46, 0.03);
   --shadow-2: 0 1px 3px rgba(15, 26, 46, 0.06), 0 4px 8px rgba(15, 26, 46, 0.04);
   --shadow-3: 0 4px 12px rgba(15, 26, 46, 0.08), 0 12px 24px rgba(15, 26, 46, 0.06);
+
+  /* โทน JIA Learning Hub (ครีม + เขียวคลินิก) — ตอนนี้ใช้ที่หน้า Landing */
+  --font-sarabun: 'Sarabun', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-georgia: Georgia, 'Times New Roman', serif;
+  --color-hub-cream: #FAFAF5;
+  --color-hub-ink: #163D3A;
+  --color-hub-body: #3F5A54;
+  --color-hub-muted: #5B6D67;
+  --color-hub-eyebrow: #4F7064;
+  --color-hub-green: #23736A;
+  --color-hub-green-hover: #1B5D54;
+  --color-hub-line: #DCE5DF;
+  --color-hub-hero: #EAF0E8;
+  --color-hub-orbit: #D6E2D7;
+  --color-hub-heart: #2C6C60;
+  --color-hub-heart-ink: #D2E2CC;
+  --color-hub-iconbox: #E7F0E7;
+  --color-hub-iconbox-ink: #2E6D5D;
+  --color-hub-journey: #F0F2EB;
+  --color-hub-journey-line: #E0E8DC;
+  --color-hub-paper: #FFFDF6;
+  --color-hub-cert: #C7B98A;
+  --color-hub-cert-ink: #546A50;
+  --color-hub-alert: #A0392F;
+  --color-hub-dark: #163D3A;
+  --color-hub-dark-2: #30544D;
+  --color-hub-dark-accent: #BFDDB3;
+  --color-hub-dark-copy: #C9DCD4;
 }
 
 /* หมายเหตุ: ห้ามใส่ universal reset (*{margin:0}) ที่นี่ — CSS นอก @layer จะชนะ
