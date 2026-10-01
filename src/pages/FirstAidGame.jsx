@@ -30,6 +30,9 @@ import {
 } from '../game/achievements';
 import './firstAidGame.css';
 
+// บูธรู้ดี งานเด็กดี (ต.ค. 2569) — ปุ่มแอด LINE @roodee.me ท้ายเกม (ดู boothLineOa)
+const BOOTH_CTA = { key: 'dekd', start: '2026-10-01', end: '2026-10-31', oa: '@roodee.me' };
+
 // เกมโหมดโบนัสของ FirstAid Morroo — engine เดียวกับ Code Blue Sim (acls-emr)
 // แต่เนื้อหา/ตัวละคร/ป้ายเป็นปฐมพยาบาลสำหรับคนทั่วไป และไม่ผูกกับ progress/ใบเซอร์
 const GAME_NAME = 'FIRST AID HERO';
@@ -211,6 +214,13 @@ export default function FirstAidGame() {
   // /game?random=play (ใช้กับการ์ด Games Hub ที่ game.morroo.com) — สุ่มเคส
   // แบบเดียวกัน แต่ข้ามจอ title ต่อไปเข้าเกมทันทีด้วย ไม่ต้องกดเริ่มเอง
   const [searchParams, setSearchParams] = useSearchParams();
+  // มาจากบูธรู้ดี งานเด็กดี (ลิงก์ใน LINE ?camp=dekd หรือ QR โปสเตอร์ ?random=1) ในช่วงงาน
+  // → ท้ายเกมชวนแอด LINE @roodee.me รับดาว/รางวัล — คิดครั้งเดียวตอนเปิด เพราะ param ถูกลบทิ้งด้านล่าง
+  const [boothLineOa] = useState(() => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+    if (today < BOOTH_CTA.start || today > BOOTH_CTA.end) return null;
+    return searchParams.get('camp') === BOOTH_CTA.key || searchParams.has('random') ? BOOTH_CTA.oa : null;
+  });
   // เก็บว่าจะกดเริ่มให้อัตโนมัติหลังสุ่มเคสไหม — เป็น counter (ไม่ใช่ boolean)
   // เพราะ startGame() ต้องรอ sc อัพเดต/re-render ก่อนถึงจะอ่านค่าที่ถูกต้อง
   // (เรียก startGame() ในเอฟเฟกต์เดียวกับ setSc จะได้ closure ของ sc ค่าเก่า)
@@ -1111,6 +1121,22 @@ export default function FirstAidGame() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          {boothLineOa && (
+            <div className="cbs-learn-cta">
+              <div className="cbs-learn-cta-head">🎁 มาจากบูธรู้ดี งานเด็กดี?</div>
+              <div className="cbs-learn-cta-sub">
+                โชว์หน้านี้ให้พี่ทีมงานเพื่อรับดาว ⭐ — ส่วนลด คอร์สฟรี และเกียรติบัตร รับทาง LINE {boothLineOa}
+              </div>
+              <a
+                className="cbs-btn-learn"
+                href={`https://line.me/R/ti/p/${encodeURIComponent(boothLineOa)}`}
+                target="_blank" rel="noopener noreferrer"
+                onClick={() => track('game_booth_line_cta', { scenario_id: sc?.id, won: result?.won })}
+              >
+                แอด LINE {boothLineOa} รับรางวัล →
+              </a>
             </div>
           )}
           {/* ชวนเรียนต่อไว้บนสุดของสรุปผล — เดิมอยู่ใต้ timeline ยาว คนบนมือถือเลื่อนไม่ถึง */}

@@ -649,6 +649,7 @@
   box-shadow: 0 6px 16px rgba(55, 200, 113, .3);
 }
 .cbs-btn-learn:active { transform: scale(.98); }
+a.cbs-btn-learn { display: block; box-sizing: border-box; text-align: center; text-decoration: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .cbs-shake, .cbs-flash.cbs-go, .cbs-redflash.cbs-go,
