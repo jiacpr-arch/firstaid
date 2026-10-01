@@ -1127,7 +1127,7 @@ export default function FirstAidGame() {
             <div className="cbs-learn-cta">
               <div className="cbs-learn-cta-head">🎁 มาจากบูธรู้ดี งานเด็กดี?</div>
               <div className="cbs-learn-cta-sub">
-                โชว์หน้านี้ให้พี่ทีมงานเพื่อรับดาว ⭐ — ส่วนลด คอร์สฟรี และเกียรติบัตร รับทาง LINE {boothLineOa}
+                แอด LINE {boothLineOa} แล้วไปปั๊มหัวใจบน SimCPR ที่บูธ ลุ้นตุ๊กตา + ส่วนลด/BLS ฟรี — รางวัลทั้งหมดส่งให้ทางแชท LINE
               </div>
               <a
                 className="cbs-btn-learn"
