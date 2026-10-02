@@ -179,3 +179,53 @@ a:focus-visible,button:focus-visible { outline: 3px solid #23736a; outline-offse
   .course-chapter-list-cover { height: 125px; }
   .course-home-art img { height: 180px; }
 }
+/* Compact home: one introduction, chapter choices, then practical shortcuts. */
+.course-landing-compact .course-hero { padding-block: 30px 20px; }
+.course-landing-compact .course-hero h1 { font-size: clamp(34px,3.6vw,48px); margin-block: 10px 12px; }
+.course-landing-compact .course-hero-art > img { height: 340px; }
+.course-landing-compact .course-stats { padding-block: 16px; }
+.course-landing-compact .course-section { padding-block: 28px 20px; }
+.course-landing-compact .course-section-heading { margin-bottom: 18px; }
+.course-landing-compact .course-chapter-copy { padding-bottom: 16px; }
+.course-landing-compact .course-chapter-bottom { padding-top: 5px; }
+.course-game-shortcut { display: flex; align-items: center; gap: 15px; padding: 20px 24px; border-radius: 16px; background: #163d3a; color: #fafaf5; }
+.course-game-shortcut > svg { flex-shrink: 0; color: #bfddb3; }
+.course-game-shortcut > span { flex: 1; }
+.course-game-shortcut strong { font-size: 17px; }
+.course-game-shortcut small { display: block; font-size: 14px; color: #c9dcd4; }
+.course-landing-compact .course-tools { padding: 20px; margin-top: 20px; }
+.course-landing-compact .course-tools h2 { font-size: 20px; margin-bottom: 12px; }
+.course-landing-compact .course-tools a { padding: 12px; }
+.course-landing-compact .course-tools small { display: none; }
+.course-practical-note { display: flex; gap: 12px; align-items: center; padding: 20px 4px; font-size: 14px; color: #5b6d67; }
+.course-practical-note > svg { color: #987640; flex-shrink: 0; }
+.course-practical-note a { display: inline-flex; align-items: center; gap: 6px; color: #23736a; font-weight: 600; margin-top: 4px; }
+.course-landing-compact .course-footer { margin-top: 0; padding-block: 16px; }
+@media (max-width: 720px) {
+  .course-landing-compact .course-hero { padding-top: 24px; gap: 20px; }
+  .course-landing-compact .course-hero h1 { font-size: clamp(32px,8.5vw,42px); }
+  .course-landing-compact .course-hero-art > img { height: 200px; aspect-ratio: auto; object-position: center 43%; border-radius: 40px 16px 16px 16px; }
+  .course-landing-compact .course-hero-art { padding-bottom: 0; }
+  .course-landing-compact .course-hero-art figcaption { display: none; }
+  .course-landing-compact .course-hero-actions { margin-top: 16px; gap: 12px; }
+  .course-landing-compact .course-checks { margin-top: 12px; }
+  .course-landing-compact .course-stats { gap: 12px; padding-block: 15px; }
+  .course-landing-compact .course-stats strong { font-size: 26px; }
+  .course-landing-compact .course-section { padding-block: 24px 18px; }
+  .course-landing-compact .course-section-heading { gap: 6px; margin-bottom: 15px; }
+  .course-landing-compact .course-chapters { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .course-landing-compact .course-chapter-art > img { aspect-ratio: 1.8; }
+  .course-landing-compact .course-chapter-copy { padding: 22px 12px 12px; }
+  .course-landing-compact .course-chapter-copy h3 { font-size: 15px; margin-block: 5px; }
+  .course-landing-compact .course-chapter-copy small { font-size: 12px; }
+  .course-game-shortcut { padding: 16px; gap: 12px; }
+  .course-game-shortcut strong { font-size: 16px; }
+  .course-game-shortcut small { font-size: 13px; }
+  .course-landing-compact .course-tools { padding: 16px; margin-top: 16px; }
+  .course-landing-compact .course-tools nav { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .course-landing-compact .course-tools a { gap: 8px; padding: 12px 9px; }
+  .course-landing-compact .course-tools strong { font-size: 14px; }
+  .course-landing-compact .course-tools a > svg:first-child { width: 19px; }
+  .course-landing-compact .course-tools a > svg:last-child { display: none; }
+  .course-practical-note { padding-block: 16px; }
+}
