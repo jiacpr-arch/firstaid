@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import {
   BookOpen, HeartPulse, Bandage, Skull, Phone, Award, MessageCircle,
-  Check, ArrowRight, Activity, Gamepad2, Map, CalendarDays, UserCheck, Clock,
+  Check, ArrowRight, Activity, Gamepad2, Map, CalendarDays, UserCheck,
 } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
@@ -49,7 +49,7 @@ export default function Landing() {
   const ctaTo = hasStarted ? `/learn/${nextLesson.id}` : FIRST_LESSON_PATH
 
   return (
-    <div className="course-landing">
+    <div className="course-landing course-landing-compact">
       <Seo path="/" jsonLd={courseJsonLd()} />
       <header className="course-nav">
         <div className="course-width course-nav-inner">
@@ -77,31 +77,18 @@ export default function Landing() {
         <section className="course-stats" aria-label="รายละเอียดคอร์ส">
           <div><strong>{lessons.length}</strong><span>บทเรียนสั้น ๆ</span></div><div><strong>{chapters.length}</strong><span>หมวดการเรียนรู้</span></div><div><strong>{scenarios.length}</strong><span>สถานการณ์ให้ฝึก</span></div><div><Award size={29} /><span>สอบผ่าน รับใบประกาศ<br /><b>ภาคทฤษฎีฟรี</b></span></div>
         </section>
-        <section className="course-start-section">
-          <div><span className="course-kicker">เริ่มตรงนี้</span><h2>{hasStarted ? 'กลับมาเรียนต่อกัน' : 'บทแรก เริ่มจากพื้นฐาน'}</h2><p>เรียนทีละเรื่อง แล้วทบทวนด้วยคำถามท้ายบท</p></div>
-          <Link to={ctaTo} onClick={() => trackStartClick('first_lesson')} className="course-first-lesson"><span className="course-lesson-number">{String(nextLesson.order).padStart(2, '0')}</span><span><strong>{nextLesson.title}</strong><small><Clock size={14} /> {nextLesson.minutes} นาที · มีคำถามท้ายบท</small></span><ArrowRight size={22} /></Link>
-        </section>
         <section className="course-section">
           <div className="course-section-heading"><div><span className="course-kicker">เลือกเรื่องที่อยากเรียนรู้</span><h2>พร้อมรับมือเรื่องใกล้ตัว</h2></div><Link to="/learn" className="course-text-link">ดูครบ {lessons.length} บท <ArrowRight size={17} /></Link></div>
           <div className="course-chapters">{chapters.map(ch => {
             const Icon = CHAPTER_ICONS[ch.icon] ?? BookOpen
             const items = lessons.filter(l => l.chapter === ch.id)
             const art = chapterArtwork[ch.id]
-            return <Link to={`/learn#chapter-${ch.id}`} key={ch.id} className="course-chapter"><div className="course-chapter-art"><img src={art.src} alt={art.alt} width="600" height="400" loading="lazy" /><span><Icon size={22} /></span></div><div className="course-chapter-copy"><small>หมวดที่ {ch.id} · {items.length} บทเรียน</small><h3>{ch.title}</h3><p>{items.slice(0, 3).map(l => l.title.replace(/\s*\(.*\)$/, '')).join(' · ')}</p><span className="course-chapter-bottom">ดูบทเรียน <ArrowRight size={17} /></span></div></Link>
+            return <Link to={`/learn#chapter-${ch.id}`} key={ch.id} className="course-chapter"><div className="course-chapter-art"><img src={art.src} alt={art.alt} width="600" height="400" loading="lazy" /><span><Icon size={22} /></span></div><div className="course-chapter-copy"><small>หมวดที่ {ch.id} · {items.length} บทเรียน</small><h3>{ch.title}</h3><span className="course-chapter-bottom">ดูบทเรียน <ArrowRight size={17} /></span></div></Link>
           })}</div>
         </section>
-        <section className="course-practice-banner">
-          <div><span className="course-kicker">ลองคิด ลองตัดสินใจ</span><h2>ถ้าเหตุเกิดตรงหน้า<br />เราจะช่วยอย่างไร?</h2><p>ฝึกกับ FIRST AID HERO เกมจำลองเหตุการณ์ที่ให้คุณเลือกวิธีช่วยเหลือด้วยตัวเอง</p><Link to="/game" className="btn btn-secondary btn-lg" onClick={() => phCapture('landing_game_click')}><Gamepad2 size={20} /> ลองเล่นเกม <ArrowRight size={18} /></Link></div>
-          <div className="course-game-art" aria-hidden="true"><img className="course-game-scene" src="/images/backgrounds/noodle_shop.webp" alt="" loading="lazy" /><img className="course-game-character" src="/images/characters/kru_fah/happy.webp" alt="" loading="lazy" /><span className="course-game-label"><Activity size={17} /> FIRST AID HERO</span></div>
-        </section>
-        <section className="course-section"><div className="course-section-heading"><div><span className="course-kicker">เส้นทางการเรียน</span><h2>เรียนรู้ → ฝึกคิด → ทบทวน</h2></div></div><ol className="course-journey">{[
-          ['เรียนบทสั้น ๆ ทีละบท', 'เริ่มจากพื้นฐาน อ่านเนื้อหาและตอบคำถามท้ายบท'],
-          ['ฝึกกับสถานการณ์จำลอง', 'นำสิ่งที่เรียนมาลองใช้กับเหตุการณ์เสมือนจริง'],
-          ['สอบรับใบประกาศภาคทฤษฎี', 'เรียนและฝึกครบตามเกณฑ์ แล้วทำแบบทดสอบหลังเรียน'],
-        ].map(([title, desc], i) => <li key={title}><span>{String(i + 1).padStart(2, '0')}</span><h3>{title}</h3><p>{desc}</p></li>)}</ol></section>
+        <Link to="/game" className="course-game-shortcut" onClick={() => phCapture('landing_game_click')}><Gamepad2 size={26} /><span><strong>FIRST AID HERO</strong><small>ลองฝึกตัดสินใจผ่านเกมช่วยชีวิต</small></span><ArrowRight size={22} /></Link>
         <section className="course-tools"><h2>ทางลัดสำหรับผู้เรียน</h2><nav aria-label="ทางลัดสำหรับผู้เรียน">{OTHER_LINKS.map(({to, label, desc, icon: Icon}) => <Link to={to} key={to}><Icon size={23} /><span><strong>{label}</strong><small>{desc}</small></span><ArrowRight size={17} /></Link>)}</nav></section>
-        <section className="course-certificate"><div className="course-cert-mark"><img src="/cert-logo.png" alt="ตรา Jia Training Center" width="110" height="110" loading="lazy" /><Award size={28} /></div><div><span className="course-kicker">เก็บความภูมิใจหลังเรียนจบ</span><h2>ใบประกาศภาคทฤษฎี ไม่มีค่าใช้จ่าย</h2><p>เรียนครบ ฝึกผ่านตามเกณฑ์ และสอบผ่าน แล้วดาวน์โหลดใบประกาศได้เลย หากต้องการใบรับรองภาคปฏิบัติ CPR &amp; AED ต้องฝึกกับครูผู้สอน</p><a href={LINE_URL} target="_blank" rel="noopener noreferrer" onClick={trackLineLead} className="course-text-link"><MessageCircle size={18} /> สนใจฝึกปฏิบัติ ทัก LINE {LINE_ID} ↗</a></div></section>
-        <a href="tel:1669" className="course-emergency-note"><Phone size={23} /><span><strong>มีเหตุฉุกเฉินตอนนี้ โทร 1669</strong><small>ติดต่อทีมฉุกเฉินทันที ไม่ต้องรอเรียนจบ</small></span><ArrowRight size={19} /></a>
+        <div className="course-practical-note"><Award size={21} /><p>ใบประกาศภาคทฤษฎีรับได้เมื่อเรียนและสอบผ่าน<br /><a href={LINE_URL} target="_blank" rel="noopener noreferrer" onClick={trackLineLead}><MessageCircle size={15} /> สนใจฝึกปฏิบัติ ทัก LINE {LINE_ID} ↗</a></p></div>
         <footer className="course-footer"><span>FirstAid · Jia Training Center</span><p>เนื้อหาดัดแปลงจากคู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป โดยหมอเจี่ย</p></footer>
       </main>
     </div>
