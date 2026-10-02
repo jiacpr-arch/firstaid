@@ -650,6 +650,10 @@
 }
 .cbs-btn-learn:active { transform: scale(.98); }
 a.cbs-btn-learn { display: block; box-sizing: border-box; text-align: center; text-decoration: none; }
+/* วันงานเด็กดี: การ์ดสมัครสมาชิกผ่าน LINE — กรอบ/ปุ่มสีแบรนด์ LINE ให้เด่นกว่าการ์ดอื่น */
+.cbs-learn-cta-signup { border: 2px solid #06C755; }
+.cbs-learn-cta-signup .cbs-learn-cta-head { font-size: 18px; }
+a.cbs-btn-line { background: #06C755; color: #fff; font-size: 16.5px; box-shadow: 0 6px 16px rgba(6, 199, 85, .35); }
 
 @media (prefers-reduced-motion: reduce) {
   .cbs-shake, .cbs-flash.cbs-go, .cbs-redflash.cbs-go,

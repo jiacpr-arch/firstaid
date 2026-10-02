@@ -31,7 +31,12 @@ import {
 import './firstAidGame.css';
 
 // บูธรู้ดี งานเด็กดี (ต.ค. 2569) — ปุ่มแอด LINE @roodee.me ท้ายเกม (ดู boothLineOa)
-const BOOTH_CTA = { key: 'dekd', start: '2026-10-01', end: '2026-10-31', oa: '@roodee.me' };
+// signupStart–signupEnd = วันงานจริง → โชว์ให้ทุกคนที่เล่นจบ เป็นปุ่ม "สมัครสมาชิกฟรีผ่าน LINE"
+// (แอด OA แล้วข้อความต้อนรับส่งลิงก์เข้าเว็บสมัครสมาชิก)
+const BOOTH_CTA = {
+  key: 'dekd', start: '2026-10-01', end: '2026-10-31',
+  signupStart: '2026-10-03', signupEnd: '2026-10-05', oa: '@roodee.me',
+};
 
 // เกมโหมดโบนัสของ FirstAid Morroo — engine เดียวกับ Code Blue Sim (acls-emr)
 // แต่เนื้อหา/ตัวละคร/ป้ายเป็นปฐมพยาบาลสำหรับคนทั่วไป และไม่ผูกกับ progress/ใบเซอร์
@@ -216,10 +221,12 @@ export default function FirstAidGame() {
   const [searchParams, setSearchParams] = useSearchParams();
   // มาจากบูธรู้ดี งานเด็กดี (ลิงก์ใน LINE ?camp=dekd หรือ QR โปสเตอร์ ?random=1) ในช่วงงาน
   // → ท้ายเกมชวนแอด LINE @roodee.me รับดาว/รางวัล — คิดครั้งเดียวตอนเปิด เพราะ param ถูกลบทิ้งด้านล่าง
-  const [boothLineOa] = useState(() => {
+  const [{ boothLineOa, boothSignup }] = useState(() => {
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
-    if (today < BOOTH_CTA.start || today > BOOTH_CTA.end) return null;
-    return searchParams.get('camp') === BOOTH_CTA.key || searchParams.has('random') ? BOOTH_CTA.oa : null;
+    if (today < BOOTH_CTA.start || today > BOOTH_CTA.end) return { boothLineOa: null, boothSignup: false };
+    if (today >= BOOTH_CTA.signupStart && today <= BOOTH_CTA.signupEnd) return { boothLineOa: BOOTH_CTA.oa, boothSignup: true };
+    const fromBooth = searchParams.get('camp') === BOOTH_CTA.key || searchParams.has('random');
+    return { boothLineOa: fromBooth ? BOOTH_CTA.oa : null, boothSignup: false };
   });
   // เก็บว่าจะกดเริ่มให้อัตโนมัติหลังสุ่มเคสไหม — เป็น counter (ไม่ใช่ boolean)
   // เพราะ startGame() ต้องรอ sc อัพเดต/re-render ก่อนถึงจะอ่านค่าที่ถูกต้อง
@@ -1123,7 +1130,25 @@ export default function FirstAidGame() {
               </div>
             </div>
           )}
-          {boothLineOa && (
+          {/* วันงานเด็กดี 3–5 ต.ค. — ปุ่มหลักชวนสมัครสมาชิกเว็บผ่าน LINE OA โชว์ให้ทุกคนที่เล่นจบ */}
+          {boothLineOa && boothSignup && (
+            <div className="cbs-learn-cta cbs-learn-cta-signup">
+              <div className="cbs-learn-cta-head">🎉 สมัครสมาชิกฟรี! รับสิทธิ์ทันทีผ่าน LINE</div>
+              <div className="cbs-learn-cta-sub">
+                แอด LINE {boothLineOa} → รับลิงก์สมัครสมาชิกเว็บ เรียนปฐมพยาบาล/CPR ออนไลน์ฟรี + ใบเซอร์
+                แล้วไปปั๊มหัวใจบน SimCPR ที่บูธรู้ดี ลุ้นตุ๊กตา + ส่วนลด/BLS ฟรี
+              </div>
+              <a
+                className="cbs-btn-learn cbs-btn-line"
+                href={`https://line.me/R/ti/p/${encodeURIComponent(boothLineOa)}`}
+                target="_blank" rel="noopener noreferrer"
+                onClick={() => track('game_booth_line_cta', { scenario_id: sc?.id, won: result?.won, signup: true })}
+              >
+                📲 สมัครสมาชิกฟรีผ่าน LINE {boothLineOa}
+              </a>
+            </div>
+          )}
+          {boothLineOa && !boothSignup && (
             <div className="cbs-learn-cta">
               <div className="cbs-learn-cta-head">🎁 มาจากบูธรู้ดี งานเด็กดี?</div>
               <div className="cbs-learn-cta-sub">
