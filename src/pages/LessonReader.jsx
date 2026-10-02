@@ -286,15 +286,16 @@ export default function LessonReader() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container course-reader">
       {seo}
       <button type="button" onClick={() => navigate('/learn')} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
         <ArrowLeft size={16} /> รายการบท
       </button>
-      <div style={{ marginTop: 4 }}>
+      <header className="course-reader-heading" style={{ marginTop: 4 }}>
         <div className="text-caption">บทที่ {lesson.order} จาก {totalLessons}</div>
-        <div className="text-title">{lesson.title}</div>
-      </div>
+        <h1 className="text-title">{lesson.title}</h1>
+        <p className="text-body">{lesson.summary}</p>
+      </header>
 
       {/* ความก้าวหน้าทั้งคอร์ส + คำให้กำลังใจ ให้มีแรงเรียนต่อจนจบ */}
       <div className="card" style={{ marginTop: 12, padding: 12 }}>

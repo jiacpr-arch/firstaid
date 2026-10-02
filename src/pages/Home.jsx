@@ -1,3 +1,4 @@
+import { CLASSROOM_ART } from '../config/courseArtwork'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
@@ -48,7 +49,7 @@ export default function Home() {
   const studiedToday = localStorage.getItem('lastStudyDate') === new Date().toISOString().slice(0, 10)
 
   return (
-    <div className="page-container">
+    <div className="page-container course-home">
       <Seo path="/" jsonLd={courseJsonLd()} />
 
       <header style={{ marginTop: 8, marginBottom: 20 }}>
@@ -61,6 +62,8 @@ export default function Home() {
           สำหรับประชาชนทั่วไป — เรียนทฤษฎีออนไลน์ ฝึกปฏิบัติกับครูผู้สอน
         </div>
       </header>
+
+      <figure className="course-home-art"><img src={CLASSROOM_ART} alt="ภาพประกอบห้องเรียนปฐมพยาบาล" width="1536" height="1024" /><figcaption>ค่อย ๆ เรียนรู้ แล้วฝึกให้มั่นใจ</figcaption></figure>
 
       {/* ═══ เรียนต่อ — การ์ดเด่นที่สุดของหน้า ═══ */}
       {nextLesson && (

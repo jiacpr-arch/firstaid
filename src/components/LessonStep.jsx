@@ -4,8 +4,8 @@ import { LessonImage, LessonVideo } from './Media'
 export default function LessonStep({ step, onQuizAnswered }) {
   if (step.type === 'read') {
     return (
-      <div className="card">
-        {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
+      <div className="card course-lesson-step">
+        {step.heading && <h2 className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</h2>}
         {step.body && <div className="text-body" style={{ whiteSpace: 'pre-wrap' }}>{step.body}</div>}
         {step.image && <LessonImage {...step.image} />}
         {step.video && <LessonVideo {...step.video} />}
@@ -14,16 +14,16 @@ export default function LessonStep({ step, onQuizAnswered }) {
   }
   if (step.type === 'image') {
     return (
-      <div className="card">
-        {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
+      <div className="card course-lesson-step">
+        {step.heading && <h2 className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</h2>}
         <LessonImage src={step.src} alt={step.alt} caption={step.caption} />
       </div>
     )
   }
   if (step.type === 'video') {
     return (
-      <div className="card">
-        {step.heading && <div className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</div>}
+      <div className="card course-lesson-step">
+        {step.heading && <h2 className="text-headline" style={{ marginBottom: 8 }}>{step.heading}</h2>}
         <LessonVideo
           src={step.src}
           youtube={step.youtube}

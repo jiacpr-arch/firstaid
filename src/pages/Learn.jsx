@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+import { chapterArtwork } from '../config/courseArtwork'
+import { useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { BookOpen, Check, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Lock, Activity } from 'lucide-react'
 import { lessons, lessonsByChapter } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
@@ -18,6 +20,10 @@ import AccountCard from '../components/AccountCard'
 import { itemListJsonLd, breadcrumbJsonLd } from '../lib/seo'
 
 export default function Learn() {
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (/^#chapter-[1-4]$/.test(hash)) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [hash])
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
   const readSet = useProgressStore((s) => s.readLessonIds)
@@ -54,7 +60,7 @@ export default function Learn() {
         : 'ขั้นที่ 4: พร้อมทำ Post-test เพื่อรับใบประกาศ'
 
   return (
-    <div className="page-container">
+    <div className="page-container course-learn">
       <Seo
         title={`บทเรียนปฐมพยาบาล ${lessons.length} บท — เรียนฟรีออนไลน์ | Jia Training Center`}
         description={`รวมบทเรียนปฐมพยาบาลเบื้องต้น ${lessons.length} บท ครอบคลุม CPR, สำลัก, เลือดออก, แผลไฟไหม้ และเหตุฉุกเฉินอื่น ๆ — เรียนฟรี บทละ 5–10 นาที พร้อมสอบรับใบประกาศ`}
@@ -67,7 +73,7 @@ export default function Learn() {
           ]),
         ]}
       />
-      <header style={{ marginTop: 8 }}>
+      <header className="course-learn-header" style={{ marginTop: 8 }}>
         <div className="text-eyebrow">{total} lessons · {lessonsByChapter.length} chapters</div>
         <h1 className="text-display" style={{ margin: 0 }}>บทเรียน</h1>
       </header>
@@ -124,7 +130,7 @@ export default function Learn() {
         {earnedBadges.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
             {earnedBadges.map((b) => (
-              <span key={b.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F7EFDF', border: '1px solid #E9D9B7', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: '#7A5A1F' }}>
+              <span key={b.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F7EFDF', border: '1px solid #E9D9B7', borderRadius: 20, padding: '3px 10px', fontSize: 14, fontWeight: 600, color: '#7A5A1F' }}>
                 {b.emoji} {b.label}
               </span>
             ))}
@@ -140,7 +146,11 @@ export default function Learn() {
         const chapterPaidLocked = !lessonsLocked && !isChapterUnlocked(ch.id, unlockedChapters)
         const chComplete = chTotal > 0 && chDone === chTotal
         return (
-          <section key={ch.id} className="card" style={{ marginTop: 16, padding: 0, overflow: 'hidden' }}>
+          <section key={ch.id} id={`chapter-${ch.id}`} className="card course-chapter-list" style={{ marginTop: 16, padding: 0, overflow: 'hidden' }}>
+            <div className="course-chapter-list-cover">
+              <img src={chapterArtwork[ch.id].src} alt={chapterArtwork[ch.id].alt} loading="lazy" width="600" height="400" />
+              <span>หมวดที่ {ch.id}</span>
+            </div>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 14,
               padding: '16px 18px', borderBottom: '1px solid var(--color-border)',
@@ -151,7 +161,7 @@ export default function Learn() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h2 className="text-body-strong" style={{ margin: 0 }}>{ch.title}</h2>
-                <div className="text-caption" style={{ fontSize: 12, color: chComplete ? '#366749' : undefined }}>
+                <div className="text-caption" style={{ fontSize: 14, color: chComplete ? '#366749' : undefined }}>
                   {chComplete ? `เรียนครบ ${chTotal} บทแล้ว` : `${chDone} / ${chTotal} บท · ${chMinutes} นาที`}
                 </div>
               </div>
@@ -182,8 +192,8 @@ export default function Learn() {
                         : isRead ? <Check size={16} strokeWidth={2.4} aria-label="เรียนแล้ว" /> : String(l.order).padStart(2, '0')}
                     </span>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.45 }}>{l.title}</span>
-                      <span className="text-caption" style={{ fontSize: 12 }}>{l.summary} · {l.minutes} นาที</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.45 }}>{l.title}</span>
+                      <span className="text-caption" style={{ fontSize: 14 }}>{l.summary} · {l.minutes} นาที</span>
                     </span>
                     {!locked && <ChevronRight size={18} strokeWidth={1.6} color="var(--color-brand)" style={{ flexShrink: 0 }} />}
                   </>
@@ -208,7 +218,7 @@ export default function Learn() {
         )
       })}
 
-      <div style={{ marginTop: 24, padding: 12, fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+      <div style={{ marginTop: 24, padding: 12, fontSize: 14, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
         เนื้อหาดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป<br />
         โดย หมอเจี่ย (Jia1669.com)
       </div>

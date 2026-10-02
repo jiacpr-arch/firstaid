@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./course-design.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -66,7 +67,7 @@
 }
 
 /* หมายเหตุ: ห้ามใส่ universal reset (*{margin:0}) ที่นี่ — CSS นอก @layer จะชนะ
-   utility ของ Tailwind (อยู่ใน @layer utilities) ทำให้ m-*/p-* ใช้ไม่ได้ทั้งแอป
+   utility ของ Tailwind (อยู่ใน @layer utilities) ทำให้ margin/padding ใช้ไม่ได้ทั้งแอป
    Tailwind preflight รีเซ็ต margin/padding/box-sizing ให้อยู่แล้ว */
 
 body {
