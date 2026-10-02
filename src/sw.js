@@ -22,7 +22,8 @@ registerRoute(
 // จุดขายของแอปคือใช้ได้ตอนฉุกเฉินไม่มีเน็ต (ยกเว้น /api/* ที่ต้องวิ่งขึ้น network)
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL('/index.html'), {
-    denylist: [/^\/api\//],
+    // Keep the hosted password recovery page outside the offline app shell.
+    denylist: [/^\/api\//, /^\/admin\/set-password(?:\?|$)/],
   })
 )
 
