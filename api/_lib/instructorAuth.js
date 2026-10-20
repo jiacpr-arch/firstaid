@@ -8,10 +8,14 @@ import { rateLimited } from './rateLimit.js'
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 const CODE_LENGTH = 8
 
-export function generateInstructorCode() {
+export function generateCode(length) {
   let out = ''
-  for (let i = 0; i < CODE_LENGTH; i += 1) out += ALPHABET[randomInt(ALPHABET.length)]
+  for (let i = 0; i < length; i += 1) out += ALPHABET[randomInt(ALPHABET.length)]
   return out
+}
+
+export function generateInstructorCode() {
+  return generateCode(CODE_LENGTH)
 }
 
 export function normalizeCode(v) {
@@ -41,10 +45,25 @@ export async function verifySessionCode(admin, sessionId, code) {
   return { ok: true }
 }
 
-// ยืนยันตัวผู้เรียก API ฝั่งผู้สอนของ session นี้: แอดมิน (Bearer token) หรือรหัสผู้สอน
-// (header X-Instructor-Code) — คืน { user, via } (user เป็น null เมื่อใช้รหัส) หรือ null
-// หลังเขียน response ผิดพลาดแล้ว
-export async function authorizeInstructor(req, res, admin, sessionId) {
+// ตรวจรหัสผู้สอนกับคลาส (cohort) — รหัสผู้สอนของคลาสที่สร้างจากแอปเก็บไว้ที่ cohorts.instructor_code
+export async function verifyCohortCode(admin, cohortId, code) {
+  const { data: cohort } = await admin
+    .from('cohorts')
+    .select('id, instructor_code, deleted_at')
+    .eq('id', cohortId)
+    .maybeSingle()
+  if (!cohort || !codesMatch(cohort.instructor_code, code)) {
+    return { status: 403, error: 'รหัสผู้สอนไม่ถูกต้อง' }
+  }
+  if (cohort.deleted_at) return { status: 410, error: 'Class closed' }
+  return { ok: true }
+}
+
+// ยืนยันตัวผู้เรียก API ฝั่งผู้สอนของคลาสหนึ่ง: แอดมิน (Bearer token) หรือรหัสผู้สอน
+// (header X-Instructor-Code) — ระบุคลาสด้วย cohortId หรือ sessionId (รอบอบรมของคลาสนั้น)
+// คืน { user, via } (user เป็น null เมื่อใช้รหัส) หรือ null หลังเขียน response ผิดพลาดแล้ว
+// รหัสของคลาสที่สร้างจากแอปถูกเก็บเหมือนกันทั้งที่ cohort และ session จึงใช้ได้ทั้งสองทาง
+export async function authorizeClass(req, res, admin, { cohortId = null, sessionId = null } = {}) {
   const adminResult = await checkAdminToken(admin, req)
   if (adminResult.user) return { user: adminResult.user, via: 'admin' }
 
@@ -53,11 +72,18 @@ export async function authorizeInstructor(req, res, admin, sessionId) {
     res.status(adminResult.status).json({ error: adminResult.error })
     return null
   }
-  if (!sessionId) { res.status(400).json({ error: 'Missing sessionId' }); return null }
+  if (!cohortId && !sessionId) { res.status(400).json({ error: 'Missing class' }); return null }
   // กันไล่เดารหัส (in-memory ต่อ instance — ดูหมายเหตุใน rateLimit.js)
   if (rateLimited(req, res, { key: 'instructor-code', limit: 20, windowMs: 60_000 })) return null
 
-  const v = await verifySessionCode(admin, sessionId, code)
+  const v = cohortId
+    ? await verifyCohortCode(admin, cohortId, code)
+    : await verifySessionCode(admin, sessionId, code)
   if (!v.ok) { res.status(v.status).json({ error: v.error }); return null }
   return { user: null, via: 'code' }
+}
+
+// เดิม: ตรวจตาม session (ผู้ช่วยที่ใช้รหัสของรอบ) — คงไว้เป็นทางลัดของ authorizeClass
+export function authorizeInstructor(req, res, admin, sessionId) {
+  return authorizeClass(req, res, admin, { sessionId })
 }
