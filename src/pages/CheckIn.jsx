@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { UserCheck, ScanLine, CheckCircle2, ChevronRight } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useEnsureLearner } from '../hooks/useLearner'
@@ -8,10 +8,12 @@ import { saveAttendance, upsertLearner } from '../db/database'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import Seo from '../components/Seo'
 
-// ถ้ามี sessionCode ใน URL แสดงว่ามาจาก QR → โหมดคีออส (หลายคนใช้อุปกรณ์เดียวกัน)
+// โหมดคีออส (หลายคนใช้อุปกรณ์เดียวกัน) เปิดเฉพาะเมื่อ URL มี ?kiosk=1 เท่านั้น
 // ใช้ fresh UUID ต่อคนเพื่อป้องกัน attendance ชนกัน; ไม่ผูกกับ learner.id ของอุปกรณ์
-function useKioskMode(paramCode) {
-  return !!paramCode
+// QR ปกติ (/checkin/:code) ใช้ learner.id ของมือถือนักเรียน เพื่อให้เห็นในตารางคลาสและออกใบเซอร์ได้
+function useKioskMode() {
+  const [searchParams] = useSearchParams()
+  return searchParams.get('kiosk') === '1'
 }
 
 export default function CheckIn() {
@@ -19,7 +21,7 @@ export default function CheckIn() {
   const { sessionCode: paramCode } = useParams()
   const learner = useLearnerStore((s) => s.learner)
   const updateLearner = useLearnerStore((s) => s.updateLearner)
-  const isKiosk = useKioskMode(paramCode)
+  const isKiosk = useKioskMode()
 
   const [code, setCode] = useState(paramCode || '')
   const [done, setDone] = useState(false)
@@ -131,6 +133,8 @@ export default function CheckIn() {
             หรือ <Link to="/checkin/scan" style={{ color: 'var(--color-brand)' }}>
               <ScanLine size={14} style={{ verticalAlign: 'middle' }} /> สแกน QR
             </Link>
+            {' · '}
+            <Link to="/my-qr" style={{ color: 'var(--color-brand)' }}>QR ของฉัน (ให้ครูสแกน)</Link>
           </div>
         </div>
       )}

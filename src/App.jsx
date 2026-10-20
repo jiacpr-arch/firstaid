@@ -31,6 +31,7 @@ import Certification from './pages/Certification'
 import EmergencyCall from './pages/EmergencyCall'
 import CheckIn from './pages/CheckIn'
 import CheckInScan from './pages/CheckInScan'
+import MyQr from './pages/MyQr'
 import JoinClass from './pages/JoinClass'
 import RedeemVoucher from './pages/RedeemVoucher'
 import Settings from './pages/Settings'
@@ -47,6 +48,7 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminSessions = lazy(() => import('./pages/AdminSessions'))
 const AdminSessionDetail = lazy(() => import('./pages/AdminSessionDetail'))
+const AdminSessionScan = lazy(() => import('./pages/AdminSessionScan'))
 const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
 const AdminCohortDetail = lazy(() => import('./pages/AdminCohortDetail'))
 const AdminCertificates = lazy(() => import('./pages/AdminCertificates'))
@@ -151,6 +153,7 @@ export default function App() {
         <Route path="/checkin" element={<CheckIn />} />
         <Route path="/checkin/scan" element={<CheckInScan />} />
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
+        <Route path="/my-qr" element={<MyQr />} />
         <Route path="/join" element={<JoinClass />} />
         <Route path="/join/:code" element={<JoinClass />} />
         <Route path="/redeem/:code" element={<RedeemVoucher />} />
@@ -174,6 +177,9 @@ export default function App() {
         } />
         <Route path="/admin/sessions" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminSessions /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/sessions/:id/scan" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminSessionScan /></RequireAdmin></Suspense>
         } />
         <Route path="/admin/sessions/:id" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminSessionDetail /></RequireAdmin></Suspense>
