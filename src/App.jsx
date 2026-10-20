@@ -32,6 +32,7 @@ import EmergencyCall from './pages/EmergencyCall'
 import CheckIn from './pages/CheckIn'
 import CheckInScan from './pages/CheckInScan'
 import JoinClass from './pages/JoinClass'
+import RedeemVoucher from './pages/RedeemVoucher'
 import Settings from './pages/Settings'
 import News from './pages/News'
 import Schedule from './pages/Schedule'
@@ -152,6 +153,7 @@ export default function App() {
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
         <Route path="/join" element={<JoinClass />} />
         <Route path="/join/:code" element={<JoinClass />} />
+        <Route path="/redeem/:code" element={<RedeemVoucher />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/news" element={<News />} />
         <Route path="/schedule" element={<Schedule />} />

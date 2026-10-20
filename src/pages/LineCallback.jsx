@@ -98,7 +98,10 @@ export default function LineCallback() {
         fbqTrack('track', 'CompleteRegistration', { content_name: 'line_login', status: true })
         phCapture('student_registered', { method: 'line' })
         clearLineAuthState()
-        if (!cancelled) navigate('/learn', { replace: true })
+        // รับเฉพาะ path ภายในแอป (กัน open redirect เช่น //evil.com)
+        const returnTo = typeof saved.returnTo === 'string' && /^\/(?!\/)/.test(saved.returnTo)
+          ? saved.returnTo : '/learn'
+        if (!cancelled) navigate(returnTo, { replace: true })
       } catch (err) {
         console.error('LINE callback failed', err)
         if (!cancelled) setError('เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง (อาจเป็นปัญหาเครือข่ายชั่วคราว)')

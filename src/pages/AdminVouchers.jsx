@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Copy, Check, Ticket } from 'lucide-react'
+import QRCode from 'qrcode'
+import { ArrowLeft, Plus, Copy, Check, QrCode, Download, X } from 'lucide-react'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import { adminFetch } from '../utils/adminFetch'
 import { chapters } from '../courses/firstaid/lessons'
@@ -33,6 +34,13 @@ function codeMeta(v) {
   return parts.join(' • ')
 }
 
+// ลิงก์ที่ฝังใน QR — สแกนแล้วเข้า /redeem/:code โค้ดกรอกให้อัตโนมัติ
+// openExternalBrowser=1 — ถ้าสแกนใน LINE ให้เด้งออก browser จริง (ล็อกอิน LINE ใน in-app browser มักพัง)
+const redeemUrl = (code) => {
+  const base = import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin
+  return `${base}/redeem/${encodeURIComponent(code)}?openExternalBrowser=1`
+}
+
 // สร้าง/ดูโค้ดปลดล็อกบทเรียน (Phase 1) — ขายมือผ่าน PromptPay/LINE แล้วส่งโค้ดให้ลูกค้า
 // redeem เองในแอป (/api/entitlements/redeem)
 export default function AdminVouchers() {
@@ -47,6 +55,17 @@ export default function AdminVouchers() {
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState('')
+  const [qr, setQr] = useState(null) // { code, dataUrl } ของโค้ดที่กำลังเปิด QR
+
+  const toggleQr = async (code) => {
+    if (qr?.code === code) { setQr(null); return }
+    try {
+      const dataUrl = await QRCode.toDataURL(redeemUrl(code), { width: 480, margin: 2 })
+      setQr({ code, dataUrl })
+    } catch {
+      setError('สร้าง QR ไม่สำเร็จ')
+    }
+  }
 
   const fetchVouchers = async () => {
     const res = await adminFetch('/api/vouchers/list')
@@ -188,13 +207,15 @@ export default function AdminVouchers() {
           <div className="text-caption" style={{ textAlign: 'center', padding: 12 }}>ยังไม่มีโค้ด</div>
         )}
         {vouchers.map((v) => (
-          <div key={v.code} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
+          <div key={v.code} className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button type="button" onClick={() => toggleQr(v.code)} aria-label={`QR ของ ${v.code}`} style={{
               width: 38, height: 38, borderRadius: 10, background: 'var(--color-bg-tertiary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              border: 'none', cursor: 'pointer', color: 'inherit',
             }}>
-              <Ticket size={18} />
-            </div>
+              {qr?.code === v.code ? <X size={18} /> : <QrCode size={18} />}
+            </button>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="text-body-strong" style={{ fontFamily: 'monospace' }}>{v.code}</div>
               <div className="text-caption">
@@ -210,6 +231,24 @@ export default function AdminVouchers() {
             <button type="button" className="btn btn-secondary" onClick={() => copy(v.code)}>
               {copied === v.code ? <Check size={14} /> : <Copy size={14} />}
             </button>
+          </div>
+          {qr?.code === v.code && (
+            <div style={{ textAlign: 'center', marginTop: 12 }}>
+              <img src={qr.dataUrl} alt={`QR ปลดล็อก ${v.code}`} style={{ width: 220, maxWidth: '100%', margin: '0 auto' }} />
+              <div className="text-body-strong" style={{ fontFamily: 'monospace', marginTop: 4 }}>{v.code}</div>
+              <div className="text-caption" style={{ marginTop: 4 }}>
+                ลูกค้าสแกนด้วยมือถือ → ล็อกอิน LINE → กดปลดล็อก (โค้ดกรอกให้อัตโนมัติ)
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+                <a className="btn btn-secondary" href={qr.dataUrl} download={`${v.code}.png`}>
+                  <Download size={14} /> บันทึกรูป QR
+                </a>
+                <button type="button" className="btn btn-secondary" onClick={() => copy(redeemUrl(v.code))}>
+                  {copied === redeemUrl(v.code) ? <Check size={14} /> : <Copy size={14} />} คัดลอกลิงก์
+                </button>
+              </div>
+            </div>
+          )}
           </div>
         ))}
       </div>

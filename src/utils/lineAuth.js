@@ -41,11 +41,12 @@ function randomToken() {
 
 // Kick off the LINE login redirect. bot_prompt=aggressive + the OA @jiacpr linked to
 // the Login channel makes LINE show the "add friend" step, so login auto-adds the OA.
-export function startLineLogin(learnerId) {
+// returnTo (optional) = path ในแอปที่จะพากลับไปหลังล็อกอินเสร็จ เช่น /redeem/FAV-XXXX จาก QR โค้ด
+export function startLineLogin(learnerId, returnTo) {
   const state = randomToken()
   const nonce = randomToken()
   const redirectUri = lineCallbackUri()
-  const payload = JSON.stringify({ state, nonce, learnerId, redirectUri })
+  const payload = JSON.stringify({ state, nonce, learnerId, redirectUri, returnTo })
   sessionStorage.setItem(SS_KEY, payload)
   setCookie(SS_KEY, payload, COOKIE_MAX_AGE)
 
