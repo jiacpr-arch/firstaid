@@ -133,6 +133,8 @@ export default function CheckIn() {
             หรือ <Link to="/checkin/scan" style={{ color: 'var(--color-brand)' }}>
               <ScanLine size={14} style={{ verticalAlign: 'middle' }} /> สแกน QR
             </Link>
+            {' · '}
+            <Link to="/my-qr" style={{ color: 'var(--color-brand)' }}>QR ของฉัน (ให้ครูสแกน)</Link>
           </div>
         </div>
       )}

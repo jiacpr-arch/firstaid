@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { ArrowLeft, Check, X, RefreshCw, Download } from 'lucide-react'
+import { ArrowLeft, Check, X, RefreshCw, Download, ScanLine } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { adminFetch } from '../utils/adminFetch'
 
@@ -137,6 +137,12 @@ export default function AdminSessionDetail() {
               </details>
             )}
           </div>
+
+          {!session.closed_at && (
+            <Link to={`/admin/sessions/${id}/scan`} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+              <ScanLine size={16} /> สแกน QR นักเรียน
+            </Link>
+          )}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={load}>
