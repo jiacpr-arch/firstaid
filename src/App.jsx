@@ -52,6 +52,7 @@ const AdminSessionScan = lazy(() => import('./pages/AdminSessionScan'))
 const InstructorScan = lazy(() => import('./pages/InstructorScan'))
 const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
 const AdminCohortDetail = lazy(() => import('./pages/AdminCohortDetail'))
+const AdminLearnerDetail = lazy(() => import('./pages/AdminLearnerDetail'))
 const AdminCertificates = lazy(() => import('./pages/AdminCertificates'))
 const AdminMedia = lazy(() => import('./pages/AdminMedia'))
 const AdminLessonMedia = lazy(() => import('./pages/AdminLessonMedia'))
@@ -175,6 +176,9 @@ export default function App() {
         } />
         <Route path="/admin/cohorts" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminCohorts /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/cohorts/:id/learners/:learnerId" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLearnerDetail /></RequireAdmin></Suspense>
         } />
         <Route path="/admin/cohorts/:id" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminCohortDetail /></RequireAdmin></Suspense>

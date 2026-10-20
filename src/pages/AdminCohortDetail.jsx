@@ -193,7 +193,9 @@ export default function AdminCohortDetail() {
               {learners.map((l) => (
                 <tr key={l.learnerId} style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '10px 12px' }}>
-                    <div className="text-body-strong">{l.name || '(ไม่ระบุชื่อ)'}</div>
+                    <Link to={`/admin/cohorts/${id}/learners/${l.learnerId}`} className="text-body-strong">
+                      {l.name || '(ไม่ระบุชื่อ)'}
+                    </Link>
                     <div className="text-caption">{l.phone || '—'}</div>
                   </td>
                   <td style={{ padding: '10px 8px' }}>{l.lessonsRead}/{lessons.length}</td>
