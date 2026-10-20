@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
-import { requireAdmin } from '../_lib/requireAdmin.js'
+import { authorizeInstructor } from '../_lib/instructorAuth.js'
+import { issuePracticalCertificate } from '../_lib/issuePractical.js'
 import { resolveStudent, approveAttendance, loadOpenSession } from '../_lib/attendanceCheckin.js'
 import { missingPracticeStations } from '../_lib/stationLogic.js'
 
@@ -12,11 +13,12 @@ export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
-  const adminUser = await requireAdmin(req, res)
-  if (!adminUser) return
   const admin = getSupabaseAdmin()
+  if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const { action, sessionId, stationId, payload, learnerId } = req.body || {}
+  const actor = await authorizeInstructor(req, res, admin, sessionId)
+  if (!actor) return
   if (!sessionId || !stationId || (!payload && !learnerId)) {
     res.status(400).json({ error: 'Missing fields' }); return
   }
@@ -57,7 +59,9 @@ export default async function handler(req, res) {
       note: typeof note === 'string' ? note.slice(0, 500) : null,
     }).eq('id', existing.id)
     if (error) { res.status(500).json({ error: error.message }); return }
-    const a = await approveAttendance(admin, s.session, student, adminUser, r.method)
+    const a = await approveAttendance(admin, s.session, student, actor.user, r.method)
+    // ในคลาสที่มีสถานี ใบเซอร์ภาคปฏิบัติออกเมื่อสอบผ่านเท่านั้น
+    if (passed && a.attendanceId) await issuePracticalCertificate(admin, a.attendanceId).catch(() => {})
     res.status(200).json({ ok: true, student, attendanceId: a.attendanceId || null })
     return
   }
@@ -76,7 +80,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const a = await approveAttendance(admin, s.session, student, adminUser, r.method)
+  const a = await approveAttendance(admin, s.session, student, actor.user, r.method)
   if (a.error) { res.status(500).json({ error: a.error }); return }
 
   const { data: existing } = await admin.from('station_checkins').select('id, passed')
@@ -89,7 +93,7 @@ export default async function handler(req, res) {
     session_id: sessionId,
     station_id: stationId,
     learner_id: student.id,
-    checked_in_by: adminUser.id,
+    checked_in_by: actor.user?.id ?? null,
   })
   if (error) { res.status(500).json({ error: error.message }); return }
   res.status(200).json({ ok: true, duplicate: false, student, passed: null, attendanceId: a.attendanceId })

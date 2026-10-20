@@ -13,22 +13,24 @@ export async function requireAdmin(req, res) {
     res.status(500).json({ error: 'Supabase not configured' })
     return null
   }
+  const r = await checkAdminToken(admin, req)
+  if (r.error) {
+    res.status(r.status).json({ error: r.error })
+    return null
+  }
+  return r.user
+}
+
+// Same checks as requireAdmin but returns the failure instead of writing the
+// response, so callers can fall back to another credential (instructor code).
+export async function checkAdminToken(admin, req) {
   const auth = req.headers?.authorization || ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null
-  if (!token) {
-    res.status(401).json({ error: 'Missing token' })
-    return null
-  }
+  if (!token) return { status: 401, error: 'Missing token' }
   const { data, error } = await admin.auth.getUser(token)
-  if (error || !data?.user) {
-    res.status(401).json({ error: 'Invalid token' })
-    return null
-  }
-  if (!isAdminUser(data.user)) {
-    res.status(403).json({ error: 'Not an admin' })
-    return null
-  }
-  return data.user
+  if (error || !data?.user) return { status: 401, error: 'Invalid token' }
+  if (!isAdminUser(data.user)) return { status: 403, error: 'Not an admin' }
+  return { user: data.user }
 }
 
 function isAdminUser(user) {

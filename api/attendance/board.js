@@ -1,17 +1,18 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
-import { requireAdmin } from '../_lib/requireAdmin.js'
+import { authorizeInstructor } from '../_lib/instructorAuth.js'
 
 // กระดานสถานี: นักเรียนทุกคนที่เช็คชื่อใน session × ฐานทั้งหมด
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return }
-  const user = await requireAdmin(req, res)
-  if (!user) return
   const admin = getSupabaseAdmin()
+  if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const sessionId = req.query?.sessionId
   if (!sessionId) { res.status(400).json({ error: 'Missing sessionId' }); return }
+  const actor = await authorizeInstructor(req, res, admin, sessionId)
+  if (!actor) return
 
   const [st, att, ck] = await Promise.all([
     admin.from('session_stations').select('id, name, kind, sort_order')

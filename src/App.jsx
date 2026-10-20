@@ -49,8 +49,10 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminSessions = lazy(() => import('./pages/AdminSessions'))
 const AdminSessionDetail = lazy(() => import('./pages/AdminSessionDetail'))
 const AdminSessionScan = lazy(() => import('./pages/AdminSessionScan'))
+const InstructorScan = lazy(() => import('./pages/InstructorScan'))
 const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
 const AdminCohortDetail = lazy(() => import('./pages/AdminCohortDetail'))
+const AdminLearnerDetail = lazy(() => import('./pages/AdminLearnerDetail'))
 const AdminCertificates = lazy(() => import('./pages/AdminCertificates'))
 const AdminMedia = lazy(() => import('./pages/AdminMedia'))
 const AdminLessonMedia = lazy(() => import('./pages/AdminLessonMedia'))
@@ -106,7 +108,7 @@ export default function App() {
     apply(theme === 'dark')
   }, [theme])
 
-  const isAdmin = location.pathname.startsWith('/admin')
+  const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/scan/')
   // เกมเป็นหน้า full-screen มีปุ่มกลับของตัวเอง — ซ่อนแท็บบาร์/แถบโฆษณาเหมือนกันกับฝั่ง admin
   const isGame = location.pathname === '/game'
   // Onboarding: ผู้ใช้ใหม่ (ยังไม่แอด LINE และยังไม่กดข้าม) เห็นหน้า landing เชิญชวนที่ "/"
@@ -154,6 +156,9 @@ export default function App() {
         <Route path="/checkin/scan" element={<CheckInScan />} />
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
         <Route path="/my-qr" element={<MyQr />} />
+        <Route path="/scan/:id" element={
+          <Suspense fallback={<AdminFallback />}><InstructorScan /></Suspense>
+        } />
         <Route path="/join" element={<JoinClass />} />
         <Route path="/join/:code" element={<JoinClass />} />
         <Route path="/redeem/:code" element={<RedeemVoucher />} />
@@ -171,6 +176,9 @@ export default function App() {
         } />
         <Route path="/admin/cohorts" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminCohorts /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/cohorts/:id/learners/:learnerId" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLearnerDetail /></RequireAdmin></Suspense>
         } />
         <Route path="/admin/cohorts/:id" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminCohortDetail /></RequireAdmin></Suspense>
