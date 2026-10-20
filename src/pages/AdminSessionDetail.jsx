@@ -30,6 +30,7 @@ export default function AdminSessionDetail() {
   const [session, setSession] = useState(null)
   const [attendance, setAttendance] = useState([])
   const [qrDataUrl, setQrDataUrl] = useState(null)
+  const [kioskQrDataUrl, setKioskQrDataUrl] = useState(null)
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
 
   const checkInUrl = useMemo(() => {
@@ -40,6 +41,7 @@ export default function AdminSessionDetail() {
   useEffect(() => {
     if (!checkInUrl) return
     QRCode.toDataURL(checkInUrl, { width: 320, margin: 1 }).then(setQrDataUrl).catch(() => {})
+    QRCode.toDataURL(`${checkInUrl}?kiosk=1`, { width: 320, margin: 1 }).then(setKioskQrDataUrl).catch(() => {})
   }, [checkInUrl])
 
   const loadData = () => {
@@ -128,6 +130,12 @@ export default function AdminSessionDetail() {
             <div className="text-caption" style={{ marginTop: 6 }}>
               ให้ผู้เรียนสแกน QR หรือกรอกรหัสด้านบนที่ <code>/checkin</code>
             </div>
+            {kioskQrDataUrl && (
+              <details style={{ marginTop: 12 }}>
+                <summary className="text-caption" style={{ cursor: 'pointer' }}>QR โหมดคีออส (หลายคนใช้เครื่องเดียว เช่น แท็บเล็ตที่บูธ)</summary>
+                <img src={kioskQrDataUrl} alt="QR คีออส" style={{ width: 180, margin: '8px auto 0', display: 'block' }} />
+              </details>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
