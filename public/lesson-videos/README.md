@@ -29,7 +29,7 @@
 ```js
 { type: 'video', heading: 'วิธีทำ CPR',
   src: '/lesson-videos/cpr-demo.mp4',
-  poster: '/lesson-images/cpr-hand-position.svg',   // รูปปกก่อนเล่น (ไม่ใส่ก็ได้)
+  poster: '/lesson-images/cpr-hand-position.jpg',   // รูปปกก่อนเล่น (ไม่ใส่ก็ได้)
   caption: 'สาธิตการกดหน้าอกที่ถูกต้อง' }
 ```
 
