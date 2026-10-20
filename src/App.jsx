@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
@@ -111,7 +111,7 @@ export default function App() {
     apply(theme === 'dark')
   }, [theme])
 
-  const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/scan/') || location.pathname.startsWith('/teach')
+  const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/scan/')
   // เกมเป็นหน้า full-screen มีปุ่มกลับของตัวเอง — ซ่อนแท็บบาร์/แถบโฆษณาเหมือนกันกับฝั่ง admin
   const isGame = location.pathname === '/game'
   // Onboarding: ผู้ใช้ใหม่ (ยังไม่แอด LINE และยังไม่กดข้าม) เห็นหน้า landing เชิญชวนที่ "/"
@@ -159,11 +159,14 @@ export default function App() {
         <Route path="/checkin/scan" element={<CheckInScan />} />
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
         <Route path="/my-qr" element={<MyQr />} />
-        <Route path="/teach" element={
-          <Suspense fallback={<AdminFallback />}><Teach /></Suspense>
+        {/* หน้าผู้สอนอยู่ฝั่งแอดมิน (ต้องล็อกอิน) — ลิงก์เก่า /teach พาไปที่นี่ */}
+        <Route path="/teach" element={<Navigate to="/admin/teach" replace />} />
+        <Route path="/teach/*" element={<Navigate to="/admin/teach" replace />} />
+        <Route path="/admin/teach" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><Teach /></RequireAdmin></Suspense>
         } />
-        <Route path="/teach/learners/:learnerId" element={
-          <Suspense fallback={<AdminFallback />}><TeachLearner /></Suspense>
+        <Route path="/admin/teach/learners/:learnerId" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><TeachLearner /></RequireAdmin></Suspense>
         } />
         <Route path="/scan/:id" element={
           <Suspense fallback={<AdminFallback />}><InstructorScan /></Suspense>

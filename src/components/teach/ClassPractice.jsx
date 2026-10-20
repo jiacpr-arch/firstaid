@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ScanLine, ListChecks } from 'lucide-react'
-import { classFetch } from '../../utils/instructorFetch'
+import { adminFetch } from '../../utils/adminFetch'
 import StationManager from '../checkin/StationManager'
 import StationBoard from '../checkin/StationBoard'
 import SessionReportCard from '../checkin/SessionReportCard'
 
 // แท็บ "ปฏิบัติ": วันอบรมภาคปฏิบัติของคลาส — สถานี, สแกน QR นักเรียน, เช็คชื่อมือ, กระดาน, รายงาน LINE
-export default function ClassPractice({ sessionId, instructorCode, classCode }) {
+export default function ClassPractice({ sessionId, classCode }) {
   const [board, setBoard] = useState(null)
   const [roster, setRoster] = useState([])
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
-  const fetcher = useCallback((url, opts) => classFetch(instructorCode, url, opts), [instructorCode])
+  const fetcher = adminFetch
 
   const load = useCallback(async () => {
     const [b, r] = await Promise.all([
@@ -65,7 +65,7 @@ export default function ClassPractice({ sessionId, instructorCode, classCode }) 
     <>
       {error && <div className="callout callout-danger" style={{ marginTop: 12 }}>{error}</div>}
 
-      <Link to={`/scan/${sessionId}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 12 }}>
+      <Link to={`/admin/sessions/${sessionId}/scan`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 12 }}>
         <ScanLine size={18} /> สแกน QR นักเรียน
       </Link>
       <div className="text-caption" style={{ marginTop: 4 }}>

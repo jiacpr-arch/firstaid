@@ -54,7 +54,7 @@ export default function ClassTheory({ learners, classCode }) {
             {learners.map((l) => (
               <tr key={l.learnerId} style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <td style={{ padding: '10px 12px' }}>
-                  <Link to={`/teach/learners/${l.learnerId}`} className="text-body-strong">{l.name || '(ไม่ระบุชื่อ)'}</Link>
+                  <Link to={`/admin/teach/learners/${l.learnerId}`} className="text-body-strong">{l.name || '(ไม่ระบุชื่อ)'}</Link>
                 </td>
                 <td style={{ padding: '10px 8px' }}>{l.lessonsRead}/{lessons.length}</td>
                 <td style={{ padding: '10px 8px' }}>{l.quizzesPassed}</td>

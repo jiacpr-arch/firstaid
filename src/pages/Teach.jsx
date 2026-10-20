@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, GraduationCap, KeyRound, Plus, RefreshCw } from 'lucide-react'
+import { ArrowLeft, FolderOpen, GraduationCap, Plus, RefreshCw } from 'lucide-react'
 import { useClassStore } from '../stores/classStore'
-import { classFetch, setInstructorCode as rememberSessionCode } from '../utils/instructorFetch'
+import { adminFetch } from '../utils/adminFetch'
 import { summarizeReadiness } from '../../api/_lib/readiness.js'
 import { lessons } from '../courses/firstaid/lessons'
 import ClassGate from '../components/teach/ClassGate'
@@ -19,8 +19,8 @@ const TABS = [['class', 'คลาส/QR'], ['overview', 'ภาพรวม'], 
 const readTab = () => { try { return sessionStorage.getItem('fa.teach.tab') || 'class' } catch { return 'class' } }
 
 export default function Teach() {
-  const { classId, sessionId, className, classCode, instructorCode, clearClass } = useClassStore()
-  const [gate, setGate] = useState(null) // null | 'create' | 'connect'
+  const { classId, sessionId, className, classCode, clearClass } = useClassStore()
+  const [gate, setGate] = useState(null) // null | 'create' | 'pick'
   const [tab, setTabState] = useState(readTab)
   const [data, setData] = useState(null)
   const [error, setError] = useState(null) // { status, message }
@@ -28,23 +28,18 @@ export default function Teach() {
 
   const setTab = (t) => { setTabState(t); try { sessionStorage.setItem('fa.teach.tab', t) } catch { /* ignore */ } }
 
-  // ให้หน้า /scan/:sessionId รู้จักรหัสนี้ (เปิดสแกนได้ทันทีโดยไม่ต้องกรอกซ้ำ)
-  useEffect(() => {
-    if (sessionId && instructorCode) rememberSessionCode(sessionId, instructorCode)
-  }, [sessionId, instructorCode])
-
   const fetchSummary = useCallback(async () => {
-    const resp = await classFetch(instructorCode, `/api/cohorts/summary?cohortId=${encodeURIComponent(classId)}`)
+    const resp = await adminFetch(`/api/cohorts/summary?cohortId=${encodeURIComponent(classId)}`)
     const body = await resp.json().catch(() => ({}))
     return { ok: resp.ok, status: resp.status, body }
-  }, [classId, instructorCode])
+  }, [classId])
 
   const apply = useCallback(({ ok, status, body }) => {
     if (ok) { setError(null); setData(body); return }
     setError({
       status,
-      message: status === 403 ? 'รหัสผู้สอนไม่ถูกต้องหรือถูกเปลี่ยนแล้ว — เชื่อมคลาสใหม่ด้วยรหัสล่าสุด'
-        : status === 410 || body.error === 'Class closed' ? 'คลาสนี้ถูกปิดแล้ว'
+      message: status === 401 || status === 403 ? 'ต้องล็อกอินแอดมินก่อน'
+        : status === 404 ? 'ไม่พบคลาสนี้ — เลือกคลาสใหม่'
           : (body.error || 'โหลดข้อมูลไม่สำเร็จ'),
     })
   }, [])
@@ -55,14 +50,14 @@ export default function Teach() {
   }, [fetchSummary, apply])
 
   useEffect(() => {
-    if (!classId || !instructorCode) return undefined
+    if (!classId) return undefined
     let cancelled = false
     fetchSummary()
       .then((r) => { if (!cancelled) apply(r) })
       .catch(() => { if (!cancelled) setError({ status: 0, message: 'โหลดข้อมูลไม่สำเร็จ — ตรวจการเชื่อมต่อ' }) })
     const t = setInterval(() => { fetchSummary().then((r) => { if (!cancelled) apply(r) }).catch(() => {}) }, REFRESH_MS)
     return () => { cancelled = true; clearInterval(t) }
-  }, [classId, instructorCode, fetchSummary, apply])
+  }, [classId, fetchSummary, apply])
 
   const learners = useMemo(() => data?.learners || [], [data])
   const stats = useMemo(() => {
@@ -76,8 +71,8 @@ export default function Teach() {
   }, [learners])
 
   const header = (
-    <Link to="/" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
-      <ArrowLeft size={16} /> กลับหน้าหลัก
+    <Link to="/admin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+      <ArrowLeft size={16} /> หน้าควบคุม
     </Link>
   )
 
@@ -85,21 +80,21 @@ export default function Teach() {
   if (!classId) {
     return (
       <div className="page-container">
-        <Seo title="สำหรับผู้สอน | Jia Training Center" noindex path="/teach" />
+        <Seo title="สำหรับผู้สอน | Jia Training Center" noindex path="/admin/teach" />
         {header}
-        <div className="text-caption">สำหรับผู้สอน</div>
+        <div className="text-caption">ผู้สอน (แอดมิน)</div>
         <div className="text-title">เปิดคลาสสอน CPR</div>
         <div className="card" style={{ marginTop: 12 }}>
           <ol className="text-body" style={{ margin: 0, paddingLeft: 22, lineHeight: 1.8, listStyle: 'decimal' }}>
-            <li><b>สร้างคลาส</b> — ได้รหัสคลาส (แจกนักเรียน) และรหัสผู้สอน (เก็บเป็นความลับ)</li>
+            <li><b>สร้างคลาส</b> — ได้รหัสคลาส (แจกนักเรียน) และรหัสผู้ช่วย (ให้คนช่วยสแกนเช็คชื่อ)</li>
             <li><b>ให้นักเรียนเข้าร่วม</b> — สแกน QR หรือใส่รหัสคลาสจากมือถือของตัวเอง แล้วเรียนออนไลน์</li>
             <li><b>ติดตามผล</b> — ดูว่าใครพร้อมเข้าอบรมภาคปฏิบัติแล้ว วันอบรมสแกน QR เช็คชื่อและให้คะแนน</li>
           </ol>
           <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={() => setGate('create')}>
             <Plus size={16} /> สร้างคลาสใหม่
           </button>
-          <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={() => setGate('connect')}>
-            <KeyRound size={14} /> มีรหัสผู้สอนอยู่แล้ว?
+          <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={() => setGate('pick')}>
+            <FolderOpen size={14} /> เลือกคลาสที่มีอยู่แล้ว
           </button>
         </div>
         {gate && <ClassGate mode={gate} onClose={() => setGate(null)} />}
@@ -113,7 +108,7 @@ export default function Teach() {
       {header}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1 }}>
-          <div className="text-caption"><GraduationCap size={14} style={{ verticalAlign: 'middle' }} /> หน้าผู้สอน · รหัสคลาส {classCode}</div>
+          <div className="text-caption"><GraduationCap size={14} style={{ verticalAlign: 'middle' }} /> หน้าผู้สอน (แอดมิน) · รหัสคลาส {classCode}</div>
           <div className="text-title">{className}</div>
         </div>
         <button type="button" className="btn btn-ghost" onClick={reload} aria-label="รีเฟรช" disabled={loading}><RefreshCw size={16} /></button>
@@ -122,10 +117,10 @@ export default function Teach() {
       {error && (
         <div className="callout callout-danger" style={{ marginTop: 10 }}>
           {error.message}
-          {(error.status === 403 || error.status === 410) && (
+          {(error.status === 404) && (
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setGate('connect')}>เชื่อมคลาสด้วยรหัสใหม่</button>
-              <button type="button" className="btn btn-ghost" onClick={clearClass}>เลิกใช้คลาสนี้บนเครื่องนี้</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setGate('pick')}>เลือกคลาสอื่น</button>
+              <button type="button" className="btn btn-ghost" onClick={clearClass}>เลิกใช้คลาสนี้</button>
             </div>
           )}
         </div>
@@ -148,10 +143,10 @@ export default function Teach() {
         ))}
       </div>
 
-      {tab === 'class' && <ClassHome onNewClass={() => setGate('create')} onConnect={() => setGate('connect')} />}
+      {tab === 'class' && <ClassHome onNewClass={() => setGate('create')} onPick={() => setGate('pick')} />}
       {tab === 'overview' && <ClassOverview learners={learners} classCode={classCode} />}
       {tab === 'theory' && <ClassTheory learners={learners} classCode={classCode} />}
-      {tab === 'practice' && <ClassPractice sessionId={sessionId} instructorCode={instructorCode} classCode={classCode} />}
+      {tab === 'practice' && <ClassPractice sessionId={sessionId} classCode={classCode} />}
 
       {gate && <ClassGate mode={gate} onClose={() => setGate(null)} />}
     </div>

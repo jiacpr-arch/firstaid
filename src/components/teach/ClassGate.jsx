@@ -1,39 +1,49 @@
-import { useState } from 'react'
-import { KeyRound, Plus, X, Copy, Check } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Plus, X, Copy, Check, FolderOpen } from 'lucide-react'
+import { adminFetch } from '../../utils/adminFetch'
 import { useClassStore } from '../../stores/classStore'
 
-// สร้างคลาสใหม่ หรือเชื่อมคลาสเดิมด้วยรหัสผู้สอน (แบบ ACLS ClassGateModal) — ไม่ต้องมีบัญชี
-// mode: 'create' | 'connect' เมื่อสร้างสำเร็จจะโชว์ 2 รหัสก่อนปิด (รหัสผู้สอนเป็นความลับ)
+// ฝั่งแอดมิน: สร้างคลาสใหม่ หรือเลือกคลาสเดิมมาทำงานต่อ — สร้างแล้วได้ 2 รหัส
+// (รหัสคลาสให้นักเรียน / รหัสผู้ช่วยให้คนช่วยสแกนเช็คชื่อ) mode: 'create' | 'pick'
 export default function ClassGate({ mode: initialMode = 'create', onClose }) {
   const setClass = useClassStore((s) => s.setClass)
   const [mode, setMode] = useState(initialMode)
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
-  const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
   const [copied, setCopied] = useState('')
+  const [classes, setClasses] = useState(null)
 
-  const post = async (url, body) => {
-    const resp = await fetch(url, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    })
-    const data = await resp.json().catch(() => ({}))
-    return { ok: resp.ok, status: resp.status, data }
-  }
+  useEffect(() => {
+    if (mode !== 'pick') return undefined
+    let cancelled = false
+    adminFetch('/api/classes/list')
+      .then((r) => r.json().then((b) => [r.ok, b]))
+      .then(([ok, b]) => {
+        if (cancelled) return
+        if (!ok) { setError(b.error || 'โหลดรายการคลาสไม่สำเร็จ'); setClasses([]); return }
+        setClasses((b.classes || []).filter((c) => !c.closed && c.sessionId))
+      })
+      .catch(() => { if (!cancelled) { setError('โหลดรายการคลาสไม่สำเร็จ'); setClasses([]) } })
+    return () => { cancelled = true }
+  }, [mode])
 
   const create = async () => {
     if (name.trim().length < 2) return
     setBusy(true)
     setError('')
     try {
-      const { ok, status, data } = await post('/api/classes/create', { name: name.trim(), location: location.trim() })
-      if (!ok) {
-        setError(status === 429 ? 'สร้างคลาสบ่อยเกินไป ลองใหม่ภายหลัง' : (data.error || 'สร้างคลาสไม่สำเร็จ'))
+      const resp = await adminFetch('/api/classes/create', {
+        method: 'POST', body: JSON.stringify({ name: name.trim(), location: location.trim() }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        setError(resp.status === 401 || resp.status === 403 ? 'ต้องล็อกอินแอดมินก่อน' : (data.error || 'สร้างคลาสไม่สำเร็จ'))
         return
       }
-      // ยังไม่ setClass ตรงนี้: หน้า /teach จะสลับเป็นโหมดมีคลาสแล้วทำให้หน้ารหัสนี้หายก่อนครูจดรหัส
+      // ยังไม่ setClass ตรงนี้: หน้าหลักจะสลับเป็นโหมดมีคลาสแล้วทำให้หน้ารหัสนี้หายก่อนจดรหัส
       setCreated(data)
     } catch {
       setError('เครือข่ายขัดข้อง ลองใหม่')
@@ -42,26 +52,12 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
     }
   }
 
-  const connect = async () => {
-    if (!code.trim()) return
-    setBusy(true)
-    setError('')
-    try {
-      const { ok, status, data } = await post('/api/classes/verify', { instructorCode: code.trim() })
-      if (!ok) {
-        setError(status === 429 ? 'ลองบ่อยเกินไป รอสักครู่' : (data.error || 'เชื่อมคลาสไม่สำเร็จ'))
-        return
-      }
-      setClass({ ...data, instructorCode: code.trim().toUpperCase().replace(/[\s-]/g, '') })
-      onClose()
-    } catch {
-      setError('เครือข่ายขัดข้อง ลองใหม่')
-    } finally {
-      setBusy(false)
-    }
+  const pick = (c) => {
+    setClass({ classId: c.id, sessionId: c.sessionId, className: c.name, classCode: c.code, instructorCode: c.instructorCode || '' })
+    onClose()
   }
 
-  // เก็บคลาสที่สร้างลงเครื่องตอนปิดหน้ารหัส (ปิดด้วย X ก็เก็บ — รหัสผู้สอนดูซ้ำได้ที่แท็บคลาส/QR)
+  // เก็บคลาสที่สร้างลงเครื่องตอนปิดหน้ารหัส (ปิดด้วย X ก็เก็บ — รหัสผู้ช่วยดูซ้ำได้ที่แท็บคลาส/QR)
   const finish = () => {
     if (created) setClass(created)
     onClose()
@@ -78,7 +74,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
     <div style={overlay} role="dialog" aria-modal="true">
       <div style={sheet}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div className="text-title" style={{ flex: 1 }}>{created ? 'สร้างคลาสแล้ว' : mode === 'create' ? 'สร้างคลาสใหม่' : 'เชื่อมคลาสด้วยรหัสผู้สอน'}</div>
+          <div className="text-title" style={{ flex: 1 }}>{created ? 'สร้างคลาสแล้ว' : mode === 'create' ? 'สร้างคลาสใหม่' : 'เลือกคลาส'}</div>
           <button type="button" className="btn btn-ghost" onClick={finish} aria-label="ปิด"><X size={18} /></button>
         </div>
 
@@ -93,13 +89,13 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
               </button>
             </div>
             <div className="card" style={{ marginTop: 10, textAlign: 'center', borderColor: '#E3C27A', background: '#FBF3DF' }}>
-              <div className="text-caption" style={{ color: '#7A5A1F' }}>รหัสผู้สอน — เก็บเป็นความลับ</div>
+              <div className="text-caption" style={{ color: '#7A5A1F' }}>รหัสผู้ช่วย — ให้เฉพาะคนที่ช่วยสแกนเช็คชื่อ</div>
               <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 5, color: '#7A5A1F' }}>{created.instructorCode}</div>
               <button type="button" className="btn btn-ghost" onClick={() => copy('inst', created.instructorCode)}>
                 {copied === 'inst' ? <Check size={14} /> : <Copy size={14} />} คัดลอก
               </button>
               <div className="text-caption" style={{ marginTop: 4, color: '#7A5A1F' }}>
-                ใช้เปิดหน้าผู้สอนบนเครื่องอื่น และเห็นผลของนักเรียนทั้งคลาส — จดเก็บไว้ ห้ามแจกนักเรียน
+                ผู้ช่วยใช้รหัสนี้สแกน/เช็คชื่อ/ให้คะแนนผ่านลิงก์ที่แท็บคลาส/QR (ไม่ต้องล็อกอิน) ห้ามแจกนักเรียน
               </div>
             </div>
             <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={finish}>
@@ -116,29 +112,25 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
             <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} disabled={busy || name.trim().length < 2} onClick={create}>
               <Plus size={16} /> {busy ? 'กำลังสร้าง…' : 'สร้างคลาส'}
             </button>
-            <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => { setMode('connect'); setError('') }}>
-              <KeyRound size={14} /> มีรหัสผู้สอนอยู่แล้ว?
+            <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => { setMode('pick'); setError('') }}>
+              <FolderOpen size={14} /> เลือกคลาสที่มีอยู่แล้ว
             </button>
           </>
         ) : (
           <>
-            <label className="label" style={{ marginTop: 12 }}>รหัสผู้สอน (8 ตัว)</label>
-            <input
-              className="input"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => { if (e.key === 'Enter') connect() }}
-              maxLength={12}
-              autoCapitalize="characters"
-              autoFocus
-              style={{ letterSpacing: 3, fontWeight: 700, textAlign: 'center', fontSize: 18 }}
-            />
-            {error && <div className="callout callout-danger" style={{ marginTop: 10 }}>{error}</div>}
-            <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} disabled={busy || !code.trim()} onClick={connect}>
-              <KeyRound size={16} /> {busy ? 'กำลังตรวจ…' : 'เชื่อมคลาส'}
-            </button>
-            <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => { setMode('create'); setError('') }}>
-              สร้างคลาสใหม่แทน
+            {error && <div className="callout callout-danger" style={{ marginTop: 12 }}>{error}</div>}
+            {classes === null && <div className="text-caption" style={{ marginTop: 12 }}>กำลังโหลด…</div>}
+            {classes && classes.length === 0 && !error && <div className="text-caption" style={{ marginTop: 12 }}>ยังไม่มีคลาสที่เปิดอยู่ — สร้างคลาสใหม่ได้เลย</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              {(classes || []).map((c) => (
+                <button key={c.id} type="button" className="card card-hover" style={{ textAlign: 'left' }} onClick={() => pick(c)}>
+                  <div className="text-body-strong">{c.name}</div>
+                  <div className="text-caption">รหัสคลาส {c.code} · นักเรียน {c.students} คน</div>
+                </button>
+              ))}
+            </div>
+            <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => { setMode('create'); setError('') }}>
+              <Plus size={14} /> สร้างคลาสใหม่แทน
             </button>
           </>
         )}

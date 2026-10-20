@@ -132,14 +132,9 @@ export default function AdminSessionScan() {
 
   return (
     <div className="page-container">
-      {!inAdmin && isMyClass && (
-        <Link to="/teach" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
-          <ArrowLeft size={16} /> กลับหน้าผู้สอน
-        </Link>
-      )}
       {inAdmin && (
-        <Link to={`/admin/sessions/${id}`} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
-          <ArrowLeft size={16} /> กลับรายละเอียดคลาส
+        <Link to={isMyClass ? '/admin/teach' : `/admin/sessions/${id}`} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+          <ArrowLeft size={16} /> {isMyClass ? 'กลับหน้าผู้สอน' : 'กลับรายละเอียดคลาส'}
         </Link>
       )}
       <div className="text-title" style={{ marginTop: 4 }}>สแกน QR นักเรียน</div>

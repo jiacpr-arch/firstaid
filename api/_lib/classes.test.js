@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createClass, findClassByInstructorCode, closeClass, buildClassList } from './classes.js'
+import { createClass, closeClass, buildClassList } from './classes.js'
 import { fakeDb } from './fakeDb.js'
 
 const uniq = { cohorts: ['code'], practical_sessions: ['qr_token'] }
@@ -49,33 +49,6 @@ test('createClass rolls back the cohort if the session cannot be created', async
   }
   await assert.rejects(() => createClass(broken, { name: 'Fail' }))
   assert.equal(db.tables.cohorts.length, 0)
-})
-
-test('findClassByInstructorCode returns the class and its first session', async () => {
-  const db = fakeDb({}, { uniqueCols: uniq })
-  const c = await createClass(db, { name: 'รุ่น 3' })
-  const r = await findClassByInstructorCode(db, ` ${c.instructorCode.toLowerCase().slice(0, 4)}-${c.instructorCode.slice(4)} `)
-  assert.deepEqual(r.cls, { classId: c.classId, sessionId: c.sessionId, className: 'รุ่น 3', classCode: c.classCode })
-  assert.equal('instructorCode' in r.cls, false)
-})
-
-test('a student class code is told apart from a wrong code', async () => {
-  const db = fakeDb({}, { uniqueCols: uniq })
-  const c = await createClass(db, { name: 'รุ่น 4' })
-  const asStudent = await findClassByInstructorCode(db, c.classCode)
-  assert.equal(asStudent.status, 403)
-  assert.match(asStudent.error, /สำหรับนักเรียน/)
-  const wrong = await findClassByInstructorCode(db, 'ZZZZZZZZ')
-  assert.equal(wrong.status, 403)
-  assert.match(wrong.error, /ไม่ถูกต้อง/)
-  assert.equal((await findClassByInstructorCode(db, '')).status, 400)
-})
-
-test('a closed class cannot be reconnected', async () => {
-  const db = fakeDb({}, { uniqueCols: uniq })
-  const c = await createClass(db, { name: 'รุ่น 5' })
-  db.tables.cohorts[0].deleted_at = '2026-10-21T00:00:00Z'
-  assert.equal((await findClassByInstructorCode(db, c.instructorCode)).status, 410)
 })
 
 test('closeClass closes the cohort and its sessions without deleting anything', async () => {

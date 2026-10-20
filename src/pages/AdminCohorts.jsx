@@ -82,7 +82,7 @@ export default function AdminCohorts() {
               <div style={{ flex: 1 }}>
                 <div className="text-body-strong">
                   {c.name}{' '}
-                  <span className="badge">{c.createdVia === 'app' ? 'ผู้สอนสร้างเอง' : 'แอดมินสร้าง'}</span>
+                  <span className="badge">{c.createdVia === 'app' ? 'สร้างจากหน้าผู้สอน' : 'สร้างจากหน้ากลุ่ม'}</span>
                   {c.closed && <span className="badge badge-danger" style={{ marginLeft: 4 }}>ปิดแล้ว</span>}
                 </div>
                 <div className="text-caption">รหัสเข้าร่วม {c.code} · นักเรียน {c.students} คน — แตะดู dashboard</div>

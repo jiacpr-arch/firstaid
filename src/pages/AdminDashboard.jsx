@@ -4,10 +4,10 @@ import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { OPEN_ADMIN } from '../config/adminAccess'
 
 const QUICK = [
+  { to: '/admin/teach', label: 'สำหรับผู้สอน', desc: 'สร้างคลาส · ติดตามนักเรียน · เช็คชื่อภาคปฏิบัติ · รายงาน LINE', icon: GraduationCap, color: '#0F766E' },
   { to: '/admin/lesson-videos', label: 'คลิปประจำบท + mini quiz', desc: 'ใส่ YouTube + คำถามท้ายคลิป → ผู้เรียนต้องดูและผ่านก่อนเรียนต่อ', icon: Clapperboard, color: '#EA580C' },
   { to: '/admin/lesson-media', label: 'ใส่รูป/วิดีโอในเนื้อหา', desc: 'บทเรียน / สถานการณ์ / ผัง → แนบสื่อ → แสดงทันที', icon: Film, color: '#DB2777' },
   { to: '/admin/vouchers', label: 'โค้ดปลดล็อกบทเรียน', desc: 'สร้าง/ดูโค้ดขายเรียนออนไลน์รายหมวด', icon: Ticket, color: '#0891B2' },
-  { to: '/teach', label: 'หน้าผู้สอน (แบบสร้างคลาสเอง)', desc: 'เปิดหน้าที่ผู้สอนใช้: สร้างคลาส รหัสผู้สอน เช็คชื่อ ติดตามนักเรียน', icon: GraduationCap, color: '#0F766E' },
   { to: '/admin/cohorts', label: 'กลุ่มผู้เรียน (Cohorts)', desc: 'สร้างกลุ่ม / ดูความก้าวหน้า', icon: Users, color: '#16A34A' },
   { to: '/admin/sessions', label: 'คลาสภาคปฏิบัติ', desc: 'เปิด session + เช็คชื่อ + อนุมัติ', icon: Calendar, color: '#2563EB' },
   { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ค้นหา / ออกใหม่ / เพิกถอน', icon: Award, color: '#D97706' },
