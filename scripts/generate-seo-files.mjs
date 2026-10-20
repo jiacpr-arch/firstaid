@@ -48,6 +48,7 @@ Disallow: /admin
 Disallow: /api/
 Disallow: /checkin
 Disallow: /join
+Disallow: /redeem
 Disallow: /settings
 Disallow: /auth/
 Disallow: /pre-test
