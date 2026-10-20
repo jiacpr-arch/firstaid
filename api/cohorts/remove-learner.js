@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
-import { requireAdmin } from '../_lib/requireAdmin.js'
+import { authorizeClass } from '../_lib/instructorAuth.js'
 
 // เอาผู้เรียนออกจากคลาส (ลบแถว enrollments) — ใช้เก็บกวาดเคส join ผิดคลาส,
 // join ซ้ำจากสองเครื่อง, หรือแถว anonymous เก่าที่ค้างหลังล็อกอิน LINE
@@ -9,12 +9,13 @@ export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
-  const user = await requireAdmin(req, res)
-  if (!user) return
   const admin = getSupabaseAdmin()
+  if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const { cohortId, learnerId } = req.body || {}
   if (!cohortId || !learnerId) { res.status(400).json({ error: 'Missing cohortId or learnerId' }); return }
+  const actor = await authorizeClass(req, res, admin, { cohortId })
+  if (!actor) return
 
   const { error, count } = await admin
     .from('enrollments')

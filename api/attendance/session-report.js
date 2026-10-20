@@ -1,13 +1,13 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
-import { requireAdmin } from '../_lib/requireAdmin.js'
+import { authorizeInstructor } from '../_lib/instructorAuth.js'
 import { rateLimited } from '../_lib/rateLimit.js'
 import { notifyAdminLine } from '../_lib/lineNotify.js'
 import { loadCohortSummary } from '../_lib/cohortSummaryLoader.js'
 import { isReady } from '../_lib/readiness.js'
 import { buildSessionReport, formatSessionReport } from '../_lib/sessionReport.js'
 
-// สรุปสถานะรอบอบรม: POST { sessionId, send }
+// สรุปสถานะรอบอบรม (แอดมิน หรือผู้สอนที่ถือรหัสผู้สอน): POST { sessionId, send }
 //   send:false → คืน { text } ให้ดูตัวอย่าง
 //   send:true  → ส่งข้อความเดียวกันเข้า LINE ของแอดมิน (LINE_ADMIN_USER_ID) คืน { sent } หรือ
 //                { sent:false, reason } ถ้ายังไม่ได้ตั้งค่า LINE — ไม่ทำเหมือนส่งสำเร็จ
@@ -15,13 +15,14 @@ export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
-  const user = await requireAdmin(req, res)
-  if (!user) return
-  if (rateLimited(req, res, { key: 'session-report', limit: 12, windowMs: 60_000 })) return
   const admin = getSupabaseAdmin()
+  if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const { sessionId, send } = req.body || {}
   if (!sessionId) { res.status(400).json({ error: 'Missing sessionId' }); return }
+  const actor = await authorizeInstructor(req, res, admin, sessionId)
+  if (!actor) return
+  if (rateLimited(req, res, { key: 'session-report', limit: 12, windowMs: 60_000 })) return
 
   try {
     const { data: session, error: sErr } = await admin

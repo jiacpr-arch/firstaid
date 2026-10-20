@@ -1,11 +1,15 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
-import { requireAdmin } from '../_lib/requireAdmin.js'
 import { authorizeInstructor } from '../_lib/instructorAuth.js'
 
 // จัดการสถานีของ session: GET ?sessionId= | POST {sessionId, stations:[{name,kind}]}
 // | PATCH {id, name?, kind?} | DELETE ?id=
 const KINDS = ['practice', 'exam']
+
+async function sessionOfStation(admin, stationId) {
+  const { data } = await admin.from('session_stations').select('session_id').eq('id', stationId).maybeSingle()
+  return data?.session_id || null
+}
 const MAX_STATIONS = 30
 
 export default async function handler(req, res) {
@@ -13,7 +17,7 @@ export default async function handler(req, res) {
   const admin = getSupabaseAdmin()
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
-  // ดูรายการฐาน: แอดมินหรือผู้ช่วยที่ใช้รหัสผู้สอน; แก้ไขฐาน (POST/PATCH/DELETE): แอดมินเท่านั้น
+  // ดูและจัดการฐานได้: แอดมิน หรือผู้สอนที่ถือรหัสผู้สอนของคลาสนี้
   if (req.method === 'GET') {
     const sessionId = req.query?.sessionId
     if (!sessionId) { res.status(400).json({ error: 'Missing sessionId' }); return }
@@ -27,14 +31,13 @@ export default async function handler(req, res) {
     return
   }
 
-  const user = await requireAdmin(req, res)
-  if (!user) return
-
   if (req.method === 'POST') {
     const { sessionId, stations } = req.body || {}
     if (!sessionId || !Array.isArray(stations) || stations.length === 0) {
       res.status(400).json({ error: 'Missing fields' }); return
     }
+    const actor = await authorizeInstructor(req, res, admin, sessionId)
+    if (!actor) return
     const rows = stations
       .map((s) => ({ name: String(s?.name || '').trim().slice(0, 120), kind: s?.kind }))
       .filter((s) => s.name && KINDS.includes(s.kind))
@@ -58,6 +61,10 @@ export default async function handler(req, res) {
   if (req.method === 'PATCH') {
     const { id, name, kind } = req.body || {}
     if (!id) { res.status(400).json({ error: 'Missing id' }); return }
+    const sessionId = await sessionOfStation(admin, id)
+    if (!sessionId) { res.status(404).json({ error: 'Station not found' }); return }
+    const actor = await authorizeInstructor(req, res, admin, sessionId)
+    if (!actor) return
     const patch = {}
     if (typeof name === 'string' && name.trim()) patch.name = name.trim().slice(0, 120)
     if (KINDS.includes(kind)) patch.kind = kind
@@ -71,6 +78,10 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     const id = req.query?.id
     if (!id) { res.status(400).json({ error: 'Missing id' }); return }
+    const sessionId = await sessionOfStation(admin, id)
+    if (!sessionId) { res.status(404).json({ error: 'Station not found' }); return }
+    const actor = await authorizeInstructor(req, res, admin, sessionId)
+    if (!actor) return
     // ลบฐานแล้วผลเช็คชื่อ/คะแนนของฐานนั้นหายตาม (cascade)
     const { error } = await admin.from('session_stations').delete().eq('id', id)
     if (error) { res.status(500).json({ error: error.message }); return }

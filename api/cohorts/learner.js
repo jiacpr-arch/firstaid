@@ -1,20 +1,21 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
-import { requireAdmin } from '../_lib/requireAdmin.js'
+import { authorizeClass } from '../_lib/instructorAuth.js'
 import { buildLearnerDetail } from '../_lib/learnerDetail.js'
 
 // หน้ารายละเอียดต่อนักเรียน: ความคืบหน้าเรียนออนไลน์ + เช็คชื่อ/ฐานปฏิบัติของคลาสนี้ + ใบเซอร์
-// ตาราง progress เป็น service-role only จึงอ่านผ่าน endpoint นี้ (requireAdmin) เท่านั้น
+// ตาราง progress เป็น service-role only จึงอ่านผ่าน endpoint นี้ (แอดมินหรือผู้ถือรหัสผู้สอนของคลาส) เท่านั้น
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return }
-  const user = await requireAdmin(req, res)
-  if (!user) return
   const admin = getSupabaseAdmin()
+  if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const cohortId = req.query?.cohortId
   const learnerId = req.query?.learnerId
   if (!cohortId || !learnerId) { res.status(400).json({ error: 'Missing cohortId or learnerId' }); return }
+  const actor = await authorizeClass(req, res, admin, { cohortId })
+  if (!actor) return
 
   try {
     // นักเรียนต้องอยู่ในคลาสนี้จริง — กันดึงข้อมูลคนนอกคลาสผ่าน id
