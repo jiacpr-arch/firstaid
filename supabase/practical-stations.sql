@@ -1,5 +1,5 @@
 -- สถานีฝึก/สอบภาคปฏิบัติต่อ session (ระบบเช็คชื่อแบบ ACLS)
--- ยังไม่ได้รันบน Supabase — รันใน SQL editor หลังตรวจแล้ว
+-- รันแล้วบนโปรเจกต์ jia-unified (migration practical_stations, 20 ต.ค. 2026)
 -- RLS เปิดโดยไม่มี policy = เข้าถึงได้เฉพาะ service role (ผ่าน api/attendance/*)
 
 create table if not exists session_stations (
