@@ -16,6 +16,7 @@ import ChapterUnlockCard from '../components/ChapterUnlockCard'
 import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { flushSync } from '../db/sync'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
+import { fetchLessonVideo } from '../utils/lessonVideo'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
 import LineLoginGate from '../components/LineLoginGate'
@@ -64,6 +65,8 @@ export default function LessonReader() {
   const [completed, setCompleted] = useState(false)
   const [earnedBadge, setEarnedBadge] = useState(null)
   const [extraMedia, setExtraMedia] = useState([])
+  // คลิปที่แอดมินตั้งใน DB: undefined = ยังโหลดอยู่, null = ไม่มี (ใช้ค่าจาก lessons.js)
+  const [dbVideo, setDbVideo] = useState(undefined)
   const [gateDismissed, setGateDismissed] = useState(false)
   const [videoWatched, setVideoWatched] = useState(false)
   const [videoResult, setVideoResult] = useState(null)
@@ -83,6 +86,7 @@ export default function LessonReader() {
     setVideoResult(null)
     setVideoAttempt(0)
     setVideoRetry(false)
+    setDbVideo(undefined)
   }
 
   useEffect(() => {
@@ -93,8 +97,12 @@ export default function LessonReader() {
   useEffect(() => {
     let cancelled = false
     fetchLessonMedia(lessonId).then((rows) => { if (!cancelled) setExtraMedia(rows) })
+    fetchLessonVideo(lessonId).then((v) => { if (!cancelled) setDbVideo(v) })
     return () => { cancelled = true }
   }, [lessonId])
+
+  // ค่าใน DB ทับ lesson.video ใน lessons.js
+  const video = dbVideo ?? lesson?.video
 
   const steps = useMemo(() => lesson?.steps || [], [lesson])
 
@@ -118,13 +126,13 @@ export default function LessonReader() {
     const cover = mediaByStep.get(0)
     if (cover?.length) out.push({ kind: 'cover', media: cover })
     // บทที่มีคลิป: คลิป → mini quiz ก่อนเนื้อหา (ต้องดูถึง 90% และผ่าน 70% ถึงไปต่อได้)
-    if (lesson?.video) {
+    if (video) {
       out.push({ kind: 'video' })
       out.push({ kind: 'videoQuiz' })
     }
     steps.forEach((s, i) => out.push({ kind: 'step', step: s, media: mediaByStep.get(i + 1) }))
     return out
-  }, [lesson, steps, mediaByStep])
+  }, [video, steps, mediaByStep])
 
   // Meta ต่อบท — ต้อง render ในทุก return path (รวมหน้า lock/ปลดล็อก) เพื่อให้
   // prerender เก็บ title/description/JSON-LD ที่ถูกต้องของบทนั้นเสมอ
@@ -144,6 +152,11 @@ export default function LessonReader() {
       ]}
     />
   )
+
+  // รอรู้ก่อนว่าบทนี้มีคลิปจาก DB ไหม ไม่งั้นผู้เรียนจะเห็นเนื้อหาแว้บก่อนคลิปโผล่ (ไม่รอตอน prerender)
+  if (lesson && dbVideo === undefined && isSupabaseConfigured && !isAutomated) {
+    return <div className="page-container">{seo}<div className="text-caption" style={{ marginTop: 16 }}>กำลังโหลดบทเรียน…</div></div>
+  }
 
   if (!lesson) {
     return (
@@ -297,7 +310,6 @@ export default function LessonReader() {
 
   // ทดสอบ/พรีวิว: ใส่ ?skipvideo=1 เพื่อข้ามด่านคลิป
   const skipVideoGate = new URLSearchParams(window.location.search).has('skipvideo')
-  const video = lesson.video
   const videoSlideIdx = slides.findIndex((x) => x.kind === 'video')
   const videoPassed = videoResult && videoResult.correct / videoResult.total >= VIDEO_QUIZ_PASS
 
