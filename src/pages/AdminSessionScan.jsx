@@ -164,7 +164,7 @@ export default function AdminSessionScan() {
       <div id={REGION_ID} style={{ marginTop: 12, width: '100%', borderRadius: 12, overflow: 'hidden' }} />
 
       {last && (
-        <div className={`callout ${last.ok ? 'callout-success' : 'callout-danger'}`} style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className={`callout ${last.ok ? 'callout-info' : 'callout-danger'}`} style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
           {last.ok ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
           <div>
             {last.name && <div className="text-body-strong">{last.name}</div>}
