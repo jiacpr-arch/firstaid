@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { ArrowLeft, Check, X, RefreshCw, Download, ScanLine } from 'lucide-react'
+import { ArrowLeft, Check, X, RefreshCw, Download, ScanLine, Undo2, ListChecks } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { adminFetch } from '../utils/adminFetch'
 
@@ -31,6 +31,8 @@ export default function AdminSessionDetail() {
   const [attendance, setAttendance] = useState([])
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [kioskQrDataUrl, setKioskQrDataUrl] = useState(null)
+  const [roster, setRoster] = useState([])
+  const [showRoster, setShowRoster] = useState(false)
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
 
   const checkInUrl = useMemo(() => {
@@ -88,6 +90,39 @@ export default function AdminSessionDetail() {
     load()
   }
 
+  const undo = async (att) => {
+    const { error } = await supabase.from('attendance').update({
+      status: 'pending', approved_by: null, approved_at: null,
+    }).eq('id', att.id)
+    if (error) { alert(error.message); return }
+    load()
+  }
+
+  const openRoster = async () => {
+    setShowRoster((v) => !v)
+    if (roster.length) return
+    const resp = await adminFetch(`/api/attendance/roster?sessionId=${id}`)
+    const body = await resp.json().catch(() => ({}))
+    if (resp.ok) setRoster(body.roster || [])
+    else alert(body.error || 'โหลดรายชื่อไม่สำเร็จ')
+  }
+
+  const manualCheckin = async (learnerId) => {
+    const resp = await adminFetch('/api/attendance/instructor-checkin', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId: id, learnerId }),
+    })
+    const body = await resp.json().catch(() => ({}))
+    if (!resp.ok) { alert(body.error || 'เช็คชื่อไม่สำเร็จ'); return }
+    if (!body.duplicate && body.attendanceId) {
+      adminFetch('/api/certificates/issue-practical', {
+        method: 'POST',
+        body: JSON.stringify({ attendanceId: body.attendanceId }),
+      }).catch(() => {})
+    }
+    load()
+  }
+
   const reject = async (att) => {
     const { error } = await supabase.from('attendance').update({
       status: 'rejected', approved_at: new Date().toISOString(),
@@ -138,6 +173,27 @@ export default function AdminSessionDetail() {
             )}
           </div>
 
+          {!session.closed_at && session.cohort_id && (
+            <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={openRoster}>
+              <ListChecks size={16} /> เช็คชื่อมือจากรายชื่อ cohort
+            </button>
+          )}
+          {showRoster && (
+            <div className="card" style={{ marginTop: 8 }}>
+              {roster.length === 0 && <div className="text-caption">ไม่มีนักเรียนใน cohort นี้</div>}
+              {roster.map((r) => {
+                const done = attendance.some((a) => a.learner_id === r.learner_id && a.status === 'approved')
+                return (
+                  <div key={r.learner_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
+                    <div style={{ flex: 1 }} className="text-body">{r.name || r.learner_id}</div>
+                    {done
+                      ? <span className="badge badge-success">เช็คแล้ว</span>
+                      : <button type="button" className="btn btn-primary" onClick={() => manualCheckin(r.learner_id)}>เช็คชื่อ</button>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
           {!session.closed_at && (
             <Link to={`/admin/sessions/${id}/scan`} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
               <ScanLine size={16} /> สแกน QR นักเรียน
@@ -196,6 +252,11 @@ export default function AdminSessionDetail() {
               )}
               {a.status === 'approved' && <span className="badge badge-success">อนุมัติแล้ว</span>}
               {a.status === 'rejected' && <span className="badge badge-danger">ปฏิเสธ</span>}
+              {a.status !== 'pending' && (
+                <button type="button" className="btn btn-ghost" title="ยกเลิก (กลับเป็นรออนุมัติ)" onClick={() => undo(a)}>
+                  <Undo2 size={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>

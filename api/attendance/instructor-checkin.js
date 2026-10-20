@@ -13,19 +13,35 @@ export default async function handler(req, res) {
   if (!adminUser) return
   const admin = getSupabaseAdmin()
 
-  const { sessionId, payload } = req.body || {}
-  if (!sessionId || !payload) { res.status(400).json({ error: 'Missing fields' }); return }
-
-  const student = parseStudentQr(payload)
-  if (!student) { res.status(422).json({ error: 'ไม่ใช่ QR นักเรียนของระบบนี้' }); return }
+  const { sessionId, payload, learnerId } = req.body || {}
+  if (!sessionId || (!payload && !learnerId)) { res.status(400).json({ error: 'Missing fields' }); return }
 
   const { data: session, error: sErr } = await admin
     .from('practical_sessions')
-    .select('id, closed_at')
+    .select('id, closed_at, cohort_id')
     .eq('id', sessionId)
     .single()
   if (sErr || !session) { res.status(404).json({ error: 'Session not found' }); return }
   if (session.closed_at) { res.status(410).json({ error: 'Session closed' }); return }
+
+  // สแกน QR (payload) หรือติ๊กชื่อมือจากรายชื่อ cohort (learnerId — ชื่อมาจาก enrollments ฝั่งเซิร์ฟเวอร์)
+  let student = null
+  let method = 'scan'
+  if (payload) {
+    student = parseStudentQr(payload)
+    if (!student) { res.status(422).json({ error: 'ไม่ใช่ QR นักเรียนของระบบนี้' }); return }
+  } else {
+    method = 'manual'
+    if (!session.cohort_id) { res.status(422).json({ error: 'Session ไม่ได้ผูกกับ cohort' }); return }
+    const { data: enr } = await admin
+      .from('enrollments')
+      .select('learner_id, name, phone')
+      .eq('cohort_id', session.cohort_id)
+      .eq('learner_id', learnerId)
+      .maybeSingle()
+    if (!enr) { res.status(404).json({ error: 'ไม่พบนักเรียนใน cohort นี้' }); return }
+    student = { id: enr.learner_id, name: enr.name || enr.learner_id, phone: enr.phone || null }
+  }
 
   const now = new Date().toISOString()
   const { data: existing } = await admin
@@ -50,7 +66,7 @@ export default async function handler(req, res) {
     status: 'approved',
     approved_by: adminUser.id,
     approved_at: now,
-    note: 'scan',
+    note: method,
   }
   const { data, error } = await admin
     .from('attendance')
