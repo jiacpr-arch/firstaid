@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
@@ -47,9 +47,12 @@ const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminSessions = lazy(() => import('./pages/AdminSessions'))
+const AdminTeachGuide = lazy(() => import('./pages/AdminTeachGuide'))
 const AdminSessionDetail = lazy(() => import('./pages/AdminSessionDetail'))
 const AdminSessionScan = lazy(() => import('./pages/AdminSessionScan'))
 const InstructorScan = lazy(() => import('./pages/InstructorScan'))
+const Teach = lazy(() => import('./pages/Teach'))
+const TeachLearner = lazy(() => import('./pages/TeachLearner'))
 const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
 const AdminCohortDetail = lazy(() => import('./pages/AdminCohortDetail'))
 const AdminLearnerDetail = lazy(() => import('./pages/AdminLearnerDetail'))
@@ -157,6 +160,18 @@ export default function App() {
         <Route path="/checkin/scan" element={<CheckInScan />} />
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
         <Route path="/my-qr" element={<MyQr />} />
+        {/* หน้าผู้สอนอยู่ฝั่งแอดมิน (ต้องล็อกอิน) — ลิงก์เก่า /teach พาไปที่นี่ */}
+        <Route path="/teach" element={<Navigate to="/admin/teach" replace />} />
+        <Route path="/teach/*" element={<Navigate to="/admin/teach" replace />} />
+        <Route path="/admin/teach" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><Teach /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/guide" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminTeachGuide /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/teach/learners/:learnerId" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><TeachLearner /></RequireAdmin></Suspense>
+        } />
         <Route path="/scan/:id" element={
           <Suspense fallback={<AdminFallback />}><InstructorScan /></Suspense>
         } />

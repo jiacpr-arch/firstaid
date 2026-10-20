@@ -54,15 +54,19 @@ function ExamRow({ label, attempts }) {
   )
 }
 
-export default function AdminLearnerDetail() {
-  const { id, learnerId } = useParams()
+export default function AdminLearnerDetail({ teach = null }) {
+  const params = useParams()
+  // teach = เปิดจากหน้าผู้สอน (/admin/teach): { cohortId } — ใช้คลาสที่เปิดอยู่และปุ่มกลับไปหน้าผู้สอน
+  const id = teach?.cohortId ?? params.id
+  const learnerId = params.learnerId
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
   const fetchDetail = useCallback(async () => {
     const q = `cohortId=${encodeURIComponent(id)}&learnerId=${encodeURIComponent(learnerId)}`
-    const resp = await adminFetch(`/api/cohorts/learner?${q}`)
+    const url = `/api/cohorts/learner?${q}`
+    const resp = await adminFetch(url)
     const body = await resp.json().catch(() => ({}))
     return { ok: resp.ok, body }
   }, [id, learnerId])
@@ -98,8 +102,8 @@ export default function AdminLearnerDetail() {
   )
 
   const back = (
-    <Link to={`/admin/cohorts/${id}`} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
-      <ArrowLeft size={16} /> กลับหน้าคลาส
+    <Link to={teach ? '/admin/teach' : `/admin/cohorts/${id}`} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+      <ArrowLeft size={16} /> {teach ? 'กลับหน้าผู้สอน' : 'กลับหน้าคลาส'}
     </Link>
   )
 
@@ -194,7 +198,9 @@ export default function AdminLearnerDetail() {
         {data.sessions.map((s) => (
           <div key={s.id} style={{ padding: '8px 0', borderTop: '1px solid var(--color-border, #e5e7eb)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <Link to={`/admin/sessions/${s.id}`} className="text-body-strong">{s.title}</Link>
+              {teach
+                ? <span className="text-body-strong">{s.title}</span>
+                : <Link to={`/admin/sessions/${s.id}`} className="text-body-strong">{s.title}</Link>}
               <span className="text-caption">
                 {s.attendance ? `เช็คชื่อ ${dt(s.attendance.checkedInAt)}` : 'ยังไม่ได้เช็คชื่อ'}
               </span>

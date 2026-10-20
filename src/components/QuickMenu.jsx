@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Map, Activity, Award, UserCheck, CalendarDays } from 'lucide-react'
+import { BookOpen, Map, Activity, Award, UserCheck, CalendarDays, Users } from 'lucide-react'
 import { lessons } from '../courses/firstaid/lessons'
 import { algorithms } from '../courses/firstaid/algorithms'
 import { scenarios } from '../courses/firstaid/scenarios'
@@ -13,6 +13,7 @@ const QUICK = [
   { to: '/schedule', label: 'อบรมภาคปฏิบัติ', desc: 'เช็ครอบ CPR & AED แล้วจองได้เลย', icon: CalendarDays, warm: true },
   { to: '/certificate', label: 'ใบประกาศของฉัน', desc: 'ดู/ดาวน์โหลดใบประกาศ', icon: Award, warm: true },
   { to: '/checkin', label: 'เช็คชื่อภาคปฏิบัติ', desc: 'สแกน QR หรือกรอกรหัสจากครู', icon: UserCheck, warm: true },
+  { to: '/join', label: 'เข้าร่วมคลาส', desc: 'มีรหัสคลาสจากครู? ใส่รหัสเพื่อให้ครูติดตามการเรียน', icon: Users, warm: true },
 ]
 
 export default function QuickMenu({ style, className }) {

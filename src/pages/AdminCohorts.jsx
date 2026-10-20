@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Users, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Plus, Users, ChevronRight, GraduationCap } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { adminFetch } from '../utils/adminFetch'
 
 function makeCohortCode() {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -17,11 +18,11 @@ export default function AdminCohorts() {
 
   const loadCohorts = () => {
     if (!isSupabaseConfigured) return Promise.resolve([])
-    return supabase
-      .from('cohorts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => data || [])
+    // ผ่าน API (service role) เพราะคลาสที่ผู้สอนสร้างจากแอปไม่มีเจ้าของ RLS จึงมองไม่เห็นจาก client
+    return adminFetch('/api/classes/list')
+      .then((r) => r.json())
+      .then((b) => b.classes || [])
+      .catch(() => [])
   }
   const load = () => loadCohorts().then((data) => setCohorts(data))
 
@@ -30,6 +31,14 @@ export default function AdminCohorts() {
     loadCohorts().then((data) => { if (!cancelled) setCohorts(data) })
     return () => { cancelled = true }
   }, [])
+
+  const closeClass = async (c) => {
+    if (!confirm(`ปิดคลาส “${c.name}”? รหัสผู้สอนจะใช้ไม่ได้อีก (ข้อมูลนักเรียนไม่ถูกลบ)`)) return
+    const resp = await adminFetch('/api/classes/close', { method: 'POST', body: JSON.stringify({ cohortId: c.id }) })
+    const body = await resp.json().catch(() => ({}))
+    if (!resp.ok) { alert(body.error || 'ปิดคลาสไม่สำเร็จ'); return }
+    load()
+  }
 
   const create = async () => {
     if (!name.trim() || !isSupabaseConfigured) return
@@ -67,14 +76,28 @@ export default function AdminCohorts() {
           <div className="callout callout-info">ยังไม่ได้เชื่อมต่อ Supabase</div>
         )}
         {cohorts.map((c) => (
-          <Link key={c.id} to={`/admin/cohorts/${c.id}`} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-            <Users size={22} color="#16A34A" />
-            <div style={{ flex: 1 }}>
-              <div className="text-body-strong">{c.name}</div>
-              <div className="text-caption">รหัสเข้าร่วม {c.code} — แตะดู dashboard ความคืบหน้า</div>
-            </div>
-            <ChevronRight size={18} color="var(--color-text-muted)" />
-          </Link>
+          <div key={c.id} className="card" style={{ opacity: c.closed ? 0.65 : 1 }}>
+            <Link to={`/admin/cohorts/${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+              {c.createdVia === 'app' ? <GraduationCap size={22} color="#2E6D5D" /> : <Users size={22} color="#16A34A" />}
+              <div style={{ flex: 1 }}>
+                <div className="text-body-strong">
+                  {c.name}{' '}
+                  <span className="badge">{c.createdVia === 'app' ? 'สร้างจากหน้าผู้สอน' : 'สร้างจากหน้ากลุ่ม'}</span>
+                  {c.closed && <span className="badge badge-danger" style={{ marginLeft: 4 }}>ปิดแล้ว</span>}
+                </div>
+                <div className="text-caption">รหัสเข้าร่วม {c.code} · นักเรียน {c.students} คน — แตะดู dashboard</div>
+              </div>
+              <ChevronRight size={18} color="var(--color-text-muted)" />
+            </Link>
+            {(c.instructorCode || !c.closed) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                {c.instructorCode && <div className="text-caption" style={{ flex: 1 }}>รหัสผู้สอน (กู้คืน): <b style={{ letterSpacing: 2 }}>{c.instructorCode}</b></div>}
+                {!c.closed && c.createdVia === 'app' && (
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: 13, color: '#B42318' }} onClick={() => closeClass(c)}>ปิดคลาส</button>
+                )}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>

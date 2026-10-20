@@ -2,7 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   generateInstructorCode, codesMatch, normalizeCode, verifySessionCode, authorizeInstructor,
+  authorizeClass, verifyCohortCode,
 } from './instructorAuth.js'
+import { fakeDb } from './fakeDb.js'
 
 const SESSION = { id: 's1', instructor_code: 'ABCD2345', closed_at: null }
 
@@ -76,4 +78,36 @@ test('authorizeInstructor: a non-admin bearer token falls back to the code', asy
     req({ authorization: 'Bearer tok', 'x-instructor-code': 'ABCD2345' }), res, admin, 's1',
   )
   assert.equal(r.via, 'code')
+})
+
+// ---- authorizeClass (class-level code) ----
+const cohortDb = (over = {}) => fakeDb({
+  cohorts: [{ id: 'c1', instructor_code: 'KLMN4567', deleted_at: null, ...over }],
+  practical_sessions: [{ id: 's1', cohort_id: 'c1', instructor_code: 'KLMN4567', closed_at: null }],
+})
+
+test('authorizeClass: the class code opens the cohort and its session', async () => {
+  const db = cohortDb()
+  const byCohort = await authorizeClass(req({ 'x-instructor-code': 'klmn4567' }), fakeRes(), db, { cohortId: 'c1' })
+  assert.deepEqual(byCohort, { user: null, via: 'code' })
+  const bySession = await authorizeClass(req({ 'x-instructor-code': 'KLMN4567' }), fakeRes(), db, { sessionId: 's1' })
+  assert.equal(bySession.via, 'code')
+})
+
+test('authorizeClass: a wrong code, another class, or no class are refused', async () => {
+  const db = cohortDb()
+  const r1 = fakeRes()
+  assert.equal(await authorizeClass(req({ 'x-instructor-code': 'WRONG123' }), r1, db, { cohortId: 'c1' }), null)
+  assert.equal(r1.statusCode, 403)
+  const r2 = fakeRes()
+  assert.equal(await authorizeClass(req({ 'x-instructor-code': 'KLMN4567' }), r2, db, { cohortId: 'other' }), null)
+  assert.equal(r2.statusCode, 403)
+  const r3 = fakeRes()
+  assert.equal(await authorizeClass(req({ 'x-instructor-code': 'KLMN4567' }), r3, db, {}), null)
+  assert.equal(r3.statusCode, 400)
+})
+
+test('verifyCohortCode: a closed class refuses even the right code', async () => {
+  const db = cohortDb({ deleted_at: '2026-10-21T00:00:00Z' })
+  assert.equal((await verifyCohortCode(db, 'c1', 'KLMN4567')).status, 410)
 })
