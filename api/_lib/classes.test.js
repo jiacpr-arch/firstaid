@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createClass, findClassByInstructorCode, closeClass } from './classes.js'
+import { createClass, findClassByInstructorCode, closeClass, buildClassList } from './classes.js'
 import { fakeDb } from './fakeDb.js'
 
 const uniq = { cohorts: ['code'], practical_sessions: ['qr_token'] }
@@ -86,4 +86,24 @@ test('closeClass closes the cohort and its sessions without deleting anything', 
   assert.equal(db.tables.practical_sessions[0].closed_at, '2026-10-21T01:00:00.000Z')
   assert.equal(db.tables.cohorts.length, 1)
   assert.equal(db.tables.practical_sessions.length, 1)
+})
+
+test('buildClassList counts students, picks the first session and orders newest first', () => {
+  const list = buildClassList({
+    cohorts: [
+      { id: 'a', name: 'เก่า', code: 'AAAAAA', created_at: '2026-10-01T00:00:00Z' },
+      { id: 'b', name: 'ใหม่', code: 'BBBBBB', instructor_code: 'KLMN4567', created_via: 'app', created_at: '2026-10-20T00:00:00Z', deleted_at: '2026-10-21T00:00:00Z' },
+    ],
+    enrollments: [{ cohort_id: 'b' }, { cohort_id: 'b' }, { cohort_id: 'a' }],
+    sessions: [
+      { id: 's2', cohort_id: 'b', starts_at: '2026-10-22T00:00:00Z' },
+      { id: 's1', cohort_id: 'b', starts_at: '2026-10-20T00:00:00Z' },
+    ],
+  })
+  assert.deepEqual(list.map((c) => c.id), ['b', 'a'])
+  assert.deepEqual(list[0], {
+    id: 'b', name: 'ใหม่', code: 'BBBBBB', instructorCode: 'KLMN4567', createdVia: 'app',
+    createdAt: '2026-10-20T00:00:00Z', closed: true, students: 2, sessionId: 's1',
+  })
+  assert.deepEqual([list[1].students, list[1].createdVia, list[1].instructorCode, list[1].sessionId], [1, 'admin', null, null])
 })

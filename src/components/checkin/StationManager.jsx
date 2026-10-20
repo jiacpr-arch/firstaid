@@ -4,7 +4,7 @@ import { adminFetch } from '../../utils/adminFetch'
 import { DEFAULT_STATIONS, STATION_KIND_META } from '../../data/checkinStations'
 
 // จัดการสถานีของ session: เพิ่มชุดมาตรฐาน / เพิ่มเอง / เปลี่ยนชนิด / ลบ
-export default function StationManager({ sessionId, stations, onChanged }) {
+export default function StationManager({ sessionId, stations, onChanged, fetcher = adminFetch }) {
   const [name, setName] = useState('')
   const [kind, setKind] = useState('practice')
   const [busy, setBusy] = useState(false)
@@ -12,7 +12,7 @@ export default function StationManager({ sessionId, stations, onChanged }) {
   const call = async (url, opts) => {
     setBusy(true)
     try {
-      const resp = await adminFetch(url, opts)
+      const resp = await fetcher(url, opts)
       const body = await resp.json().catch(() => ({}))
       if (!resp.ok) { alert(body.error || 'ไม่สำเร็จ'); return false }
       await onChanged()

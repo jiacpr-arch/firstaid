@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { instructorFetch, getInstructorCode, clearInstructorCode } from '../utils/instructorFetch'
+import { useClassStore } from '../stores/classStore'
 import ChecklistGrader from '../components/checkin/ChecklistGrader'
 
 const REGION_ID = 'admin-qr-scan-region'
@@ -11,6 +12,7 @@ const SAME_QR_COOLDOWN_MS = 3000
 export default function AdminSessionScan() {
   const { id } = useParams()
   const inAdmin = useLocation().pathname.startsWith('/admin')
+  const isMyClass = useClassStore((st) => st.sessionId === id)
   const [cameraError, setCameraError] = useState(null)
   const [last, setLast] = useState(null) // { ok, message, name }
   const [recent, setRecent] = useState([])
@@ -130,6 +132,11 @@ export default function AdminSessionScan() {
 
   return (
     <div className="page-container">
+      {!inAdmin && isMyClass && (
+        <Link to="/teach" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+          <ArrowLeft size={16} /> กลับหน้าผู้สอน
+        </Link>
+      )}
       {inAdmin && (
         <Link to={`/admin/sessions/${id}`} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
           <ArrowLeft size={16} /> กลับรายละเอียดคลาส
