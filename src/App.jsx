@@ -56,6 +56,7 @@ const AdminLearnerDetail = lazy(() => import('./pages/AdminLearnerDetail'))
 const AdminCertificates = lazy(() => import('./pages/AdminCertificates'))
 const AdminMedia = lazy(() => import('./pages/AdminMedia'))
 const AdminLessonMedia = lazy(() => import('./pages/AdminLessonMedia'))
+const AdminLessonVideos = lazy(() => import('./pages/AdminLessonVideos'))
 const AdminVouchers = lazy(() => import('./pages/AdminVouchers'))
 
 const AdminFallback = () => (
@@ -197,6 +198,9 @@ export default function App() {
         } />
         <Route path="/admin/media" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminMedia /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/lesson-videos" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLessonVideos /></RequireAdmin></Suspense>
         } />
         <Route path="/admin/lesson-media" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminLessonMedia /></RequireAdmin></Suspense>
