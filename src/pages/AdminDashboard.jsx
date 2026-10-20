@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
-import { Users, Calendar, Award, Image, Film, Clapperboard, Ticket, LogOut, GraduationCap } from 'lucide-react'
+import { Users, Calendar, Award, Image, Film, Clapperboard, Ticket, LogOut, GraduationCap, BookOpen } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { OPEN_ADMIN } from '../config/adminAccess'
 
 const QUICK = [
-  { to: '/admin/teach', label: 'สำหรับผู้สอน', desc: 'สร้างคลาส · ติดตามนักเรียน · เช็คชื่อภาคปฏิบัติ · รายงาน LINE', icon: GraduationCap, color: '#0F766E' },
+  { to: '/admin/teach', label: 'สำหรับผู้สอน', desc: 'สร้างคลาส · ติดตามนักเรียน · เช็คชื่อภาคปฏิบัติ · รายงาน LINE', icon: GraduationCap, BookOpen, color: '#0F766E' },
+  { to: '/admin/guide', label: 'คู่มือระบบผู้สอน', desc: 'วิธีสร้างคลาส รหัสผู้ช่วย เช็คชื่อ สถานี และรายงาน LINE', icon: BookOpen, color: '#475569' },
   { to: '/admin/lesson-videos', label: 'คลิปประจำบท + mini quiz', desc: 'ใส่ YouTube + คำถามท้ายคลิป → ผู้เรียนต้องดูและผ่านก่อนเรียนต่อ', icon: Clapperboard, color: '#EA580C' },
   { to: '/admin/lesson-media', label: 'ใส่รูป/วิดีโอในเนื้อหา', desc: 'บทเรียน / สถานการณ์ / ผัง → แนบสื่อ → แสดงทันที', icon: Film, color: '#DB2777' },
   { to: '/admin/vouchers', label: 'โค้ดปลดล็อกบทเรียน', desc: 'สร้าง/ดูโค้ดขายเรียนออนไลน์รายหมวด', icon: Ticket, color: '#0891B2' },

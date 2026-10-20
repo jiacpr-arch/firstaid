@@ -47,6 +47,7 @@ const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminSessions = lazy(() => import('./pages/AdminSessions'))
+const AdminTeachGuide = lazy(() => import('./pages/AdminTeachGuide'))
 const AdminSessionDetail = lazy(() => import('./pages/AdminSessionDetail'))
 const AdminSessionScan = lazy(() => import('./pages/AdminSessionScan'))
 const InstructorScan = lazy(() => import('./pages/InstructorScan'))
@@ -164,6 +165,9 @@ export default function App() {
         <Route path="/teach/*" element={<Navigate to="/admin/teach" replace />} />
         <Route path="/admin/teach" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><Teach /></RequireAdmin></Suspense>
+        } />
+        <Route path="/admin/guide" element={
+          <Suspense fallback={<AdminFallback />}><RequireAdmin><AdminTeachGuide /></RequireAdmin></Suspense>
         } />
         <Route path="/admin/teach/learners/:learnerId" element={
           <Suspense fallback={<AdminFallback />}><RequireAdmin><TeachLearner /></RequireAdmin></Suspense>
