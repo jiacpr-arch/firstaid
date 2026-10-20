@@ -1,38 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="ตำแหน่งวางมือกดหน้าอกสำหรับ CPR คือกึ่งกลางหน้าอก">
-  <rect width="600" height="400" fill="#F4F6FA"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 440" role="img" aria-label="ตำแหน่งวางมือกดหน้าอกสำหรับ CPR คือครึ่งล่างของกระดูกหน้าอก กึ่งกลางระหว่างหัวนมสองข้าง">
+  <rect width="600" height="440" fill="#F4F6FA"/>
 
-  <!-- torso (front view) -->
-  <g stroke="#1F2937" stroke-width="3" fill="#FFFFFF" stroke-linejoin="round">
+  <!-- person (front view, upper body) -->
+  <g stroke="#1F2937" stroke-width="3" fill="#FFFFFF" stroke-linejoin="round" stroke-linecap="round">
+    <!-- arms -->
+    <path d="M196 120 q-34 6 -40 46 l-14 150 q-2 14 12 16 l18 2 q12 0 14 -14 l14 -130"/>
+    <path d="M404 120 q34 6 40 46 l14 150 q2 14 -12 16 l-18 2 q-12 0 -14 -14 l-14 -130"/>
+    <!-- trunk -->
+    <path d="M272 96
+             q-50 10 -76 24
+             q-14 10 -12 40
+             l6 70
+             q4 60 -2 120
+             l224 0
+             q-6 -60 -2 -120
+             l6 -70
+             q2 -30 -12 -40
+             q-26 -14 -76 -24 z"/>
     <!-- neck -->
-    <path d="M270 70 h60 v34 h-60 z"/>
-    <!-- shoulders + trunk -->
-    <path d="M210 104
-             q-46 6 -54 44
-             l-10 70
-             q24 8 40 4
-             l8 122
-             q66 18 132 0
-             l8 -122
-             q16 4 40 -4
-             l-10 -70
-             q-8 -38 -54 -44
-             q-50 14 -100 0 z"/>
+    <path d="M276 70 v30 q24 14 48 0 v-30"/>
+    <!-- head -->
+    <ellipse cx="300" cy="48" rx="34" ry="40"/>
   </g>
 
-  <!-- nipple line reference -->
-  <line x1="232" y1="206" x2="368" y2="206" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="6 6"/>
-  <circle cx="248" cy="206" r="5" fill="#9CA3AF"/>
-  <circle cx="352" cy="206" r="5" fill="#9CA3AF"/>
+  <!-- collarbones -->
+  <g stroke="#9CA3AF" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M288 112 q-36 4 -78 14"/>
+    <path d="M312 112 q36 4 78 14"/>
+  </g>
 
-  <!-- center-of-chest target (compression point) -->
-  <circle cx="300" cy="218" r="34" fill="#DC2626" fill-opacity="0.14" stroke="#DC2626" stroke-width="3"/>
-  <line x1="300" y1="190" x2="300" y2="246" stroke="#DC2626" stroke-width="3"/>
-  <line x1="272" y1="218" x2="328" y2="218" stroke="#DC2626" stroke-width="3"/>
+  <!-- sternum (breastbone) -->
+  <path d="M290 112 h20 l-2 120 l-8 16 l-8 -16 z" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="2" stroke-linejoin="round"/>
 
-  <!-- label -->
-  <line x1="334" y1="218" x2="430" y2="170" stroke="#DC2626" stroke-width="2"/>
-  <rect x="392" y="138" width="180" height="40" rx="8" fill="#DC2626"/>
-  <text x="482" y="163" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">กึ่งกลางหน้าอก</text>
+  <!-- nipples + nipple line -->
+  <line x1="236" y1="190" x2="364" y2="190" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="240" cy="190" r="5" fill="#6B7280"/>
+  <circle cx="360" cy="190" r="5" fill="#6B7280"/>
 
-  <text x="300" y="372" text-anchor="middle" font-family="sans-serif" font-size="17" fill="#374151">วางส้นมือกึ่งกลางหน้าอก แล้วประสานมืออีกข้างทับ</text>
+  <!-- compression point: lower half of sternum, between nipples -->
+  <ellipse cx="300" cy="196" rx="22" ry="26" fill="#DC2626" fill-opacity="0.18" stroke="#DC2626" stroke-width="3"/>
+  <line x1="300" y1="176" x2="300" y2="216" stroke="#DC2626" stroke-width="3"/>
+  <line x1="284" y1="196" x2="316" y2="196" stroke="#DC2626" stroke-width="3"/>
+
+  <!-- labels -->
+  <line x1="322" y1="196" x2="410" y2="196" stroke="#DC2626" stroke-width="2"/>
+  <rect x="410" y="170" width="170" height="52" rx="8" fill="#DC2626"/>
+  <text x="495" y="192" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="700" fill="#FFFFFF">กึ่งกลางหน้าอก</text>
+  <text x="495" y="212" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#FFFFFF">ครึ่งล่างกระดูกหน้าอก</text>
+
+  <line x1="236" y1="190" x2="120" y2="150" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="70" y="140" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#374151">แนวหัวนม</text>
+
+  <line x1="300" y1="240" x2="120" y2="270" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="70" y="268" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#374151">ลิ้นปี่</text>
+  <text x="70" y="286" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#6B7280">(ห้ามกด)</text>
+
+  <text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="17" fill="#374151">วางส้นมือกึ่งกลางหน้าอก ระหว่างหัวนมสองข้าง</text>
+  <text x="300" y="404" text-anchor="middle" font-family="sans-serif" font-size="17" fill="#374151">แล้วประสานมืออีกข้างทับ</text>
 </svg>
