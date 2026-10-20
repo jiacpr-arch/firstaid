@@ -5,6 +5,7 @@ import { adminFetch } from '../utils/adminFetch'
 import { lessons } from '../courses/firstaid/lessons'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { computeGaps } from '../../api/_lib/learnerDetail.js'
+import { READINESS, classifyReadiness } from '../../api/_lib/readiness.js'
 
 // รายละเอียดต่อนักเรียน (เปิดจากตารางในหน้าคลาส): เรียนออนไลน์ถึงไหน สอบผ่านหรือยัง
 // ฐานปฏิบัติครบไหม ใบเซอร์ออกหรือยัง — อ่านผ่าน api/cohorts/learner.js (requireAdmin)
@@ -113,6 +114,19 @@ export default function AdminLearnerDetail() {
     + gaps.stationsMissing.length + gaps.examStationsNotPassed.length
     + (gaps.preTestMissing ? 1 : 0) + (gaps.postTestMissing ? 1 : 0)
   const { learner, certificates } = data
+  const bestPost = data.exams.post.length ? data.exams.post.reduce((a, b) => (b.score > a.score ? b : a)) : null
+  const readiness = classifyReadiness(
+    {
+      lessonsRead: read.size,
+      quizzesPassed: quiz.size,
+      preTest: data.exams.pre.length ? { score: 0, passed: false } : null,
+      postTest: bestPost ? { score: bestPost.score, passed: data.exams.post.some((e) => e.passed) } : null,
+      scenariosPassed: passedScen.size,
+      gameBest: data.game,
+    },
+    { totalLessons: lessons.length },
+  )
+  const readinessMeta = READINESS[readiness.status]
 
   return (
     <div className="page-container">
@@ -128,7 +142,10 @@ export default function AdminLearnerDetail() {
         <button type="button" className="btn btn-ghost" onClick={load} aria-label="รีเฟรช"><RefreshCw size={16} /></button>
       </div>
 
-      <div className="card" style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="card" style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span className={readinessMeta.tone === 'success' ? 'badge badge-success' : readinessMeta.tone === 'warning' ? 'badge badge-warning' : 'badge'}>
+          ความพร้อมเข้าอบรม: {readinessMeta.label}
+        </span>
         <span className={certificates.theory ? 'badge badge-success' : 'badge'}>
           ใบเซอร์ทฤษฎี: {certificates.theory ? `ออกแล้ว (${certificates.theory.code})` : 'ยังไม่ออก'}
         </span>
