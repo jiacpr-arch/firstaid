@@ -16,12 +16,21 @@ import { flushSync } from '../db/sync'
 import { fetchLessonMedia, mediaRowToStep } from '../utils/lessonMediaSteps'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
+import LineLoginGate from '../components/LineLoginGate'
+import { useAuthSession } from '../hooks/useAuthSession'
+import { isLineLoginConfigured } from '../utils/lineAuth'
+import { isSupabaseConfigured } from '../config/supabaseClient'
+import { isAutomated } from '../lib/isAutomated'
 import { getNewBadge } from '../utils/badges'
 import { encourage } from '../utils/encouragement'
 import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 import { lessonJsonLd, breadcrumbJsonLd } from '../lib/seo'
+
+// ตั้งค่า LINE Login ครบ → ด่านล็อกอินจริง (LineLoginGate) หลังจบบทแรก และกั้นบทที่ 2 ขึ้นไป
+// ยังไม่ตั้ง → ด่าน honor-system เดิม (LinePopup "ฉันแอดแล้ว"/ข้าม) — ดู docs/LINE_LOGIN_SETUP.md
+const REAL_LOGIN_GATE = isLineLoginConfigured && isSupabaseConfigured
 
 export default function LessonReader() {
   useEnsureLearner()
@@ -38,6 +47,9 @@ export default function LessonReader() {
   const unlockedChapters = useEntitlementStore((s) => s.chapters)
   const entitlementsLoaded = useEntitlementStore((s) => s.loaded)
   useEnsureEntitlements()
+  const { session, loading: authLoading } = useAuthSession()
+  // ไม่กั้นตอน prerender (navigator.webdriver) — หน้าบทเรียนต้องมีเนื้อหาให้ SEO เก็บ
+  const needsLogin = REAL_LOGIN_GATE && !isAutomated && !authLoading && !session
 
   const lesson = lessonsById[lessonId]
   const [prevLessonId, setPrevLessonId] = useState(lessonId)
@@ -47,6 +59,7 @@ export default function LessonReader() {
   const [completed, setCompleted] = useState(false)
   const [earnedBadge, setEarnedBadge] = useState(null)
   const [extraMedia, setExtraMedia] = useState([])
+  const [gateDismissed, setGateDismissed] = useState(false)
 
   // Reset state when lessonId changes — set-during-render pattern
   if (prevLessonId !== lessonId) {
@@ -56,6 +69,7 @@ export default function LessonReader() {
     setQuizCount(0)
     setCompleted(false)
     setEarnedBadge(null)
+    setGateDismissed(false)
   }
 
   useEffect(() => {
@@ -120,6 +134,31 @@ export default function LessonReader() {
         <div className="card">ไม่พบบทเรียน</div>
         <Link to="/learn" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
           กลับไปหน้าบทเรียน
+        </Link>
+      </div>
+    )
+  }
+
+  // ด่านล็อกอินบังคับ: บทที่ 2 ขึ้นไปต้องล็อกอิน (LINE หรือบัญชี JIA) ก่อน — ครอบคลุมทุกทางเข้า
+  // (ปุ่ม "บทถัดไป", list ในหน้า Learn, URL ตรง) เพราะวิ่งผ่าน route นี้หมด; ป๊อปอัพหลังจบบท 1
+  // กด "ไว้ทีหลัง" ได้ แต่จะมาเจอด่านนี้อีกเมื่อเปิดบทถัดไป
+  if (needsLogin && lesson.order > 1) {
+    const readFirst = readLessonIds.has(lessons[0].id)
+    return (
+      <div className="page-container">
+        {seo}
+        <div style={{ marginTop: 8 }}>
+          <div className="text-caption">บทเรียนปฐมพยาบาล</div>
+          <h1 className="text-title" style={{ margin: 0 }}>{lesson.title}</h1>
+          <div className="text-body text-text-muted" style={{ marginTop: 4 }}>{lesson.summary}</div>
+        </div>
+        <LineLoginGate
+          inline
+          source="lesson_gate"
+          title={readFirst ? 'เรียนจบบทแรกแล้ว 🎉' : 'เข้าสู่ระบบเพื่อเรียนต่อ'}
+        />
+        <Link to="/learn" className="btn btn-secondary btn-block" style={{ marginTop: 12, maxWidth: 400, marginInline: 'auto' }}>
+          <ArrowLeft size={16} /> รายการบท
         </Link>
       </div>
     )
@@ -205,7 +244,9 @@ export default function LessonReader() {
     if (correct) setCorrectCount((c) => c + 1)
   }
 
-  const needLoginGate = completed && lesson.order === 1 && !learner?.lineAdded && !learner?.lineSkippedAt
+  // จบบท 1: ด่านล็อกอินจริงเมื่อตั้งค่า LINE Login แล้ว ไม่งั้นป๊อปอัพ honor-system เดิม
+  const showLoginGate = completed && lesson.order === 1 && needsLogin && !gateDismissed
+  const needLoginGate = !REAL_LOGIN_GATE && completed && lesson.order === 1 && !learner?.lineAdded && !learner?.lineSkippedAt
   const confirmLine = async () => {
     updateLearner({ lineAdded: true })
     track('line_add', { source: 'lesson1_popup' })
@@ -227,6 +268,13 @@ export default function LessonReader() {
   const skipLine = () => {
     updateLearner({ lineSkippedAt: new Date().toISOString() })
     track('line_skip', { source: 'lesson1_popup' })
+  }
+
+  // "ไว้ทีหลัง" บนด่านล็อกอิน: ปิดป๊อปอัพ + นับเป็นข้ามเหมือน LinePopup (หน้าแรกจึงเป็น Home ไม่ใช่
+  // Landing) — ไม่ได้ปลดล็อกอะไร บทที่ 2 ขึ้นไปยังกั้นด้วย session อยู่ดี
+  const postponeLogin = () => {
+    setGateDismissed(true)
+    updateLearner({ lineSkippedAt: new Date().toISOString() })
   }
 
   const advance = () => {
@@ -280,6 +328,7 @@ export default function LessonReader() {
         </div>
         {/* เรียนครบทุกบทแล้ว — ชวนมาอบรมปฏิบัติจริง */}
         {!nextLesson && <CertUpsellCard source="lesson_complete_all" />}
+        {showLoginGate && <LineLoginGate onLater={postponeLogin} />}
         {needLoginGate && <LinePopup onConfirm={confirmLine} onSkip={skipLine} />}
       </div>
     )
