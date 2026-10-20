@@ -1,12 +1,12 @@
 // ใบประเมินทักษะปฐมพยาบาลภาคปฏิบัติ
 //
-// *** DRAFT — รอครูตรวจ ***
-// ร่างจากเนื้อหาบทเรียนใน src/courses/firstaid (lessons.js, algorithms.js) ยังไม่ได้ผ่านการ
-// ตรวจโดยครูผู้สอน ใช้ตัดสินผลสอบจริงไม่ได้จนกว่าจะตรวจแล้ว: เมื่อครูยืนยันเนื้อหาแล้ว
-// ให้เปลี่ยน CHECKLISTS_REVIEWED เป็น true (ป้ายร่างในหน้าให้คะแนนจะหายไป)
+// ร่างจากเนื้อหาบทเรียนใน src/courses/firstaid (lessons.js, algorithms.js)
+// เจ้าของระบบยืนยันเนื้อหาและเกณฑ์ผ่านแล้วเมื่อ 20 ต.ค. 2026 (CHECKLISTS_REVIEWED = true)
+// ถ้าแก้ไขเนื้อหาในไฟล์นี้ภายหลัง ให้ตั้ง CHECKLISTS_REVIEWED เป็น false จนกว่าจะตรวจซ้ำ
+// (ป้ายร่างในหน้าให้คะแนนจะแสดงเมื่อเป็น false)
 // ★ (critical: true) = ข้อวิกฤต ต้องทำได้ครบทุกข้อจึงจะถือว่าผ่าน
 
-export const CHECKLISTS_REVIEWED = false
+export const CHECKLISTS_REVIEWED = true
 
 function items(list) {
   return list.map(([no, text, critical]) => ({ no, text, critical: !!critical }))
