@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, ChevronRight, CheckCircle2, Lock } from 'lucide-react'
 import { lessonsById, lessons } from '../courses/firstaid/lessons'
 import LessonStep from '../components/LessonStep'
+import YouTubeLessonPlayer from '../components/YouTubeLessonPlayer'
+import VideoQuiz from '../components/VideoQuiz'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
@@ -32,6 +34,9 @@ import { lessonJsonLd, breadcrumbJsonLd } from '../lib/seo'
 // ยังไม่ตั้ง → ด่าน honor-system เดิม (LinePopup "ฉันแอดแล้ว"/ข้าม) — ดู docs/LINE_LOGIN_SETUP.md
 const REAL_LOGIN_GATE = isLineLoginConfigured && isSupabaseConfigured
 
+// mini quiz หลังคลิป ต้องได้อย่างน้อยเท่านี้ถึงไปต่อ ไม่งั้นต้องดูคลิปซ้ำ
+const VIDEO_QUIZ_PASS = 0.7
+
 export default function LessonReader() {
   useEnsureLearner()
   const { lessonId } = useParams()
@@ -60,6 +65,10 @@ export default function LessonReader() {
   const [earnedBadge, setEarnedBadge] = useState(null)
   const [extraMedia, setExtraMedia] = useState([])
   const [gateDismissed, setGateDismissed] = useState(false)
+  const [videoWatched, setVideoWatched] = useState(false)
+  const [videoResult, setVideoResult] = useState(null)
+  const [videoAttempt, setVideoAttempt] = useState(0)
+  const [videoRetry, setVideoRetry] = useState(false)
 
   // Reset state when lessonId changes — set-during-render pattern
   if (prevLessonId !== lessonId) {
@@ -70,6 +79,10 @@ export default function LessonReader() {
     setCompleted(false)
     setEarnedBadge(null)
     setGateDismissed(false)
+    setVideoWatched(false)
+    setVideoResult(null)
+    setVideoAttempt(0)
+    setVideoRetry(false)
   }
 
   useEffect(() => {
@@ -104,9 +117,14 @@ export default function LessonReader() {
     const out = []
     const cover = mediaByStep.get(0)
     if (cover?.length) out.push({ kind: 'cover', media: cover })
+    // บทที่มีคลิป: คลิป → mini quiz ก่อนเนื้อหา (ต้องดูถึง 90% และผ่าน 70% ถึงไปต่อได้)
+    if (lesson?.video) {
+      out.push({ kind: 'video' })
+      out.push({ kind: 'videoQuiz' })
+    }
     steps.forEach((s, i) => out.push({ kind: 'step', step: s, media: mediaByStep.get(i + 1) }))
     return out
-  }, [steps, mediaByStep])
+  }, [lesson, steps, mediaByStep])
 
   // Meta ต่อบท — ต้อง render ในทุก return path (รวมหน้า lock/ปลดล็อก) เพื่อให้
   // prerender เก็บ title/description/JSON-LD ที่ถูกต้องของบทนั้นเสมอ
@@ -277,7 +295,37 @@ export default function LessonReader() {
     updateLearner({ lineSkippedAt: new Date().toISOString() })
   }
 
+  // ทดสอบ/พรีวิว: ใส่ ?skipvideo=1 เพื่อข้ามด่านคลิป
+  const skipVideoGate = new URLSearchParams(window.location.search).has('skipvideo')
+  const video = lesson.video
+  const videoSlideIdx = slides.findIndex((x) => x.kind === 'video')
+  const videoPassed = videoResult && videoResult.correct / videoResult.total >= VIDEO_QUIZ_PASS
+
+  const advanceLocked =
+    !skipVideoGate &&
+    ((slide?.kind === 'video' && !videoWatched) || (slide?.kind === 'videoQuiz' && !videoResult))
+
   const advance = () => {
+    if (slide?.kind === 'videoQuiz' && !skipVideoGate) {
+      const passed = videoPassed
+      track('video_quiz_submit', {
+        lessonId: lesson.id,
+        score: Math.round((videoResult.correct / videoResult.total) * 100),
+        passed,
+        attempt: videoAttempt + 1,
+      })
+      if (!passed) {
+        // ตก → กลับไปดูคลิปใหม่ ล็อกปุ่มต่อไปอีกรอบ
+        setVideoWatched(false)
+        setVideoResult(null)
+        setVideoAttempt((n) => n + 1)
+        setVideoRetry(true)
+        setStepIdx(videoSlideIdx)
+        return
+      }
+      setQuizCount((c) => c + videoResult.total)
+      setCorrectCount((c) => c + videoResult.correct)
+    }
     if (!isLast) setStepIdx((i) => i + 1)
     else finishLesson()
   }
@@ -372,6 +420,43 @@ export default function LessonReader() {
             <LessonStep step={mediaRowToStep(row)} />
           </div>
         ))
+      ) : slide?.kind === 'video' ? (
+        <div className="card course-lesson-step">
+          {videoRetry && (
+            <div className="callout callout-info" style={{ marginBottom: 12 }}>
+              <div className="text-body">ตอบถูกยังไม่ถึงเกณฑ์ ลองดูคลิปอีกครั้งแล้วทำคำถามใหม่นะ</div>
+            </div>
+          )}
+          <YouTubeLessonPlayer
+            videoId={video.youtube}
+            orientation={video.orientation}
+            resetKey={videoAttempt}
+            onPlay={() => track('video_play', { lessonId: lesson.id, attempt: videoAttempt + 1 })}
+            onWatched={() => {
+              setVideoWatched(true)
+              track('video_watched', { lessonId: lesson.id, attempt: videoAttempt + 1 })
+            }}
+          />
+          {!videoWatched && !skipVideoGate && (
+            <div className="text-caption" style={{ marginTop: 8, textAlign: 'center' }}>
+              ดูคลิปให้ถึง 90% เพื่อไปต่อ
+            </div>
+          )}
+        </div>
+      ) : slide?.kind === 'videoQuiz' ? (
+        <>
+          <VideoQuiz key={videoAttempt} questions={video.quiz} onComplete={setVideoResult} />
+          {videoResult && (
+            <div className={`callout ${videoPassed ? 'callout-info' : 'callout-danger'}`} style={{ marginTop: 12 }}>
+              <div className="text-body-strong">
+                ได้ {videoResult.correct} / {videoResult.total} ข้อ
+              </div>
+              <div className="text-body">
+                {videoPassed ? 'ผ่านแล้ว ไปเรียนต่อได้เลย' : 'ยังไม่ถึง 70% กดต่อไปเพื่อกลับไปดูคลิปอีกครั้ง'}
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <>
           <LessonStep step={slide.step} onQuizAnswered={onAnswered} />
@@ -384,7 +469,7 @@ export default function LessonReader() {
         </>
       )}
 
-      <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance}>
+      <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance} disabled={advanceLocked}>
         {isLast ? 'จบบทเรียน' : 'ต่อไป'} <ChevronRight size={16} />
       </button>
     </div>

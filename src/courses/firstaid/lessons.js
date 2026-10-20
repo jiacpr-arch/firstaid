@@ -23,6 +23,12 @@
 //          poster: '/lesson-images/cpr-hand-position.jpg', caption: 'วิธีทำ CPR' }
 //   ใส่วิดีโอใต้ข้อความก็ได้: { type: 'read', ..., video: { youtube: '...' } }
 //
+// คลิปประจำบท (ไม่บังคับ): ใส่ field `video` ที่ระดับบทเรียน
+//   video: { youtube: '<unlisted id>', orientation: 'portrait' | 'landscape',
+//            quiz: [{ question, choices: [{ id, text }], correctId, explanation }, ...] }  // แนะนำ 3 ข้อ
+//   ผู้เรียนต้องดูคลิปถึง 90% → ตอบ mini quiz ผ่าน 70% จึงเข้าเนื้อหาได้ (ตกต้องดูคลิปซ้ำ)
+//   บทที่ไม่มี `video` ทำงานเหมือนเดิม
+//
 // Lessons จัดกลุ่มเป็น 4 บทตามต้นฉบับ
 
 export const chapters = [
