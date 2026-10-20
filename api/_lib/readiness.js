@@ -12,7 +12,7 @@ export const READINESS = {
   not_started: { label: 'ยังไม่เริ่ม', tone: 'neutral' },
 }
 
-const isReady = (l) => l.postTest?.passed === true
+export const isReady = (l) => l.postTest?.passed === true
 
 export function classifyReadiness(l, { totalLessons }) {
   const lessonsLeft = Math.max(0, totalLessons - (l.lessonsRead || 0))
