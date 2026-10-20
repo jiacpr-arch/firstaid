@@ -6,6 +6,7 @@ import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import LearningPathCard from '../components/LearningPathCard'
 import GamePromoCard from '../components/GamePromoCard'
 import QuickMenu from '../components/QuickMenu'
+import ClassBanner from '../components/ClassBanner'
 import StreakBadge from '../components/StreakBadge'
 import DailyQuiz from '../components/DailyQuiz'
 import { useEnsureLearner } from '../hooks/useLearner'
@@ -62,6 +63,8 @@ export default function Home() {
           สำหรับประชาชนทั่วไป — เรียนทฤษฎีออนไลน์ ฝึกปฏิบัติกับครูผู้สอน
         </div>
       </header>
+
+      <ClassBanner />
 
       <figure className="course-home-art"><img src={CLASSROOM_ART} alt="ภาพประกอบห้องเรียนปฐมพยาบาล" width="1536" height="1024" /><figcaption>ค่อย ๆ เรียนรู้ แล้วฝึกให้มั่นใจ</figcaption></figure>
 

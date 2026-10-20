@@ -101,3 +101,27 @@ export async function closeClass(admin, cohortId, now = new Date()) {
   const { error: sErr } = await admin.from('practical_sessions').update({ closed_at: at }).eq('cohort_id', cohortId)
   if (sErr) throw sErr
 }
+
+// รายการคลาสทั้งหมดสำหรับแอดมิน (รวมที่ผู้สอนสร้างจากแอป ซึ่ง RLS ซ่อนจาก client) พร้อมจำนวนนักเรียน
+// และรหัสผู้สอน (แอดมินใช้กู้คืนรหัสที่ผู้สอนทำหาย) ใหม่สุดก่อน
+export function buildClassList({ cohorts = [], enrollments = [], sessions = [] }) {
+  const counts = new Map()
+  for (const e of enrollments) counts.set(e.cohort_id, (counts.get(e.cohort_id) || 0) + 1)
+  const firstSession = new Map()
+  for (const s of [...sessions].sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))) {
+    if (!firstSession.has(s.cohort_id)) firstSession.set(s.cohort_id, s.id)
+  }
+  return [...cohorts]
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      code: c.code,
+      instructorCode: c.instructor_code || null,
+      createdVia: c.created_via || 'admin',
+      createdAt: c.created_at,
+      closed: !!c.deleted_at,
+      students: counts.get(c.id) || 0,
+      sessionId: firstSession.get(c.id) || null,
+    }))
+}

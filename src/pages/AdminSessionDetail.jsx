@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { adminFetch } from '../utils/adminFetch'
 import StationManager from '../components/checkin/StationManager'
 import StationBoard from '../components/checkin/StationBoard'
+import SessionReportCard from '../components/checkin/SessionReportCard'
 
 function exportCsv(rows, filename) {
   const header = ['ชื่อ', 'เบอร์โทร', 'เวลาเช็คชื่อ', 'สถานะ']
@@ -33,7 +34,6 @@ export default function AdminSessionDetail() {
   const [attendance, setAttendance] = useState([])
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [kioskQrDataUrl, setKioskQrDataUrl] = useState(null)
-  const [report, setReport] = useState({ text: '', status: '', busy: false })
   const [instructorCode, setInstructorCode] = useState(null)
   const [board, setBoard] = useState(null)
   const [showStations, setShowStations] = useState(false)
@@ -126,24 +126,6 @@ export default function AdminSessionDetail() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [id])
-
-  const callReport = async (send) => {
-    setReport((r) => ({ ...r, busy: true, status: '' }))
-    try {
-      const resp = await adminFetch('/api/attendance/session-report', {
-        method: 'POST', body: JSON.stringify({ sessionId: id, send }),
-      })
-      const body = await resp.json().catch(() => ({}))
-      if (!resp.ok) { setReport((r) => ({ ...r, busy: false, status: body.error || 'สร้างรายงานไม่สำเร็จ' })); return }
-      setReport({
-        text: body.text,
-        busy: false,
-        status: !send ? '' : body.sent ? 'ส่งเข้า LINE แล้ว' : (body.reason || 'ส่งเข้า LINE ไม่สำเร็จ'),
-      })
-    } catch {
-      setReport((r) => ({ ...r, busy: false, status: 'เครือข่ายขัดข้อง ลองใหม่' }))
-    }
-  }
 
   const makeInstructorCode = async (action) => {
     if (action === 'rotate' && !confirm('เปลี่ยนรหัสผู้สอนใหม่? ผู้ช่วยที่ใช้รหัสเดิมอยู่จะถูกเด้งออก')) return
@@ -287,30 +269,7 @@ export default function AdminSessionDetail() {
               )}
             </div>
           )}
-          <div className="card" style={{ marginTop: 8 }}>
-            <div className="text-body-strong">รายงานสรุปรอบอบรม</div>
-            <div className="text-caption" style={{ marginTop: 2 }}>
-              ผ่านไปกี่คน เหลือกี่รายการ — ดูตัวอย่างก่อน แล้วส่งเข้า LINE ของแอดมิน (ตัวเลขรวม ไม่มีชื่อนักเรียน)
-            </div>
-            {report.text && (
-              <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 13, margin: '8px 0 0', padding: 10, borderRadius: 8, background: 'var(--color-surface-muted, #f3f4f6)' }}>
-                {report.text}
-              </pre>
-            )}
-            {report.status && (
-              <div className={report.status === 'ส่งเข้า LINE แล้ว' ? 'callout callout-info' : 'callout callout-danger'} style={{ marginTop: 8 }}>
-                {report.status}
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button type="button" className="btn btn-secondary" style={{ flex: 1 }} disabled={report.busy} onClick={() => callReport(false)}>
-                ดูตัวอย่าง
-              </button>
-              <button type="button" className="btn btn-primary" style={{ flex: 1 }} disabled={report.busy} onClick={() => callReport(true)}>
-                ส่งเข้า LINE
-              </button>
-            </div>
-          </div>
+          <SessionReportCard sessionId={id} fetcher={adminFetch} />
           <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={() => setShowStations((v) => !v)}>
             <Layers size={16} /> สถานีฝึก/สอบ {hasStations ? `(${board.stations.length} ฐาน)` : ''}
           </button>
