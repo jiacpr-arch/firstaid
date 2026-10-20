@@ -25,3 +25,11 @@ export function instructorFetch(sessionId, url, opts = {}) {
     headers: { 'Content-Type': 'application/json', 'X-Instructor-Code': code, ...opts.headers },
   })
 }
+
+// เรียก API ฝั่งผู้สอนด้วยรหัสผู้สอนของคลาสที่เปิดอยู่ (หน้า /teach) — ไม่ต้องล็อกอินแอดมิน
+export function classFetch(instructorCode, url, opts = {}) {
+  return fetch(url, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'X-Instructor-Code': instructorCode, ...opts.headers },
+  })
+}

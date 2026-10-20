@@ -50,6 +50,8 @@ const AdminSessions = lazy(() => import('./pages/AdminSessions'))
 const AdminSessionDetail = lazy(() => import('./pages/AdminSessionDetail'))
 const AdminSessionScan = lazy(() => import('./pages/AdminSessionScan'))
 const InstructorScan = lazy(() => import('./pages/InstructorScan'))
+const Teach = lazy(() => import('./pages/Teach'))
+const TeachLearner = lazy(() => import('./pages/TeachLearner'))
 const AdminCohorts = lazy(() => import('./pages/AdminCohorts'))
 const AdminCohortDetail = lazy(() => import('./pages/AdminCohortDetail'))
 const AdminLearnerDetail = lazy(() => import('./pages/AdminLearnerDetail'))
@@ -108,7 +110,7 @@ export default function App() {
     apply(theme === 'dark')
   }, [theme])
 
-  const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/scan/')
+  const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/scan/') || location.pathname.startsWith('/teach')
   // เกมเป็นหน้า full-screen มีปุ่มกลับของตัวเอง — ซ่อนแท็บบาร์/แถบโฆษณาเหมือนกันกับฝั่ง admin
   const isGame = location.pathname === '/game'
   // Onboarding: ผู้ใช้ใหม่ (ยังไม่แอด LINE และยังไม่กดข้าม) เห็นหน้า landing เชิญชวนที่ "/"
@@ -156,6 +158,12 @@ export default function App() {
         <Route path="/checkin/scan" element={<CheckInScan />} />
         <Route path="/checkin/:sessionCode" element={<CheckIn />} />
         <Route path="/my-qr" element={<MyQr />} />
+        <Route path="/teach" element={
+          <Suspense fallback={<AdminFallback />}><Teach /></Suspense>
+        } />
+        <Route path="/teach/learners/:learnerId" element={
+          <Suspense fallback={<AdminFallback />}><TeachLearner /></Suspense>
+        } />
         <Route path="/scan/:id" element={
           <Suspense fallback={<AdminFallback />}><InstructorScan /></Suspense>
         } />

@@ -21,6 +21,10 @@ export function fakeDb(seed = {}, { uniqueCols = {} } = {}) {
         rows.push(row)
         return { data: [row], error: null }
       }
+      if (st.op === 'update') {
+        for (const r of rows) if (match(r)) Object.assign(r, st.payload)
+        return { data: null, error: null }
+      }
       if (st.op === 'delete') {
         for (let i = rows.length - 1; i >= 0; i -= 1) if (match(rows[i])) rows.splice(i, 1)
         return { data: null, error: null }
@@ -34,6 +38,7 @@ export function fakeDb(seed = {}, { uniqueCols = {} } = {}) {
     const b = {
       select: () => b,
       insert: (row) => { st.op = 'insert'; st.payload = row; return b },
+      update: (patch) => { st.op = 'update'; st.payload = patch; return b },
       delete: () => { st.op = 'delete'; return b },
       eq: (c, v) => { st.filters.push([c, v]); return b },
       order: (c) => { st.order = c; return b },

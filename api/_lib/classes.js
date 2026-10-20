@@ -91,3 +91,13 @@ export async function findClassByInstructorCode(admin, rawCode) {
     },
   }
 }
+
+// ปิดคลาส: รหัสผู้สอนและ session ใช้ไม่ได้ต่อ (cohorts.deleted_at + practical_sessions.closed_at)
+// ไม่ลบข้อมูลใด ๆ — แอดมินยังเห็นคลาสนี้ได้
+export async function closeClass(admin, cohortId, now = new Date()) {
+  const at = now.toISOString()
+  const { error: cErr } = await admin.from('cohorts').update({ deleted_at: at }).eq('id', cohortId)
+  if (cErr) throw cErr
+  const { error: sErr } = await admin.from('practical_sessions').update({ closed_at: at }).eq('cohort_id', cohortId)
+  if (sErr) throw sErr
+}
