@@ -1,10 +1,10 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { requireAdmin } from '../_lib/requireAdmin.js'
-import { parseStudentQr } from '../_lib/qrPayload.js'
+import { resolveStudent, approveAttendance, loadOpenSession } from '../_lib/attendanceCheckin.js'
 
-// ครูสแกน QR ประจำตัวนักเรียน → บันทึกเข้าร่วม session และอนุมัติทันที
-// (ครูเห็นตัวนักเรียนอยู่ตรงหน้า จึงไม่ต้องรออนุมัติซ้ำเหมือนนักเรียนเช็คชื่อเอง)
+// ครูสแกน QR ประจำตัวนักเรียน (payload) หรือติ๊กชื่อมือจากรายชื่อ cohort (learnerId)
+// → บันทึกเข้าร่วม session และอนุมัติทันที
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
@@ -16,64 +16,14 @@ export default async function handler(req, res) {
   const { sessionId, payload, learnerId } = req.body || {}
   if (!sessionId || (!payload && !learnerId)) { res.status(400).json({ error: 'Missing fields' }); return }
 
-  const { data: session, error: sErr } = await admin
-    .from('practical_sessions')
-    .select('id, closed_at, cohort_id')
-    .eq('id', sessionId)
-    .single()
-  if (sErr || !session) { res.status(404).json({ error: 'Session not found' }); return }
-  if (session.closed_at) { res.status(410).json({ error: 'Session closed' }); return }
+  const s = await loadOpenSession(admin, sessionId)
+  if (s.error) { res.status(s.status).json({ error: s.error }); return }
 
-  // สแกน QR (payload) หรือติ๊กชื่อมือจากรายชื่อ cohort (learnerId — ชื่อมาจาก enrollments ฝั่งเซิร์ฟเวอร์)
-  let student = null
-  let method = 'scan'
-  if (payload) {
-    student = parseStudentQr(payload)
-    if (!student) { res.status(422).json({ error: 'ไม่ใช่ QR นักเรียนของระบบนี้' }); return }
-  } else {
-    method = 'manual'
-    if (!session.cohort_id) { res.status(422).json({ error: 'Session ไม่ได้ผูกกับ cohort' }); return }
-    const { data: enr } = await admin
-      .from('enrollments')
-      .select('learner_id, name, phone')
-      .eq('cohort_id', session.cohort_id)
-      .eq('learner_id', learnerId)
-      .maybeSingle()
-    if (!enr) { res.status(404).json({ error: 'ไม่พบนักเรียนใน cohort นี้' }); return }
-    student = { id: enr.learner_id, name: enr.name || enr.learner_id, phone: enr.phone || null }
-  }
+  const r = await resolveStudent(admin, s.session, { payload, learnerId })
+  if (r.error) { res.status(r.status).json({ error: r.error }); return }
 
-  const now = new Date().toISOString()
-  const { data: existing } = await admin
-    .from('attendance')
-    .select('id, status')
-    .eq('session_id', session.id)
-    .eq('learner_id', student.id)
-    .maybeSingle()
+  const a = await approveAttendance(admin, s.session, r.student, adminUser, r.method)
+  if (a.error) { res.status(500).json({ error: a.error }); return }
 
-  // สแกนซ้ำ: ไม่เปลี่ยนเวลา/สถานะที่อนุมัติแล้ว
-  if (existing?.status === 'approved') {
-    res.status(200).json({ ok: true, duplicate: true, attendanceId: existing.id, student })
-    return
-  }
-
-  const row = {
-    session_id: session.id,
-    learner_id: student.id,
-    learner_name: student.name,
-    learner_phone: student.phone,
-    checked_in_at: now,
-    status: 'approved',
-    approved_by: adminUser.id,
-    approved_at: now,
-    note: method,
-  }
-  const { data, error } = await admin
-    .from('attendance')
-    .upsert(row, { onConflict: 'session_id,learner_id' })
-    .select('id')
-    .single()
-  if (error) { res.status(500).json({ error: error.message }); return }
-
-  res.status(200).json({ ok: true, duplicate: false, attendanceId: data.id, student })
+  res.status(200).json({ ok: true, duplicate: a.duplicate, attendanceId: a.attendanceId, student: r.student })
 }
