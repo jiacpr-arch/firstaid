@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { requireAdmin } from '../_lib/requireAdmin.js'
+import { authorizeInstructor } from '../_lib/instructorAuth.js'
 
 // จัดการสถานีของ session: GET ?sessionId= | POST {sessionId, stations:[{name,kind}]}
 // | PATCH {id, name?, kind?} | DELETE ?id=
@@ -9,13 +10,15 @@ const MAX_STATIONS = 30
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
-  const user = await requireAdmin(req, res)
-  if (!user) return
   const admin = getSupabaseAdmin()
+  if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
+  // ดูรายการฐาน: แอดมินหรือผู้ช่วยที่ใช้รหัสผู้สอน; แก้ไขฐาน (POST/PATCH/DELETE): แอดมินเท่านั้น
   if (req.method === 'GET') {
     const sessionId = req.query?.sessionId
     if (!sessionId) { res.status(400).json({ error: 'Missing sessionId' }); return }
+    const actor = await authorizeInstructor(req, res, admin, sessionId)
+    if (!actor) return
     const { data, error } = await admin
       .from('session_stations').select('id, name, kind, sort_order')
       .eq('session_id', sessionId).order('sort_order').order('created_at')
@@ -23,6 +26,9 @@ export default async function handler(req, res) {
     res.status(200).json({ stations: data || [] })
     return
   }
+
+  const user = await requireAdmin(req, res)
+  if (!user) return
 
   if (req.method === 'POST') {
     const { sessionId, stations } = req.body || {}

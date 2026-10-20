@@ -33,6 +33,7 @@ export default function AdminSessionDetail() {
   const [attendance, setAttendance] = useState([])
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [kioskQrDataUrl, setKioskQrDataUrl] = useState(null)
+  const [instructorCode, setInstructorCode] = useState(null)
   const [board, setBoard] = useState(null)
   const [showStations, setShowStations] = useState(false)
   const [roster, setRoster] = useState([])
@@ -114,6 +115,31 @@ export default function AdminSessionDetail() {
   }, [id])
 
   const hasStations = (board?.stations?.length || 0) > 0
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let cancelled = false
+    adminFetch(`/api/attendance/instructor-code?sessionId=${id}`)
+      .then((r) => r.json())
+      .then((b) => { if (!cancelled && 'code' in b) setInstructorCode(b.code) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [id])
+
+  const makeInstructorCode = async (action) => {
+    if (action === 'rotate' && !confirm('เปลี่ยนรหัสผู้สอนใหม่? ผู้ช่วยที่ใช้รหัสเดิมอยู่จะถูกเด้งออก')) return
+    const resp = await adminFetch('/api/attendance/instructor-code', {
+      method: 'POST', body: JSON.stringify({ action, sessionId: id }),
+    })
+    const body = await resp.json().catch(() => ({}))
+    if (!resp.ok) { alert(body.error || 'สร้างรหัสไม่สำเร็จ'); return }
+    setInstructorCode(body.code)
+  }
+
+  const assistantUrl = useMemo(() => {
+    const base = import.meta.env.VITE_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+    return `${base}/scan/${id}`
+  }, [id])
 
   const undo = async (att) => {
     const { error } = await supabase.from('attendance').update({
@@ -218,6 +244,28 @@ export default function AdminSessionDetail() {
                   </div>
                 )
               })}
+            </div>
+          )}
+          {!session.closed_at && (
+            <div className="card" style={{ marginTop: 8 }}>
+              <div className="text-body-strong">รหัสผู้สอน (สำหรับผู้ช่วย)</div>
+              {instructorCode ? (
+                <>
+                  <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 4, color: 'var(--color-brand)', textAlign: 'center', marginTop: 4 }}>
+                    {instructorCode}
+                  </div>
+                  <div className="text-caption" style={{ marginTop: 4 }}>
+                    ผู้ช่วยเปิดลิงก์ <code>{assistantUrl}</code> แล้วใส่รหัสนี้ — สแกน/เช็คชื่อ/ให้คะแนนได้ แต่จัดการฐานหรือดูรอบอื่นไม่ได้ รหัสใช้ได้จนกว่าจะปิดรอบ
+                  </div>
+                  <button type="button" className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => makeInstructorCode('rotate')}>
+                    เปลี่ยนรหัสใหม่
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 6 }} onClick={() => makeInstructorCode('create')}>
+                  สร้างรหัสผู้สอน
+                </button>
+              )}
             </div>
           )}
           <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={() => setShowStations((v) => !v)}>

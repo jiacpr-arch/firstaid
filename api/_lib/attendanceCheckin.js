@@ -25,8 +25,9 @@ export async function resolveStudent(admin, session, { payload, learnerId }) {
 }
 
 // บันทึกเข้าร่วม session และอนุมัติทันที (ครูเห็นตัวนักเรียนอยู่ตรงหน้า)
+// actor = ผู้ใช้แอดมิน หรือ null เมื่อผู้ช่วยใช้รหัสผู้สอน
 // สแกนซ้ำไม่แตะแถวที่อนุมัติแล้ว — คืน { attendanceId, duplicate } หรือ { error }
-export async function approveAttendance(admin, session, student, adminUser, method) {
+export async function approveAttendance(admin, session, student, actor, method) {
   const { data: existing } = await admin
     .from('attendance')
     .select('id, status')
@@ -45,7 +46,7 @@ export async function approveAttendance(admin, session, student, adminUser, meth
       learner_phone: student.phone,
       checked_in_at: now,
       status: 'approved',
-      approved_by: adminUser.id,
+      approved_by: actor?.id ?? null,
       approved_at: now,
       note: method,
     }, { onConflict: 'session_id,learner_id' })
@@ -65,4 +66,11 @@ export async function loadOpenSession(admin, sessionId) {
   if (error || !session) return { status: 404, error: 'Session not found' }
   if (session.closed_at) return { status: 410, error: 'Session closed' }
   return { session }
+}
+
+// session นี้มีสถานีหรือไม่ — มีสถานี: ใบเซอร์ออกเมื่อสอบผ่าน; ไม่มี: ออกตอนเช็คชื่อ (flow เดิม)
+export async function sessionHasStations(admin, sessionId) {
+  const { count } = await admin
+    .from('session_stations').select('id', { count: 'exact', head: true }).eq('session_id', sessionId)
+  return (count || 0) > 0
 }
