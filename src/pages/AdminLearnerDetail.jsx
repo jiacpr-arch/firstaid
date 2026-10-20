@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, CheckCircle2, Circle, AlertTriangle } from 'lucide-react'
 import { adminFetch } from '../utils/adminFetch'
-import { classFetch } from '../utils/instructorFetch'
 import { lessons } from '../courses/firstaid/lessons'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { computeGaps } from '../../api/_lib/learnerDetail.js'
@@ -57,7 +56,7 @@ function ExamRow({ label, attempts }) {
 
 export default function AdminLearnerDetail({ teach = null }) {
   const params = useParams()
-  // teach = เปิดจากหน้าผู้สอน (/teach) ด้วยรหัสผู้สอน: { cohortId, instructorCode }
+  // teach = เปิดจากหน้าผู้สอน (/admin/teach): { cohortId } — ใช้คลาสที่เปิดอยู่และปุ่มกลับไปหน้าผู้สอน
   const id = teach?.cohortId ?? params.id
   const learnerId = params.learnerId
   const [data, setData] = useState(null)
@@ -67,10 +66,10 @@ export default function AdminLearnerDetail({ teach = null }) {
   const fetchDetail = useCallback(async () => {
     const q = `cohortId=${encodeURIComponent(id)}&learnerId=${encodeURIComponent(learnerId)}`
     const url = `/api/cohorts/learner?${q}`
-    const resp = teach ? await classFetch(teach.instructorCode, url) : await adminFetch(url)
+    const resp = await adminFetch(url)
     const body = await resp.json().catch(() => ({}))
     return { ok: resp.ok, body }
-  }, [id, learnerId, teach])
+  }, [id, learnerId])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -103,7 +102,7 @@ export default function AdminLearnerDetail({ teach = null }) {
   )
 
   const back = (
-    <Link to={teach ? '/teach' : `/admin/cohorts/${id}`} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+    <Link to={teach ? '/admin/teach' : `/admin/cohorts/${id}`} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
       <ArrowLeft size={16} /> {teach ? 'กลับหน้าผู้สอน' : 'กลับหน้าคลาส'}
     </Link>
   )

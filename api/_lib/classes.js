@@ -1,9 +1,11 @@
-import { generateCode, generateInstructorCode, normalizeCode } from './instructorAuth.js'
+import { generateCode, generateInstructorCode } from './instructorAuth.js'
 
 // คลาส (แบบ ACLS) = cohort + รอบอบรมภาคปฏิบัติ 1 รอบ สร้างพร้อมกัน ได้ 2 รหัส:
 //   รหัสคลาส (6 ตัว, cohorts.code)  — แจกนักเรียน ใช้ที่ /join/:code
-//   รหัสผู้สอน (8 ตัว)              — เก็บทั้งที่ cohorts.instructor_code และ practical_sessions.instructor_code
+//   รหัสผู้ช่วย (8 ตัว)             — เก็บทั้งที่ cohorts.instructor_code และ practical_sessions.instructor_code
+//                                     ผู้ช่วยใช้รหัสนี้สแกน/เช็คชื่อ/ให้คะแนนผ่าน /scan/:id (ไม่ต้องล็อกอิน)
 // ไม่ผูกกับบัญชีผู้ใช้ (instructor_id เป็น null) แถวพวกนี้เห็นได้เฉพาะ service role
+// สร้างได้เฉพาะแอดมิน (api/classes/create.js)
 
 const UNIQUE_VIOLATION = '23505'
 const ATTEMPTS = 5
@@ -52,43 +54,6 @@ export async function createClass(admin, { name, location = null, now = new Date
     className: cohort.name,
     classCode: cohort.code,
     instructorCode,
-  }
-}
-
-// หาคลาสจากรหัสผู้สอน — คืน { cls } หรือ { status, error }
-export async function findClassByInstructorCode(admin, rawCode) {
-  const code = normalizeCode(rawCode)
-  if (!code) return { status: 400, error: 'กรุณาใส่รหัสผู้สอน' }
-
-  const { data: cohort } = await admin
-    .from('cohorts')
-    .select('id, name, code, deleted_at')
-    .eq('instructor_code', code)
-    .maybeSingle()
-
-  if (!cohort) {
-    // ใส่รหัสนักเรียนมาแทน — บอกให้ชัด (แบบ ACLS) แทนที่จะตอบว่าผิดเฉย ๆ
-    const { data: asStudent } = await admin.from('cohorts').select('id').eq('code', code).maybeSingle()
-    if (asStudent) return { status: 403, error: 'นี่คือรหัสสำหรับนักเรียน ไม่ใช่รหัสผู้สอน' }
-    return { status: 403, error: 'รหัสผู้สอนไม่ถูกต้อง' }
-  }
-  if (cohort.deleted_at) return { status: 410, error: 'คลาสนี้ถูกปิดแล้ว' }
-
-  const { data: session } = await admin
-    .from('practical_sessions')
-    .select('id')
-    .eq('cohort_id', cohort.id)
-    .order('starts_at')
-    .limit(1)
-    .maybeSingle()
-
-  return {
-    cls: {
-      classId: cohort.id,
-      sessionId: session?.id || null,
-      className: cohort.name,
-      classCode: cohort.code,
-    },
   }
 }
 

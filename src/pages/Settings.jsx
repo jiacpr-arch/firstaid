@@ -1,5 +1,3 @@
-import { Link } from 'react-router-dom'
-import { GraduationCap } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { HouseAdList } from '../components/HouseAdBanner'
 import Seo from '../components/Seo'
@@ -35,14 +33,6 @@ export default function Settings() {
           ))}
         </div>
       </div>
-
-      <Link to="/teach" className="card card-hover" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
-        <GraduationCap size={22} />
-        <span style={{ flex: 1 }}>
-          <span className="text-body-strong">สำหรับผู้สอน</span>
-          <span className="text-caption" style={{ display: 'block' }}>สร้างคลาส ติดตามนักเรียน เช็คชื่อภาคปฏิบัติ</span>
-        </span>
-      </Link>
 
       <HouseAdList />
     </div>

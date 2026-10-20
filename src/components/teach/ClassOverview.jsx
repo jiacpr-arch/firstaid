@@ -73,7 +73,7 @@ export default function ClassOverview({ learners, classCode }) {
           const r = classifyReadiness(l, opts)
           const m = READINESS[r.status]
           return (
-            <Link key={l.learnerId} to={`/teach/learners/${l.learnerId}`} className="card" style={{ textDecoration: 'none' }}>
+            <Link key={l.learnerId} to={`/admin/teach/learners/${l.learnerId}`} className="card" style={{ textDecoration: 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <div className="text-body-strong">{l.name || '(ไม่ระบุชื่อ)'}</div>
