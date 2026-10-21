@@ -8,7 +8,7 @@ export async function fetchLessonVideo(lessonId) {
   try {
     const { data, error } = await supabase
       .from('lesson_videos')
-      .select('youtube, orientation, quiz')
+      .select('youtube, orientation, position, quiz')
       .eq('lesson_id', lessonId)
       .maybeSingle()
     if (error || !data?.youtube || !Array.isArray(data.quiz) || data.quiz.length === 0) return null
@@ -21,7 +21,7 @@ export async function fetchLessonVideo(lessonId) {
 // แถวทั้งหมด ใช้แสดงสถานะในหน้า admin → Map<lessonId, row>
 export async function fetchAllLessonVideos() {
   if (!isSupabaseConfigured) return new Map()
-  const { data } = await supabase.from('lesson_videos').select('lesson_id, youtube, orientation, quiz')
+  const { data } = await supabase.from('lesson_videos').select('lesson_id, youtube, orientation, position, quiz')
   return new Map((data || []).map((r) => [r.lesson_id, r]))
 }
 
@@ -31,6 +31,7 @@ export async function saveLessonVideo(lessonId, video) {
       lesson_id: lessonId,
       youtube: video.youtube,
       orientation: video.orientation,
+      position: video.position,
       quiz: video.quiz,
       updated_at: new Date().toISOString(),
     },

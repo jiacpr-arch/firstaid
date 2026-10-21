@@ -22,10 +22,11 @@ const blankQuestion = () => ({
 // ค่าเริ่มต้นของฟอร์มจากบทนั้น: DB → lessons.js → ว่าง
 function initialForm(lesson, dbRow) {
   const v = dbRow || lesson?.video
-  if (!v) return { youtube: '', orientation: 'portrait', quiz: [blankQuestion()] }
+  if (!v) return { youtube: '', orientation: 'portrait', position: 'start', quiz: [blankQuestion()] }
   return {
     youtube: v.youtube,
     orientation: v.orientation || 'portrait',
+    position: v.position === 'end' ? 'end' : 'start',
     quiz: v.quiz.map((q) => ({ explanation: '', ...q, choices: q.choices.map((c) => ({ ...c })) })),
   }
 }
@@ -100,6 +101,7 @@ export default function AdminLessonVideos() {
   const cleaned = () => ({
     youtube: parseYouTubeId(form.youtube),
     orientation: form.orientation,
+    position: form.position,
     quiz: form.quiz.map((q) => ({
       question: q.question.trim(),
       choices: q.choices.map((c) => ({ id: c.id, text: c.text.trim() })),
@@ -188,6 +190,19 @@ export default function AdminLessonVideos() {
                 {label}
               </button>
             ))}
+          </div>
+          <div className="text-body-strong" style={{ marginTop: 14 }}>ตำแหน่งในบท</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+            {[['start', 'ต้นบท (ดูก่อนอ่าน)'], ['end', 'ท้ายบท (อ่านก่อนแล้วดูสรุป)']].map(([v, label]) => (
+              <button key={v} type="button"
+                className={form.position === v ? 'btn btn-primary' : 'btn btn-secondary'}
+                onClick={() => setForm((f) => ({ ...f, position: v }))}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="text-caption" style={{ marginTop: 4 }}>
+            ไม่ว่าจะอยู่ตรงไหน ผู้เรียนต้องดูคลิปถึง 90% และตอบ mini quiz ผ่าน 70% ก่อนไปต่อ
           </div>
           {ytId && (
             <div style={{ marginTop: 10, maxWidth: form.orientation === 'portrait' ? 240 : undefined }}>
