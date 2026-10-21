@@ -14,7 +14,10 @@ export default async function handler(req, res) {
   const actor = await authorizeInstructor(req, res, admin, sessionId)
   if (!actor) return
 
-  const [st, att, ck] = await Promise.all([
+  const { data: session } = await admin
+    .from('practical_sessions').select('cohort_id').eq('id', sessionId).maybeSingle()
+
+  const [st, att, ck, en] = await Promise.all([
     admin.from('session_stations').select('id, name, kind, sort_order')
       .eq('session_id', sessionId).order('sort_order').order('created_at'),
     admin.from('attendance').select('learner_id, learner_name, learner_phone, status')
@@ -22,8 +25,12 @@ export default async function handler(req, res) {
     admin.from('station_checkins')
       .select('station_id, learner_id, checked_in_at, passed, score, checklist_id')
       .eq('session_id', sessionId),
+    // กลุ่มฝึก A–D อยู่ที่ enrollments ของคลาส (api/attendance/group.js)
+    session?.cohort_id
+      ? admin.from('enrollments').select('learner_id, group_label').eq('cohort_id', session.cohort_id)
+      : Promise.resolve({ data: [], error: null }),
   ])
-  const err = st.error || att.error || ck.error
+  const err = st.error || att.error || ck.error || en.error
   if (err) { res.status(500).json({ error: err.message }); return }
 
   const byLearner = new Map()
@@ -33,10 +40,12 @@ export default async function handler(req, res) {
       checkedInAt: c.checked_in_at, passed: c.passed, score: c.score, checklistId: c.checklist_id,
     }
   }
+  const groups = new Map((en.data || []).map((e) => [e.learner_id, e.group_label || null]))
   const rows = (att.data || []).map((a) => ({
     learnerId: a.learner_id,
     name: a.learner_name,
     phone: a.learner_phone,
+    groupLabel: groups.get(a.learner_id) || null,
     checkins: byLearner.get(a.learner_id) || {},
   }))
   res.status(200).json({ stations: st.data || [], rows })

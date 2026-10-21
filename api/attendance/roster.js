@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
   const { data, error } = await admin
     .from('enrollments')
-    .select('learner_id, name, phone')
+    .select('learner_id, name, phone, group_label')
     .eq('cohort_id', session.cohort_id)
     .order('name')
     .limit(500)

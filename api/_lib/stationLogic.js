@@ -23,6 +23,23 @@ export function suggestPass({ total, checkedCount, criticalDone }, rule = {}) {
   return (checkedCount / total) * 100 >= minPercent
 }
 
+// ตรวจผลฐานสอบซ้ำฝั่ง server ก่อนบันทึก (api/attendance/station-checkin.js) — ไม่เชื่อแค่ passed
+// จาก client: บันทึก "ผ่าน" ได้เมื่อติ๊กข้อ ★ ครบเท่านั้น (เกณฑ์ ≥80% ของข้ออื่นยังเป็นดุลยพินิจครู
+// ตาม suggestPass) — "ไม่ผ่าน" บันทึกได้เสมอ; score = จำนวนข้อที่ทำได้ นับจาก server
+// checklist = null เมื่อ checklistId ไม่รู้จัก → คืน error ถ้า client ส่ง id มา
+export function validateExamResult({ checklist, checklistId, checklistItems, passed }) {
+  if (checklistId && !checklist) return { ok: false, error: 'ไม่รู้จักใบประเมินนี้' }
+  if (!checklist) {
+    if (passed) return { ok: false, error: 'ต้องให้คะแนนด้วยใบประเมินก่อนบันทึกผ่าน' }
+    return { ok: true, score: null, items: null }
+  }
+  const checked = {}
+  for (const it of checklist.items) checked[it.no] = checklistItems?.[it.no] === true
+  const tally = tallyChecklist(checklist.items, checked)
+  if (passed && !tally.criticalDone) return { ok: false, error: 'ข้อ ★ ยังไม่ครบ — บันทึกว่าผ่านไม่ได้' }
+  return { ok: true, score: tally.checkedCount, items: checked }
+}
+
 // สถิติต่อฐานจากกระดาน { stations, rows:[{ checkins:{[stationId]:{passed}} }] }
 export function computeStationStats(board) {
   const stations = board?.stations || []
@@ -55,14 +72,14 @@ const esc = (v) => {
 export function buildBoardCsv(board, formatTime = (iso) => iso) {
   const stations = board?.stations || []
   const rows = board?.rows || []
-  const headers = ['ลำดับ', 'ชื่อ-สกุล', 'เบอร์โทร']
+  const headers = ['ลำดับ', 'ชื่อ-สกุล', 'เบอร์โทร', 'กลุ่ม']
   for (const st of stations) {
     headers.push(`${st.name} — เช็คชื่อ`)
     if (st.kind === 'exam') headers.push(`${st.name} — ผล`, `${st.name} — คะแนน`)
   }
   const lines = [headers.map(esc).join(',')]
   rows.forEach((r, i) => {
-    const cells = [i + 1, r.name || '', r.phone || '']
+    const cells = [i + 1, r.name || '', r.phone || '', r.groupLabel || '']
     for (const st of stations) {
       const c = r.checkins?.[st.id]
       cells.push(c ? formatTime(c.checkedInAt) : '')

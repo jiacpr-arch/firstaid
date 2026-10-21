@@ -10,6 +10,10 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
   const [mode, setMode] = useState(initialMode)
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
+  // คลาสรวม CPR + ปฐมพยาบาล: สร้างโค้ดเรียน CPR ออนไลน์ (cpr.morroo.com) + เปิดทุกบทให้คนในคลาส
+  const [includesCpr, setIncludesCpr] = useState(false)
+  const [startsOn, setStartsOn] = useState('')
+  const [seats, setSeats] = useState('24')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
@@ -36,7 +40,11 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
     setError('')
     try {
       const resp = await adminFetch('/api/classes/create', {
-        method: 'POST', body: JSON.stringify({ name: name.trim(), location: location.trim() }),
+        method: 'POST',
+        body: JSON.stringify({
+          name: name.trim(), location: location.trim(),
+          includesCpr, startsOn: includesCpr ? startsOn || null : null, seats: includesCpr ? Number(seats) || null : null,
+        }),
       })
       const data = await resp.json().catch(() => ({}))
       if (!resp.ok) {
@@ -98,6 +106,15 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
                 ผู้ช่วยใช้รหัสนี้สแกน/เช็คชื่อ/ให้คะแนนผ่านลิงก์ที่แท็บคลาส/QR (ไม่ต้องล็อกอิน) ห้ามแจกนักเรียน
               </div>
             </div>
+            {created.cprPromoCode && (
+              <div className="card" style={{ marginTop: 10, textAlign: 'center' }}>
+                <div className="text-caption">โค้ดเรียน CPR ออนไลน์ (cpr.morroo.com)</div>
+                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 2, color: '#B91C1C' }}>{created.cprPromoCode}</div>
+                <div className="text-caption" style={{ marginTop: 4 }}>
+                  นักเรียนเห็นปุ่มไปเรียน CPR พร้อมโค้ดนี้หลังเข้าคลาสด้วยรหัสคลาสอยู่แล้ว — ไม่ต้องแจกแยก
+                </div>
+              </div>
+            )}
             <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={finish}>
               เข้าหน้าผู้สอน
             </button>
@@ -108,6 +125,27 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น รุ่นที่ 7 / ต.ค. 69" maxLength={80} autoFocus />
             <label className="label" style={{ marginTop: 10 }}>สถานที่ (ไม่บังคับ)</label>
             <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="เช่น ห้องอบรม รพ.ตัวอย่าง" maxLength={120} />
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, cursor: 'pointer' }}>
+              <input type="checkbox" checked={includesCpr} onChange={(e) => setIncludesCpr(e.target.checked)} style={{ marginTop: 3 }} />
+              <span>
+                <span className="text-body-strong">คลาสรวม CPR + ปฐมพยาบาล</span>
+                <span className="text-caption" style={{ display: 'block' }}>
+                  สร้างโค้ดเรียน CPR ออนไลน์ที่ cpr.morroo.com ให้อัตโนมัติ และเปิดทุกบทปฐมพยาบาลให้คนในคลาส
+                </span>
+              </span>
+            </label>
+            {includesCpr && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label className="label">วันเรียนจริง</label>
+                  <input className="input" type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+                </div>
+                <div style={{ width: 110 }}>
+                  <label className="label">จำนวนคน</label>
+                  <input className="input" inputMode="numeric" value={seats} onChange={(e) => setSeats(e.target.value.replace(/\D/g, ''))} />
+                </div>
+              </div>
+            )}
             {error && <div className="callout callout-danger" style={{ marginTop: 10 }}>{error}</div>}
             <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} disabled={busy || name.trim().length < 2} onClick={create}>
               <Plus size={16} /> {busy ? 'กำลังสร้าง…' : 'สร้างคลาส'}

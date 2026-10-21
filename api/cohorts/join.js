@@ -32,12 +32,17 @@ export default async function handler(req, res) {
 
   const { data: cohort, error: cErr } = await admin
     .from('cohorts')
-    .select('id, name, code, deleted_at')
+    .select('id, name, code, deleted_at, includes_cpr, cpr_promo_code')
     .eq('code', code)
     .maybeSingle()
   if (cErr) { res.status(500).json({ error: cErr.message }); return }
   if (!cohort) { res.status(404).json({ error: 'Cohort not found' }); return }
   if (cohort.deleted_at) { res.status(410).json({ error: 'Cohort closed' }); return }
+  // คลาสรวม CPR จับคู่ความคืบหน้าบน cpr.morroo.com ด้วยเบอร์โทร (api/_lib/cprProgress.js)
+  if (cohort.includes_cpr && phone.replace(/\D/g, '').length < 9) {
+    res.status(400).json({ error: 'phone_required' })
+    return
+  }
 
   const { error } = await admin
     .from('enrollments')
@@ -47,5 +52,8 @@ export default async function handler(req, res) {
     )
   if (error) { res.status(500).json({ error: error.message }); return }
 
-  res.status(200).json({ ok: true, cohortId: cohort.id, cohortName: cohort.name, code: cohort.code })
+  res.status(200).json({
+    ok: true, cohortId: cohort.id, cohortName: cohort.name, code: cohort.code,
+    cprPromoCode: cohort.includes_cpr ? cohort.cpr_promo_code || null : null,
+  })
 }

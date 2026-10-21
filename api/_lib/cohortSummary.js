@@ -17,6 +17,7 @@ export function buildCohortSummary({
   gameResults = [],
   attendance = [],
   sessions = [],
+  cpr = new Map(),
 } = {}) {
   const emptyBucket = () => ({
     lessons: new Set(),
@@ -89,6 +90,9 @@ export function buildCohortSummary({
       gameBest: b.game,
       attendance: b.attendance,
       lastActivity: b.lastActivity,
+      groupLabel: e.group_label || null,
+      // CPR ออนไลน์ (cpr.morroo.com) ของคลาสรวม — จับคู่ด้วยเบอร์โทร ดู cprProgress.js
+      cpr: cpr.get(e.learner_id) || null,
     }
   })
 

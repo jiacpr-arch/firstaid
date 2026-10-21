@@ -28,7 +28,7 @@ export async function issuePracticalCertificate(admin, attendanceId) {
     .eq('kind', 'theory')
     .maybeSingle()
   if (!theory) {
-    // Defer — server hook will retry when theory cert is issued. For v1 just no-op.
+    // Defer — api/certificates/issue-theory.js retries (retryPracticalForLearner) once it is issued.
     return { status: 202, body: { ok: false, reason: 'Theory cert not yet issued — will retry' } }
   }
 
@@ -77,4 +77,43 @@ export async function issuePracticalCertificate(admin, attendanceId) {
   })
 
   return { status: 200, body: { certificate: data } }
+}
+
+// ลองออกใบเซอร์ภาคปฏิบัติอีกครั้งเมื่อเงื่อนไขที่ขาดมาถึงทีหลัง — ใช้ตอนเพิ่งได้ใบเซอร์ทฤษฎี
+// (issue-theory.js): นักเรียนที่มาเรียนจริง/สอบผ่านก่อนทำ post-test ผ่าน เดิมจะค้าง 202 ตลอดไป
+// คงกติกาเดิมของระบบสถานี (instructor-checkin.js / station-checkin.js): รอบที่มีสถานี ใบเซอร์ออกเมื่อ
+// สอบผ่านที่ฐานสอบเท่านั้น — รอบที่ไม่มีสถานี การเช็คชื่อที่อนุมัติแล้วพอ
+// คืนผลของ issuePracticalCertificate หรือ null ถ้ายังไม่มีรอบไหนที่ออกได้
+export async function retryPracticalForLearner(admin, learnerId) {
+  const { data: rows, error } = await admin
+    .from('attendance')
+    .select('id, session_id, checked_in_at')
+    .eq('learner_id', learnerId)
+    .eq('status', 'approved')
+    .order('checked_in_at', { ascending: false })
+    .limit(10)
+  if (error) throw error
+  for (const att of rows || []) {
+    if (await practicalExamSatisfied(admin, att.session_id, learnerId)) {
+      return issuePracticalCertificate(admin, att.id)
+    }
+  }
+  return null
+}
+
+async function practicalExamSatisfied(admin, sessionId, learnerId) {
+  const { data: stations, error } = await admin
+    .from('session_stations').select('id, kind').eq('session_id', sessionId)
+  if (error) throw error
+  if (!stations?.length) return true
+  const examIds = new Set(stations.filter((st) => st.kind === 'exam').map((st) => st.id))
+  if (!examIds.size) return false
+  const { data: passes, error: pErr } = await admin
+    .from('station_checkins')
+    .select('station_id')
+    .eq('session_id', sessionId)
+    .eq('learner_id', learnerId)
+    .eq('passed', true)
+  if (pErr) throw pErr
+  return (passes || []).some((p) => examIds.has(p.station_id))
 }

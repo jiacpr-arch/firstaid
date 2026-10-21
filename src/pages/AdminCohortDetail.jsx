@@ -18,10 +18,20 @@ function examCell(exam) {
   return `${exam.score}% ${exam.passed ? '✅' : '✗'}`
 }
 
+// CPR ออนไลน์ (cpr.morroo.com) ของคลาสรวม — จับคู่ด้วยเบอร์โทร (api/_lib/cprProgress.js)
+function cprCell(cpr) {
+  if (!cpr) return '—'
+  if (cpr.completed) return `จบ${cpr.finalScore != null ? ` ${cpr.finalScore}%` : ''} ✅`
+  return `${cpr.modulesDone} บท`
+}
+
+const GROUPS = ['A', 'B', 'C', 'D']
+
 function exportCsv(learners, sessions, filename) {
   const header = [
     'ชื่อ', 'เบอร์โทร', 'เข้าร่วมเมื่อ', `บทเรียน (จาก ${lessons.length})`, 'ควิซผ่าน',
     'Pre-test', 'Post-test', 'สถานการณ์ผ่าน', 'เกม (คะแนน)',
+    'กลุ่ม', 'CPR ออนไลน์',
     ...sessions.map((s) => s.title),
   ]
   const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
@@ -33,6 +43,7 @@ function exportCsv(learners, sessions, filename) {
       l.lessonsRead, l.quizzesPassed,
       q(l.preTest ? `${l.preTest.score}%` : ''), q(l.postTest ? `${l.postTest.score}%${l.postTest.passed ? ' ผ่าน' : ''}` : ''),
       l.scenariosPassed, l.gameBest ? l.gameBest.score : '',
+      q(l.groupLabel || ''), q(l.cpr ? cprCell(l.cpr) : ''),
       ...sessions.map((s) => q(l.attendance?.[s.id] || '')),
     ].join(',')),
   ]
@@ -124,6 +135,16 @@ export default function AdminCohortDetail() {
     load()
   }
 
+  // กลุ่มฝึก A–D ในวันเรียนจริง (ผู้ช่วยตั้งได้จากหน้าสแกนด้วย) — api/attendance/group.js
+  const setGroup = async (l, groupLabel) => {
+    const resp = await adminFetch('/api/attendance/group', {
+      method: 'POST',
+      body: JSON.stringify({ cohortId: id, learnerId: l.learnerId, groupLabel: groupLabel || null }),
+    }).catch(() => null)
+    if (!resp?.ok) { alert('ตั้งกลุ่มไม่สำเร็จ — ลองใหม่อีกครั้ง'); return }
+    load()
+  }
+
   return (
     <div className="page-container" style={{ maxWidth: 900 }}>
       <Link to="/admin/cohorts" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
@@ -146,6 +167,12 @@ export default function AdminCohortDetail() {
             <div className="text-caption" style={{ marginTop: 6 }}>
               ให้ผู้เรียนสแกน QR จาก<b>มือถือของตัวเอง</b> หรือเปิด <code>/join</code> แล้วกรอกรหัส
             </div>
+            {data.cohort.includesCpr && data.cohort.cprPromoCode && (
+              <div className="callout callout-info" style={{ marginTop: 10, textAlign: 'left' }}>
+                คลาสรวม CPR — หลังเข้าคลาส ผู้เรียนเห็นปุ่มไปเรียน CPR ที่ cpr.morroo.com พร้อมโค้ด{' '}
+                <b>{data.cohort.cprPromoCode}</b> (ใช้ชื่อ+เบอร์เดียวกับที่เข้าคลาสนี้ — คอลัมน์ "CPR ออนไลน์" จับคู่ด้วยเบอร์)
+              </div>
+            )}
           </div>
         </>
       )}
@@ -218,6 +245,8 @@ export default function AdminCohortDetail() {
                 <th style={{ padding: '10px 8px' }}>Post</th>
                 <th style={{ padding: '10px 8px' }}>จำลอง</th>
                 <th style={{ padding: '10px 8px' }}>เกม</th>
+                <th style={{ padding: '10px 8px' }}>กลุ่ม</th>
+                {data?.cohort?.includesCpr && <th style={{ padding: '10px 8px' }}>CPR ออนไลน์</th>}
                 {sessions.map((s) => (
                   <th key={s.id} style={{ padding: '10px 8px' }}>{s.title}</th>
                 ))}
@@ -255,6 +284,14 @@ export default function AdminCohortDetail() {
                   <td style={{ padding: '10px 8px' }}>
                     {l.gameBest ? `${l.gameBest.score}${l.gameBest.grade ? ` (${l.gameBest.grade})` : ''}` : '—'}
                   </td>
+                  <td style={{ padding: '6px 8px' }}>
+                    <select className="input" style={{ width: 64, padding: '4px 6px' }} value={l.groupLabel || ''}
+                      onChange={(e) => setGroup(l, e.target.value)} aria-label="กลุ่ม">
+                      <option value="">–</option>
+                      {GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </td>
+                  {data?.cohort?.includesCpr && <td style={{ padding: '10px 8px' }}>{cprCell(l.cpr)}</td>}
                   {sessions.map((s) => {
                     const [cls, label] = ATT_BADGE[l.attendance?.[s.id]] || [null, '—']
                     return (

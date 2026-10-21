@@ -80,3 +80,49 @@ test('buildClassList counts students, picks the first session and orders newest 
   })
   assert.deepEqual([list[1].students, list[1].createdVia, list[1].instructorCode, list[1].sessionId], [1, 'admin', null, null])
 })
+
+test('createClass with includesCpr creates a CPR pre-course code and unlocks lessons', async () => {
+  const db = fakeDb({}, { uniqueCols: uniq })
+  const c = await createClass(db, {
+    name: 'คลาสรวม', includesCpr: true, startsOn: '2026-11-05', seats: 24,
+    now: new Date('2026-10-21T01:00:00Z'),
+  })
+  const [cohort] = db.tables.cohorts
+  const [promo] = db.tables.lead_promo_codes
+  assert.equal(c.cprPromoCode, `JIA-FA-${c.classCode}`)
+  assert.equal(cohort.includes_cpr, true)
+  assert.equal(cohort.unlock_lessons, true)
+  assert.equal(cohort.starts_on, '2026-11-05')
+  assert.equal(cohort.cpr_promo_code, c.cprPromoCode)
+  assert.equal(promo.code, c.cprPromoCode)
+  assert.equal(promo.source, 'pre_course')
+  assert.equal(promo.multi_use, true)
+  assert.equal(promo.max_uses, 29)
+  assert.deepEqual(promo.unlock_modules, [1, 2, 3, 4, 5, 6, 7])
+  assert.equal(promo.company, `firstaid-class:${c.cprPromoCode}`)
+  assert.match(promo.code, /^[A-Z0-9][A-Z0-9-]{3,19}$/) // jia-online's own code format
+})
+
+test('createClass without includesCpr leaves CPR fields untouched', async () => {
+  const db = fakeDb({}, { uniqueCols: uniq })
+  const c = await createClass(db, { name: 'ปกติ' })
+  assert.equal(c.cprPromoCode, null)
+  assert.equal(db.tables.cohorts[0].includes_cpr, undefined)
+  assert.equal((db.tables.lead_promo_codes || []).length, 0)
+})
+
+test('createClass rolls back the whole class if the CPR code cannot be created', async () => {
+  const db = fakeDb({}, { uniqueCols: uniq })
+  const realFrom = db.from
+  const broken = {
+    ...db,
+    from: (t) => {
+      const b = realFrom(t)
+      if (t === 'lead_promo_codes') b.insert = () => Promise.resolve({ data: null, error: { code: '42501', message: 'boom' } })
+      return b
+    },
+  }
+  await assert.rejects(() => createClass(broken, { name: 'Fail CPR', includesCpr: true }))
+  assert.equal(db.tables.cohorts.length, 0)
+  assert.equal(db.tables.practical_sessions.length, 0)
+})

@@ -20,6 +20,7 @@ export default function AdminSessionScan() {
   const [stationId, setStationId] = useState('')
   const [grading, setGrading] = useState(null) // { station, student }
   const [saving, setSaving] = useState(false)
+  const [groupSaved, setGroupSaved] = useState('')
   const stationRef = useRef({ id: '', list: [] })
   const busyRef = useRef(false)
   const lastScanRef = useRef({ text: '', at: 0 })
@@ -57,6 +58,16 @@ export default function AdminSessionScan() {
     } finally { setSaving(false) }
   }
 
+  // จัดกลุ่มฝึก A–D ทันทีหลังสแกน (api/attendance/group.js — รหัสผู้ช่วยของรอบนี้ใช้ได้)
+  const assignGroup = async (learnerId, groupLabel) => {
+    const resp = await instructorFetch(id, '/api/attendance/group', {
+      method: 'POST', body: JSON.stringify({ sessionId: id, learnerId, groupLabel }),
+    }).catch(() => null)
+    const body = await resp?.json().catch(() => ({}))
+    if (!resp?.ok) { alert(body?.error || 'ตั้งกลุ่มไม่สำเร็จ'); return }
+    setGroupSaved(groupLabel)
+  }
+
   const handleScan = useCallback(async (text) => {
     const now = Date.now()
     if (busyRef.current) return
@@ -90,7 +101,8 @@ export default function AdminSessionScan() {
       }
       navigator.vibrate?.(80)
       const name = body.student?.name || ''
-      setLast({ ok: true, name, message: body.duplicate ? 'เช็คชื่อไปแล้ว' : 'เช็คชื่อสำเร็จ' })
+      setGroupSaved('')
+      setLast({ ok: true, name, learnerId: body.student?.id, message: body.duplicate ? 'เช็คชื่อไปแล้ว' : 'เช็คชื่อสำเร็จ' })
       if (!body.duplicate) setRecent((r) => [{ name, at: now }, ...r].slice(0, 8))
       if (station?.kind === 'exam' && body.passed == null) {
         // เปิดใบประเมิน และหยุดรับสแกนใหม่จนกว่าจะบันทึกผล
@@ -171,6 +183,17 @@ export default function AdminSessionScan() {
           <div>
             {last.name && <div className="text-body-strong">{last.name}</div>}
             <div>{last.message}</div>
+            {last.ok && last.learnerId && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+                <span className="text-caption">กลุ่ม:</span>
+                {['A', 'B', 'C', 'D'].map((g) => (
+                  <button key={g} type="button" className={`btn ${groupSaved === g ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => assignGroup(last.learnerId, g)}>
+                    {g}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
