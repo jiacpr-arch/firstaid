@@ -102,7 +102,8 @@ export default function LessonReader() {
   }, [lessonId])
 
   // ค่าใน DB ทับ lesson.video ใน lessons.js
-  const video = dbVideo ?? lesson?.video
+  // บทจะมีคลิปก็ต่อเมื่อมี YouTube ID — บทที่มีแค่ร่าง quiz (ยังไม่มีคลิป) ทำงานเหมือนเดิม
+  const video = dbVideo ?? (lesson?.video?.youtube ? lesson.video : null)
   const videoPosition = video?.position === 'end' ? 'end' : 'start'
 
   const steps = useMemo(() => lesson?.steps || [], [lesson])
