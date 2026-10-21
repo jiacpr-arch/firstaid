@@ -29,8 +29,11 @@
 //            quiz: [{ question, choices: [{ id, text }], correctId, explanation }, ...] }  // แนะนำ 3 ข้อ
 //   ผู้เรียนต้องดูคลิปถึง 90% → ตอบ mini quiz ผ่าน 70% จึงเข้าเนื้อหาได้ (ตกต้องดูคลิปซ้ำ)
 //   บทที่ไม่มี `video` ทำงานเหมือนเดิม
+//   บทที่มีเฉพาะ quiz (ไม่มี youtube) = ยังไม่เปิดใช้: ร่าง quiz อยู่ใน videoQuizzes.js
 //
 // Lessons จัดกลุ่มเป็น 4 บทตามต้นฉบับ
+
+import { videoQuizzes } from './videoQuizzes.js'
 
 export const chapters = [
   { id: 1, title: 'ความรู้พื้นฐานการปฐมพยาบาล', color: '#23736A', icon: 'BookOpen' },
@@ -39,7 +42,7 @@ export const chapters = [
   { id: 4, title: 'อุบัติเหตุรอบตัวและสารเคมี', color: '#6B5A86', icon: 'Skull' },
 ]
 
-export const lessons = [
+const baseLessons = [
   // ═══════════════ บทที่ 1 — ความรู้พื้นฐานการปฐมพยาบาล ═══════════════
   {
     id: 'duty',
@@ -726,6 +729,15 @@ export const lessons = [
     ],
   },
 ]
+
+// ผูกร่าง mini quiz ท้ายคลิป (videoQuizzes.js) เข้ากับแต่ละบทเป็น video.quiz ค่าเริ่มต้น
+// ผู้เรียนจะเห็นคลิป + quiz เมื่อบทนั้นมี video.youtube เท่านั้น (ดู LessonReader)
+// quiz ที่กำหนด video.quiz เองในบทนั้นจะใช้ก่อน
+export const lessons = baseLessons.map((l) =>
+  videoQuizzes[l.id]
+    ? { ...l, video: { ...l.video, quiz: l.video?.quiz ?? videoQuizzes[l.id] } }
+    : l,
+)
 
 // Single source of truth for the lesson count — imported by the nurture cron
 // (api/nurture/run.js) so its "lessons remaining" math can never drift from content.

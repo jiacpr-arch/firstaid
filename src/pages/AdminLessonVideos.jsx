@@ -24,7 +24,7 @@ function initialForm(lesson, dbRow) {
   const v = dbRow || lesson?.video
   if (!v) return { youtube: '', orientation: 'portrait', position: 'start', quiz: [blankQuestion()] }
   return {
-    youtube: v.youtube,
+    youtube: v.youtube || '',
     orientation: v.orientation || 'portrait',
     position: v.position === 'end' ? 'end' : 'start',
     quiz: v.quiz.map((q) => ({ explanation: '', ...q, choices: q.choices.map((c) => ({ ...c })) })),
@@ -43,6 +43,8 @@ export default function AdminLessonVideos() {
 
   const lesson = useMemo(() => lessons.find((l) => l.id === lessonId), [lessonId])
   const dbRow = rows.get(lessonId)
+  // มีร่างคำถามใน lessons.js แต่ยังไม่มีคลิป (ไม่มีแถวใน DB และไม่มี YouTube) = ยังไม่เปิดใช้
+  const isDraft = !dbRow && !!lesson?.video && !lesson.video.youtube
 
   const reload = () => fetchAllLessonVideos().then((m) => { setRows(m); return m })
 
@@ -167,18 +169,26 @@ export default function AdminLessonVideos() {
       <select className="input" value={lessonId} onChange={(e) => pickLesson(e.target.value)}>
         {lessons.map((l) => (
           <option key={l.id} value={l.id}>
-            {rows.has(l.id) || l.video ? '🎬 ' : ''}บทที่ {l.order} — {l.title}
+            {rows.has(l.id) || l.video?.youtube ? '🎬 ' : l.video?.quiz ? '📝 ' : ''}บทที่ {l.order} — {l.title}
           </option>
         ))}
       </select>
       <div className="text-caption" style={{ marginTop: 4 }}>
-        🎬 = บทที่มีคลิปแล้ว {lesson?.video && !dbRow && '· บทนี้ตั้งไว้ใน lessons.js (บันทึกที่นี่จะทับค่านั้น)'}
+        🎬 = เปิดใช้แล้ว (มีคลิป) · 📝 = มีคำถามร่างแล้ว รอใส่คลิป {lesson?.video?.youtube && !dbRow && '· บทนี้ตั้งไว้ใน lessons.js (บันทึกที่นี่จะทับค่านั้น)'}
       </div>
 
       {!loaded ? (
         <div className="text-caption" style={{ marginTop: 16 }}>กำลังโหลด…</div>
       ) : (
         <div key={formKey}>
+          {isDraft && (
+            <div className="callout callout-info" style={{ marginTop: 14 }}>
+              <div className="text-body-strong" style={{ marginBottom: 4 }}>คำถามร่างจากเนื้อหาบทเรียน</div>
+              <div className="text-body">
+                ยังไม่ได้ตรวจกับคลิป และผู้เรียนยังไม่เห็นจนกว่าจะใส่ลิงก์ YouTube ตรวจ/แก้ให้ตรงกับที่คลิปพูดก่อนกดบันทึก — การบันทึกพร้อมลิงก์คือการเปิดใช้บทนี้
+              </div>
+            </div>
+          )}
           <label className="label" style={{ marginTop: 14 }}>ลิงก์หรือรหัสวิดีโอ YouTube (ตั้งเป็น Unlisted)</label>
           <input className="input" value={form.youtube} placeholder="https://youtu.be/xxxxxxxxxxx"
             onChange={(e) => setForm((f) => ({ ...f, youtube: e.target.value }))} />
