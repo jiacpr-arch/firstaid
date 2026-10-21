@@ -60,8 +60,8 @@ export default function LessonReader() {
   const lesson = lessonsById[lessonId]
   const [prevLessonId, setPrevLessonId] = useState(lessonId)
   const [stepIdx, setStepIdx] = useState(0)
-  const [correctCount, setCorrectCount] = useState(0)
-  const [quizCount, setQuizCount] = useState(0)
+  const [correctCountState, setCorrectCount] = useState(0)
+  const [quizCountState, setQuizCount] = useState(0)
   const [completed, setCompleted] = useState(false)
   const [earnedBadge, setEarnedBadge] = useState(null)
   const [extraMedia, setExtraMedia] = useState([])
@@ -103,6 +103,7 @@ export default function LessonReader() {
 
   // ค่าใน DB ทับ lesson.video ใน lessons.js
   const video = dbVideo ?? lesson?.video
+  const videoPosition = video?.position === 'end' ? 'end' : 'start'
 
   const steps = useMemo(() => lesson?.steps || [], [lesson])
 
@@ -125,14 +126,14 @@ export default function LessonReader() {
     const out = []
     const cover = mediaByStep.get(0)
     if (cover?.length) out.push({ kind: 'cover', media: cover })
-    // บทที่มีคลิป: คลิป → mini quiz ก่อนเนื้อหา (ต้องดูถึง 90% และผ่าน 70% ถึงไปต่อได้)
-    if (video) {
-      out.push({ kind: 'video' })
-      out.push({ kind: 'videoQuiz' })
-    }
+    // บทที่มีคลิป: คลิป → mini quiz (ต้องดูถึง 90% และผ่าน 70% ถึงไปต่อได้)
+    // position 'end' = ท้ายบท (อ่านก่อนแล้วดูสรุป), นอกนั้น = ต้นบท
+    const videoSlides = video ? [{ kind: 'video' }, { kind: 'videoQuiz' }] : []
+    if (videoPosition !== 'end') out.push(...videoSlides)
     steps.forEach((s, i) => out.push({ kind: 'step', step: s, media: mediaByStep.get(i + 1) }))
+    if (videoPosition === 'end') out.push(...videoSlides)
     return out
-  }, [video, steps, mediaByStep])
+  }, [video, videoPosition, steps, mediaByStep])
 
   // Meta ต่อบท — ต้อง render ในทุก return path (รวมหน้า lock/ปลดล็อก) เพื่อให้
   // prerender เก็บ title/description/JSON-LD ที่ถูกต้องของบทนั้นเสมอ
@@ -241,8 +242,11 @@ export default function LessonReader() {
   const totalLessons = lessons.length
   const doneLessons = lessons.filter((l) => readLessonIds.has(l.id)).length
 
-  const finishLesson = async () => {
+  // extra = คะแนน mini quiz ที่เพิ่งผ่านในสไลด์สุดท้าย (state ยังไม่อัปเดตตอนเรียกฟังก์ชันนี้)
+  const finishLesson = async (extra = { correct: 0, total: 0 }) => {
     if (!learner?.id) return
+    const quizCount = quizCountState + extra.total
+    const correctCount = correctCountState + extra.correct
     const newBadge = getNewBadge({ readLessonIds, postTestDone, lessonId: lesson.id })
     await markLessonRead(learner.id, lesson.id)
     markReadStore(lesson.id)
@@ -325,6 +329,7 @@ export default function LessonReader() {
         score: Math.round((videoResult.correct / videoResult.total) * 100),
         passed,
         attempt: videoAttempt + 1,
+        position: videoPosition,
       })
       if (!passed) {
         // ตก → กลับไปดูคลิปใหม่ ล็อกปุ่มต่อไปอีกรอบ
@@ -337,6 +342,7 @@ export default function LessonReader() {
       }
       setQuizCount((c) => c + videoResult.total)
       setCorrectCount((c) => c + videoResult.correct)
+      if (isLast) { finishLesson({ correct: videoResult.correct, total: videoResult.total }); return }
     }
     if (!isLast) setStepIdx((i) => i + 1)
     else finishLesson()
@@ -350,9 +356,9 @@ export default function LessonReader() {
           <CheckCircle2 size={48} color="#347053" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 12 }}>เรียนจบบทแล้ว!</div>
           <div className="text-caption" style={{ marginTop: 4 }}>{lesson.title}</div>
-          {quizCount > 0 && (
+          {quizCountState > 0 && (
             <div className="text-body" style={{ marginTop: 12 }}>
-              ตอบคำถามถูก {correctCount} / {quizCount}
+              ตอบคำถามถูก {correctCountState} / {quizCountState}
             </div>
           )}
           <div style={{ marginTop: 16 }}>
@@ -443,10 +449,10 @@ export default function LessonReader() {
             videoId={video.youtube}
             orientation={video.orientation}
             resetKey={videoAttempt}
-            onPlay={() => track('video_play', { lessonId: lesson.id, attempt: videoAttempt + 1 })}
+            onPlay={() => track('video_play', { lessonId: lesson.id, attempt: videoAttempt + 1, position: videoPosition })}
             onWatched={() => {
               setVideoWatched(true)
-              track('video_watched', { lessonId: lesson.id, attempt: videoAttempt + 1 })
+              track('video_watched', { lessonId: lesson.id, attempt: videoAttempt + 1, position: videoPosition })
             }}
           />
           {!videoWatched && !skipVideoGate && (

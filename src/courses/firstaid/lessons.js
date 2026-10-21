@@ -25,6 +25,7 @@
 //
 // คลิปประจำบท (ไม่บังคับ): ใส่ field `video` ที่ระดับบทเรียน
 //   video: { youtube: '<unlisted id>', orientation: 'portrait' | 'landscape',
+//            position: 'start' | 'end',  // ต้นบท (ค่าเริ่มต้น) หรือท้ายบท
 //            quiz: [{ question, choices: [{ id, text }], correctId, explanation }, ...] }  // แนะนำ 3 ข้อ
 //   ผู้เรียนต้องดูคลิปถึง 90% → ตอบ mini quiz ผ่าน 70% จึงเข้าเนื้อหาได้ (ตกต้องดูคลิปซ้ำ)
 //   บทที่ไม่มี `video` ทำงานเหมือนเดิม

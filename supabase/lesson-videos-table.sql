@@ -6,6 +6,7 @@ create table if not exists public.lesson_videos (
   lesson_id   text primary key,                            -- ตรงกับ id ใน lessons.js เช่น 'duty'
   youtube     text not null,                               -- รหัสวิดีโอ YouTube (unlisted)
   orientation text not null default 'portrait' check (orientation in ('portrait', 'landscape')),
+  position    text not null default 'start' check (position in ('start', 'end')),   -- ต้นบท / ท้ายบท
   quiz        jsonb not null default '[]'::jsonb,          -- [{ question, choices:[{id,text}], correctId, explanation }]
   updated_at  timestamptz not null default now()
 );
@@ -22,3 +23,11 @@ drop policy if exists "lesson_videos auth write" on public.lesson_videos;
 create policy "lesson_videos auth write"
   on public.lesson_videos for all to authenticated
   using (true) with check (true);
+
+-- ตารางที่สร้างไปก่อนหน้านี้ (ยังไม่มีคอลัมน์ position) — รันซ้ำได้
+alter table public.lesson_videos add column if not exists position text not null default 'start';
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'lesson_videos_position_check') then
+    alter table public.lesson_videos add constraint lesson_videos_position_check check (position in ('start', 'end'));
+  end if;
+end $$;
