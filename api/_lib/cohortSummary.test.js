@@ -106,3 +106,17 @@ test('learners sorted by joinedAt ascending', () => {
   })
   assert.deepEqual(out.learners.map((l) => l.learnerId), [A, B])
 })
+
+test('group label and CPR progress pass through per learner', () => {
+  const out = buildCohortSummary({
+    enrollments: [
+      { learner_id: A, group_label: 'B', joined_at: '2026-07-01T00:00:00Z' },
+      { learner_id: B, joined_at: '2026-07-02T00:00:00Z' },
+    ],
+    cpr: new Map([[A, { redeemed: true, modulesDone: 3, finalScore: null, completed: false }]]),
+  })
+  assert.equal(out.learners[0].groupLabel, 'B')
+  assert.equal(out.learners[0].cpr.modulesDone, 3)
+  assert.equal(out.learners[1].groupLabel, null)
+  assert.equal(out.learners[1].cpr, null)
+})

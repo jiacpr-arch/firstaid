@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  missingPracticeStations, tallyChecklist, suggestPass, computeStationStats, buildBoardCsv,
+  missingPracticeStations, tallyChecklist, suggestPass, computeStationStats, buildBoardCsv, validateExamResult,
 } from './stationLogic.js'
 
 const stations = [
@@ -52,4 +52,23 @@ test('csv has BOM, escapes commas and quotes, and exam columns', () => {
   assert.ok(csv.includes('"ข, ""ทดสอบ"""'))
   assert.ok(csv.split('\n')[0].includes('สอบ — ผล'))
   assert.ok(csv.includes('ผ่าน,9'))
+})
+
+test('validateExamResult: pass needs every critical item, fail is always allowed', () => {
+  const checklist = { items: [{ no: 1, critical: true }, { no: 2, critical: true }, { no: 3 }] }
+  const ok = validateExamResult({ checklist, checklistId: 'x', checklistItems: { 1: true, 2: true }, passed: true })
+  assert.deepEqual(ok, { ok: true, score: 2, items: { 1: true, 2: true, 3: false } })
+  const missing = validateExamResult({ checklist, checklistId: 'x', checklistItems: { 1: true, 3: true }, passed: true })
+  assert.equal(missing.ok, false)
+  const failAnyway = validateExamResult({ checklist, checklistId: 'x', checklistItems: {}, passed: false })
+  assert.equal(failAnyway.ok, true)
+  assert.equal(failAnyway.score, 0)
+})
+
+test('validateExamResult: JSON string keys count, unknown or missing checklist blocks a pass', () => {
+  const checklist = { items: [{ no: 1, critical: true }] }
+  assert.equal(validateExamResult({ checklist, checklistId: 'x', checklistItems: { '1': true }, passed: true }).ok, true)
+  assert.equal(validateExamResult({ checklist: null, checklistId: 'nope', passed: false }).ok, false)
+  assert.equal(validateExamResult({ checklist: null, checklistId: null, passed: true }).ok, false)
+  assert.equal(validateExamResult({ checklist: null, checklistId: null, passed: false }).ok, true)
 })

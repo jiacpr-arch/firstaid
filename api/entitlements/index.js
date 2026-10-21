@@ -27,5 +27,20 @@ export default async function handler(req, res) {
     .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
   if (error) { res.status(500).json({ error: error.message }); return }
 
-  res.status(200).json({ chapters: (data || []).map((r) => r.chapter) })
+  const chapters = new Set((data || []).map((r) => r.chapter))
+  // อยู่ในคลาสที่ยังไม่ปิดและตั้ง unlock_lessons (คลาสรวม CPR — ค่าคลาสรวมเรียนออนไลน์แล้ว)
+  // → ทั้งคอร์ส (chapter 0) ตราบที่ยังอยู่ในคลาส; ปิดคลาสแล้วสิทธิ์นี้หมดเอง
+  if (!chapters.has(0)) {
+    const { data: classes, error: cErr } = await admin
+      .from('enrollments')
+      .select('cohorts!inner(unlock_lessons, deleted_at)')
+      .eq('learner_id', learnerId)
+      .eq('cohorts.unlock_lessons', true)
+      .is('cohorts.deleted_at', null)
+      .limit(1)
+    if (cErr) console.error('entitlements: class unlock lookup failed (non-fatal)', cErr)
+    else if (classes?.length) chapters.add(0)
+  }
+
+  res.status(200).json({ chapters: [...chapters] })
 }

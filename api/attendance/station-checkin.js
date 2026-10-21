@@ -3,7 +3,8 @@ import { applyCors } from '../_lib/cors.js'
 import { authorizeInstructor } from '../_lib/instructorAuth.js'
 import { issuePracticalCertificate } from '../_lib/issuePractical.js'
 import { resolveStudent, approveAttendance, loadOpenSession } from '../_lib/attendanceCheckin.js'
-import { missingPracticeStations } from '../_lib/stationLogic.js'
+import { missingPracticeStations, validateExamResult } from '../_lib/stationLogic.js'
+import { FIRST_AID_CHECKLISTS } from '../../src/data/checklists/firstAidChecklists.js'
 
 // POST { sessionId, stationId, payload | learnerId }            → เช็คชื่อเข้าฐาน
 // POST { action:'result', sessionId, stationId, learnerId, passed, score?, checklistId?, checklistItems?, note? }
@@ -46,16 +47,21 @@ export default async function handler(req, res) {
 
   if (action === 'result') {
     if (station.kind !== 'exam') { res.status(422).json({ error: 'บันทึกผลได้เฉพาะฐานสอบ' }); return }
-    const { passed, score, checklistId, checklistItems, note } = req.body
+    const { passed, checklistId, checklistItems, note } = req.body
     if (typeof passed !== 'boolean') { res.status(400).json({ error: 'Missing passed' }); return }
+    const id = typeof checklistId === 'string' ? checklistId.slice(0, 60) : null
+    const v = validateExamResult({
+      checklist: id ? FIRST_AID_CHECKLISTS[id] || null : null, checklistId: id, checklistItems, passed,
+    })
+    if (!v.ok) { res.status(422).json({ error: v.error }); return }
     const { data: existing } = await admin.from('station_checkins').select('id')
       .eq('station_id', stationId).eq('learner_id', student.id).maybeSingle()
     if (!existing) { res.status(409).json({ error: 'ต้องเช็คชื่อเข้าฐานสอบก่อนบันทึกผล' }); return }
     const { error } = await admin.from('station_checkins').update({
       passed,
-      score: Number.isInteger(score) ? score : null,
-      checklist_id: typeof checklistId === 'string' ? checklistId.slice(0, 60) : null,
-      checklist_items: checklistItems && typeof checklistItems === 'object' ? checklistItems : null,
+      score: v.score,
+      checklist_id: id,
+      checklist_items: v.items,
       note: typeof note === 'string' ? note.slice(0, 500) : null,
     }).eq('id', existing.id)
     if (error) { res.status(500).json({ error: error.message }); return }

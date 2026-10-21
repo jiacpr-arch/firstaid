@@ -71,7 +71,8 @@ export default function ChecklistGrader({ station, student, saving, onSave, onCl
       <input className="input" style={{ marginTop: 8 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ (ไม่บังคับ)" />
 
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button type="button" className="btn btn-primary" style={{ flex: 1 }} disabled={saving} onClick={() => save(true)}>
+        {/* เซิร์ฟเวอร์ปฏิเสธ "ผ่าน" ที่ข้อ ★ ไม่ครบอยู่แล้ว (stationLogic.validateExamResult) — ปิดปุ่มให้เห็นก่อน */}
+        <button type="button" className="btn btn-primary" style={{ flex: 1 }} disabled={saving || !tally.criticalDone} onClick={() => save(true)}>
           <Check size={16} /> ผ่าน
         </button>
         <button type="button" className="btn btn-danger" style={{ flex: 1 }} disabled={saving} onClick={() => save(false)}>

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { generateCertCode } from '../_lib/certCode.js'
+import { retryPracticalForLearner } from '../_lib/issuePractical.js'
 import { notifyCertIssued } from '../_lib/certNotify.js'
 import { scoreExam, POST_PASSING as PASSING } from '../_lib/examKey.js'
 import { authFromToken, reconcileLearner, isLearnerIdBound } from '../_lib/authLearner.js'
@@ -135,6 +136,11 @@ export default async function handler(req, res) {
     score: best.score,
     code: data.code,
     issuedAt: data.issued_at,
+  })
+
+  // ใบเซอร์ภาคปฏิบัติรอใบนี้อยู่ — ถ้ามาเรียนจริง (และสอบผ่านถ้ารอบนั้นมีฐานสอบ) แล้ว ออกให้เลย
+  await retryPracticalForLearner(admin, learnerId).catch((err) => {
+    console.error('issue-theory: practical retry failed (non-fatal)', err)
   })
 
   res.status(200).json({ certificate: data })
