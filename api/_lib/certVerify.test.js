@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseVerifyQuery, visibleCertificate, namesMatch, normalizeName } from './certVerify.js'
+import { parseVerifyQuery, visibleCertificate, namesMatch, normalizeName, publicExam } from './certVerify.js'
 import { generateCertCode } from './certCode.js'
 
 const fa = { code: 'FA-7KQ2MZ9P', kind: 'theory', learner_name: 'นางสาว สมหญิง ใจดี', issued_at: '2026-06-20', location: null }
@@ -41,4 +41,11 @@ test('name matching follows the Hub rules', () => {
   assert.equal(namesMatch('ก', 'ก'), false, 'too short to count')
   assert.equal(namesMatch('Mrs Smith', 'Smith'), true)
   assert.equal(namesMatch('Mrsmith', 'smith'), false, 'a Latin title needs a dot or a space')
+})
+
+test('publicExam shows the backing post-test and judges it against the pass mark', () => {
+  assert.equal(publicExam(undefined, 80), null)
+  assert.deepEqual(publicExam({ score: 90, correct: 18, total: 20, passed: true, finished_at: '2026-06-20T03:00:00Z', learner_id: 'x' }, 80),
+    { score: 90, correct: 18, total: 20, passPercent: 80, passed: true, at: '2026-06-20T03:00:00Z' })
+  assert.equal(publicExam({ score: 75, correct: 15, total: 20, passed: true }, 80).passed, false, 'below the pass mark never reads as passed')
 })
