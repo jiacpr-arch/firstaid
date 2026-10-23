@@ -9,7 +9,11 @@ import { authHeader } from './authHeader'
 //
 // The server re-scores the post-test from the raw answers (it never trusts a
 // client-supplied score), so we send `answers` rather than score/passed.
-export async function issueTheoryCertificate({ learner, attempt, phone, email }) {
+//
+// `hub`: the certificate itself is issued by the JIA Hub (TheoryCertCard) — this request records it
+// here and sends the passed post-test to the Hub, so it must reach the server: no local fallback, and
+// the stored record is marked hubIssued (the app shows the Hub's certificate for it, not its own).
+export async function issueTheoryCertificate({ learner, attempt, phone, email, hub = false }) {
   const learnerName = (learner?.name || '').trim()
   const localId = `theory-${learner.id}`
 
@@ -43,6 +47,7 @@ export async function issueTheoryCertificate({ learner, attempt, phone, email })
       learnerPhone: certificate.learner_phone || phone,
       learnerEmail: certificate.learner_email || email,
       synced: true,
+      ...(hub ? { hubIssued: true } : {}),
     }
     await saveCertificate(cert)
     return { cert, synced: true }
@@ -56,6 +61,8 @@ export async function issueTheoryCertificate({ learner, attempt, phone, email })
     const data = await res.json().catch(() => ({}))
     throw new Error(data.error || `Certificate rejected (${res.status})`)
   }
+
+  if (hub) throw new Error('เชื่อมต่อระบบไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่')
 
   // Local fallback: still give the learner a certificate they can keep & download.
   const cert = {

@@ -7,6 +7,10 @@ import { issueTheoryCertificate } from '../utils/certIssue'
 import CertificatePreview from './CertificatePreview'
 import LineGateCard from './LineGateCard'
 import HubCertificateCard from './HubCertificateCard'
+import AccountCard from './AccountCard'
+import { isSupabaseConfigured } from '../config/supabaseClient'
+import { useAuthSession } from '../hooks/useAuthSession'
+import { readHubCard, saveHubCardName } from '../utils/hubProfile'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
 import { track } from '../utils/analytics'
 
@@ -19,8 +23,14 @@ const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 const phoneDigits = (v) => v.replace(/\D/g, '')
 
 // Self-service theory certificate card: collects name + phone + email + PDPA consent,
-// issues the certificate once (server-backed with local fallback), then locks.
-// Shared by the post-test results screen and the /certificate page.
+// issues the certificate once, then locks. Shared by the post-test results screen and the
+// /certificate page.
+//
+// Every new certificate is issued by the JIA Hub (owner decision 23 Oct 2026): wherever Supabase is
+// configured the form waits for a login (LINE or the JIA account), puts the name on the learner's JIA
+// student card, and the request records the passed post-test at the Hub — the certificate shown is the
+// Hub's (HubCertificateCard), never a local one. Certificates issued here before stay as they were.
+// A build without Supabase keeps issuing its own (there is no Hub to send the learner to).
 export default function TheoryCertCard({ postAttempt, onIssued }) {
   const learner = useLearnerStore((s) => s.learner)
   const updateLearner = useLearnerStore((s) => s.updateLearner)
@@ -33,6 +43,22 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const { session, loading: sessionLoading } = useAuthSession()
+  const hubMode = isSupabaseConfigured
+  const [hubCard, setHubCard] = useState(null)
+
+  // The JIA student card's name is the name on the Hub certificate: prefill it, and keep it read-only
+  // once an instructor has locked it.
+  useEffect(() => {
+    if (!hubMode || !session) return undefined
+    let cancelled = false
+    readHubCard().then((card) => {
+      if (cancelled || !card) return
+      setHubCard(card)
+      if (card.name) setName(card.name)
+    })
+    return () => { cancelled = true }
+  }, [hubMode, session])
 
   useEffect(() => {
     if (!learner?.id) return
@@ -78,17 +104,19 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
       updateLearner(patch)
       const merged = { ...learner, ...patch }
       await upsertLearner(merged)
+      if (hubMode) await saveHubCardName(patch.name, patch.phone)
       const { cert: issued } = await issueTheoryCertificate({
         learner: merged,
         attempt: postAttempt,
         phone: patch.phone,
         email: patch.email,
+        hub: hubMode,
       })
       setCert(issued)
       onIssued?.(issued)
     } catch (err) {
       console.error('issue theory cert failed', err)
-      setError('ออกใบประกาศไม่สำเร็จ กรุณาลองใหม่')
+      setError(hubMode && err?.message ? err.message : 'ออกใบประกาศไม่สำเร็จ กรุณาลองใหม่')
     } finally {
       setBusy(false)
     }
@@ -133,8 +161,18 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
           <span className="badge badge-muted">ยังไม่พร้อม</span>}
       </div>
 
-      {/* Already issued — locked preview + download */}
-      {cert && (
+      {/* Issued by the Hub — shown from there */}
+      {cert?.hubIssued && (session
+        ? <HubCertificateCard requested />
+        : (
+          <>
+            <div className="text-caption" style={{ marginTop: 8 }}>เข้าสู่ระบบเพื่อดูใบประกาศของคุณจากระบบกลาง JIA</div>
+            <AccountCard showSignedOut style={{ marginTop: 10 }} />
+          </>
+        ))}
+
+      {/* Issued here before the Hub took over — locked preview + download */}
+      {cert && !cert.hubIssued && (
         <>
           <div style={{ marginTop: 14 }}>
             <CertificatePreview
@@ -168,11 +206,31 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
         <LineGateCard onConfirm={confirmLine} />
       )}
 
-      {loaded && !cert && theoryEval.eligible && lineAdded && (
+      {/* Eligible — every certificate comes from the JIA Hub, so log in first */}
+      {loaded && !cert && theoryEval.eligible && lineAdded && hubMode && !session && !sessionLoading && (
+        <div style={{ marginTop: 12 }} data-testid="cert-login-gate">
+          <div className="text-body-strong">เข้าสู่ระบบเพื่อรับใบประกาศ</div>
+          <div className="text-caption" style={{ marginTop: 4 }}>
+            ใบประกาศ JIA ทุกใบออกจากระบบกลาง (class.jiacpr.com) — มี QR Code ตรวจสอบได้ ใส่รูปได้
+            และรวมใบทุกคอร์สไว้ในบัญชีเดียว
+          </div>
+          <AccountCard showSignedOut style={{ marginTop: 10 }} />
+        </div>
+      )}
+
+      {loaded && !cert && theoryEval.eligible && lineAdded && (!hubMode || session) && (
         <div style={{ marginTop: 12 }}>
           <label className="label">ชื่อ-นามสกุล</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)}
+            readOnly={!!hubCard?.nameLocked}
             placeholder="ชื่อที่จะแสดงบนใบประกาศ" />
+          {hubMode && (
+            <div className="text-caption" style={{ marginTop: 4 }}>
+              {hubCard?.nameLocked
+                ? 'ชื่อนี้ยืนยันแล้วบนบัตรนักเรียน JIA — แก้ไขได้โดยติดต่อเจ้าหน้าที่'
+                : 'ใช้เป็นชื่อบนบัตรนักเรียน JIA และใบประกาศของคุณที่ระบบกลาง'}
+            </div>
+          )}
 
           <label className="label" style={{ marginTop: 10 }}>เบอร์โทร</label>
           <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)}
@@ -195,7 +253,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
 
           <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }}
             disabled={!canIssue} onClick={issue}>
-            {busy ? 'กำลังออกใบประกาศ…' : 'ออกใบประกาศ'}
+            {busy ? 'กำลังออกใบประกาศ…' : hubMode ? 'รับใบประกาศ (ระบบกลาง JIA)' : 'ออกใบประกาศ'}
           </button>
           {!consent && (
             <div className="text-caption" style={{ marginTop: 6, textAlign: 'center' }}>
@@ -205,8 +263,8 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
         </div>
       )}
 
-      {/* The Hub's central online certificate, alongside this one (renders nothing until there is one) */}
-      <HubCertificateCard />
+      {/* The Hub's central online certificate next to one issued here before (nothing until there is one) */}
+      {!cert?.hubIssued && <HubCertificateCard />}
     </div>
   )
 }
