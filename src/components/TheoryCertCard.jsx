@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Award } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { getCertificates, upsertLearner } from '../db/database'
@@ -35,7 +36,7 @@ async function getHubCertificate(state, onError) {
 // app's own theory certificate (practical certificate, LINE follow-up, FA- verification), then shows
 // the learner the JIA Hub's central certificate — the one they open, print and verify. This app never
 // renders its own certificate any more: a learner the Hub hasn't given one yet is sent there, and an
-// FA- certificate issued before the switch is pointed there too (LINE OA if the Hub can't re-issue it).
+// FA- certificate issued before the switch gets its new one by retaking the post-test while signed in.
 // Shared by the post-test results screen and the /certificate page.
 //
 // Every new certificate comes from the Hub (owner decision 23 Oct 2026): wherever Supabase is
@@ -194,7 +195,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
 
       {/* Issued here before the switch, no Hub certificate yet — this app no longer shows its own
           certificate: send the learner to the Hub (log in / get the new one), where the old FA- code
-          still verifies. A learner the Hub can't re-issue for is pointed to LINE OA. */}
+          still verifies. A post-test retake while signed in reaches the Hub (sync), then the claim issues it. */}
       {issued && !cert.hubIssued && !hubCert && hub !== undefined && (
         <div className="callout callout-info" data-testid="legacy-certificate" style={{ marginTop: 12 }}>
           <div className="text-caption">
@@ -203,14 +204,22 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
           </div>
           {hub?.signedIn === false ? (
             <>
-              <div className="text-caption" style={{ marginTop: 6 }}>เข้าสู่ระบบเพื่อรับใบแบบใหม่ (มี QR Code)</div>
+              <div className="text-caption" style={{ marginTop: 6 }}>
+                รับใบแบบใหม่ (มี QR Code): เข้าสู่ระบบ แล้วสอบ Post-test อีกครั้ง — ผ่านแล้วใบออกที่ระบบกลางให้
+              </div>
               <AccountCard showSignedOut style={{ marginTop: 10 }} />
             </>
           ) : (
             <>
+              <div className="text-caption" style={{ marginTop: 6 }}>
+                รับใบแบบใหม่ (มี QR Code): สอบ Post-test อีกครั้ง — ผ่านแล้วกด "รับใบประกาศแบบใหม่"
+              </div>
               {hubError && <div className="text-caption" style={{ marginTop: 6 }}>{hubError}</div>}
-              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
-                {busy ? 'กำลังออกใบประกาศ…' : 'รับใบประกาศแบบใหม่ (มี QR Code)'}
+              <Link className="btn btn-primary btn-block" style={{ marginTop: 8, textDecoration: 'none' }} to="/post-test">
+                สอบ Post-test อีกครั้ง
+              </Link>
+              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
+                {busy ? 'กำลังออกใบประกาศ…' : 'สอบผ่านแล้ว — รับใบประกาศแบบใหม่'}
               </button>
               <a className="btn btn-secondary btn-block" style={{ marginTop: 8, textDecoration: 'none' }}
                 href={HUB_URL + '/portal/certificates'} target="_blank" rel="noreferrer">
@@ -219,7 +228,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
             </>
           )}
           <div className="text-caption" style={{ marginTop: 10, textAlign: 'center' }}>
-            ยังรับใบแบบใหม่ไม่ได้? ติดต่อ{' '}
+            มีปัญหา? ติดต่อ{' '}
             <a href={lineInterestUrl(`ขอรับใบประกาศแบบใหม่ (ใบเดิม ${cert.code})`)} target="_blank" rel="noreferrer"
               style={{ textDecoration: 'underline' }}>LINE OA @jiacpr</a>
           </div>
