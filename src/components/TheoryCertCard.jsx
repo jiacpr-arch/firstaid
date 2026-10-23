@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import { Award, Download, ImageDown } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { getCertificates, upsertLearner } from '../db/database'
-import { CERT_KINDS, evaluateTheoryEligibility } from '../courses/firstaid/cert'
+import { evaluateTheoryEligibility } from '../courses/firstaid/cert'
 import { issueTheoryCertificate } from '../utils/certIssue'
+import { fetchHubState, saveCardName, claimHubCertificate } from '../utils/hubCertificate'
 import CertificatePreview from './CertificatePreview'
 import LineGateCard from './LineGateCard'
 import HubCertificateCard from './HubCertificateCard'
 import AccountCard from './AccountCard'
 import { isSupabaseConfigured } from '../config/supabaseClient'
-import { useAuthSession } from '../hooks/useAuthSession'
-import { readHubCard, saveHubCardName } from '../utils/hubProfile'
+import { HUB_URL } from '../utils/hubCertificate'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
 import { track } from '../utils/analytics'
 
@@ -22,67 +22,79 @@ function fmtDate(iso) {
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 const phoneDigits = (v) => v.replace(/\D/g, '')
 
-// Self-service theory certificate card: collects name + phone + email + PDPA consent,
-// issues the certificate once, then locks. Shared by the post-test results screen and the
-// /certificate page.
+// Asks the Hub for the certificate (it may already have issued it on its own) and returns the fresh
+// state; on refusal returns the old state and reports the Hub's reason (e.g. no name on the card yet).
+async function getHubCertificate(state, onError) {
+  if (!state?.signedIn || state.cert) return state
+  try {
+    await claimHubCertificate()
+    track('hub_cert_claimed', { source: 'theory_card' })
+    onError('')
+    return await fetchHubState()
+  } catch (err) {
+    onError(err.message)
+    return state
+  }
+}
+
+// Self-service theory certificate card: collects name + phone + email + PDPA consent, records this
+// app's own theory certificate (practical certificate, LINE follow-up, FA- verification), then shows
+// the learner the JIA Hub's central certificate — the one they open, print and verify. Only when the
+// Hub can't give one (not signed in, Hub unreachable, result not at the Hub) does the learner see
+// this app's own certificate, so nobody is left without one.
+// Shared by the post-test results screen and the /certificate page.
 //
-// Every new certificate is issued by the JIA Hub (owner decision 23 Oct 2026): wherever Supabase is
-// configured the form waits for a login (LINE or the JIA account), puts the name on the learner's JIA
-// student card, and the request records the passed post-test at the Hub — the certificate shown is the
-// Hub's (HubCertificateCard), never a local one. Certificates issued here before stay as they were.
-// A build without Supabase keeps issuing its own (there is no Hub to send the learner to).
+// Every new certificate comes from the Hub (owner decision 23 Oct 2026): wherever Supabase is
+// configured the form waits for a login, issuance has no offline fallback, and a certificate issued
+// that way (hubIssued) is never shown as this app's own — until the Hub's is there the learner sees
+// "being issued" with a retry. Certificates issued here before keep their own preview and download.
 export default function TheoryCertCard({ postAttempt, onIssued }) {
   const learner = useLearnerStore((s) => s.learner)
   const updateLearner = useLearnerStore((s) => s.updateLearner)
 
   const [cert, setCert] = useState(null)
   const [loaded, setLoaded] = useState(false)
+  const [hub, setHub] = useState(undefined) // undefined = loading, null = unreachable
+  const [hubError, setHubError] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const { session, loading: sessionLoading } = useAuthSession()
-  const hubMode = isSupabaseConfigured
-  const [hubCard, setHubCard] = useState(null)
-
-  // The JIA student card's name is the name on the Hub certificate: prefill it, and keep it read-only
-  // once an instructor has locked it.
-  useEffect(() => {
-    if (!hubMode || !session) return undefined
-    let cancelled = false
-    readHubCard().then((card) => {
-      if (cancelled || !card) return
-      setHubCard(card)
-      if (card.name) setName(card.name)
-    })
-    return () => { cancelled = true }
-  }, [hubMode, session])
 
   useEffect(() => {
     if (!learner?.id) return
     let cancelled = false
-    getCertificates(learner.id).then((list) => {
+    Promise.all([getCertificates(learner.id), fetchHubState()]).then(async ([list, hubState]) => {
       if (cancelled) return
-      setCert(list.find((c) => c.kind === 'theory') || null)
+      const own = list.find((c) => c.kind === 'theory') || null
+      setCert(own)
       setLoaded(true)
+      // Already issued here and the Hub is ready to issue its own: fetch it straight away, so a
+      // learner from before the switch sees the central certificate without pressing anything.
+      const next = own && hubState?.claimable && !hubState.cert ? await getHubCertificate(hubState, setHubError) : hubState
+      if (!cancelled) setHub(next)
     })
     return () => { cancelled = true }
   }, [learner?.id])
 
-  // Seed the form from the learner profile once it's available.
+  // Seed the form once: the Hub certificate's name, else the student card's, else this app's profile.
   const [seededFor, setSeededFor] = useState(null)
-  if (learner?.id && seededFor !== learner.id) {
+  if (learner?.id && loaded && seededFor !== learner.id) {
     setSeededFor(learner.id)
-    setName(learner.name || '')
-    setPhone(learner.phone || '')
-    setEmail(learner.email || '')
+    setName(hub?.cert?.name || hub?.profile?.nameTh || learner.name || '')
+    setPhone(learner.phone || hub?.profile?.phone || '')
+    setEmail(learner.email || hub?.profile?.email || '')
   }
+  // The name printed on the Hub certificate comes from the student card; once a certificate exists or
+  // an instructor has verified the card, that name is fixed.
+  const nameFixed = !!(hub?.cert || hub?.profile?.nameLocked)
 
-  const accent = '#546A50' // โทนใบประกาศ (cert-title) ของ JIA Learning Hub — PDF ยังใช้สีตาม CERT_KINDS
   const theoryEval = evaluateTheoryEligibility({ postTestAttempt: postAttempt })
   const lineAdded = !!learner?.lineAdded
+  const hubCert = hub?.cert || null
+  const hubMode = isSupabaseConfigured
 
   const confirmLine = async () => {
     updateLearner({ lineAdded: true })
@@ -90,7 +102,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     await upsertLearner({ ...learner, lineAdded: true })
   }
 
-  const nameOk = name.trim().length > 0
+  const nameOk = name.trim().length >= 2
   const phoneOk = phoneDigits(phone).length >= 9
   const emailOk = isEmail(email)
   const canIssue = nameOk && phoneOk && emailOk && consent && theoryEval.eligible && !busy
@@ -104,7 +116,9 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
       updateLearner(patch)
       const merged = { ...learner, ...patch }
       await upsertLearner(merged)
-      if (hubMode) await saveHubCardName(patch.name, patch.phone)
+      if (hub?.signedIn && !nameFixed) {
+        await saveCardName(hub.profile, { name: patch.name, phone: patch.phone }).catch((err) => setHubError(err.message))
+      }
       const { cert: issued } = await issueTheoryCertificate({
         learner: merged,
         attempt: postAttempt,
@@ -114,9 +128,27 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
       })
       setCert(issued)
       onIssued?.(issued)
+      setHub(await getHubCertificate(hub?.signedIn ? await fetchHubState() : hub, setHubError))
     } catch (err) {
       console.error('issue theory cert failed', err)
       setError(hubMode && err?.message ? err.message : 'ออกใบประกาศไม่สำเร็จ กรุณาลองใหม่')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Learners who got this app's certificate before the switch: fetch their Hub certificate on request.
+  // A student card with no name yet gets the name already on this app's certificate.
+  const retryHub = async () => {
+    setBusy(true)
+    try {
+      const state = await fetchHubState()
+      const certName = (cert?.learnerName || '').trim()
+      if (state?.signedIn && !state.cert && state.profile && !(state.profile.nameTh || '').trim() && certName.length >= 2) {
+        await saveCardName(state.profile, { name: certName, phone: state.profile.phone || cert.learnerPhone || '' })
+          .catch((err) => setHubError(err.message))
+      }
+      setHub(await getHubCertificate(state, setHubError))
     } finally {
       setBusy(false)
     }
@@ -147,33 +179,63 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
       })
   }
 
+  const issued = !!cert
+
   return (
     <div className="card" style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Award size={22} strokeWidth={1.6} color={accent} />
+        <Award size={22} strokeWidth={1.6} color="#1b2a5b" />
         <div style={{ flex: 1 }}>
           <div className="text-body-strong">ใบประกาศภาคทฤษฎี</div>
-          <div className="text-caption">ออกเมื่อผ่าน Post-test ≥ 80%</div>
+          <div className="text-caption">ออกเมื่อผ่าน Post-test ≥ 80% · ใบกลาง JIA ตรวจสอบได้ด้วย QR</div>
         </div>
-        {cert ? <span className="badge badge-success">ได้รับแล้ว</span> :
+        {issued || hubCert ? <span className="badge badge-success">ได้รับแล้ว</span> :
           theoryEval.eligible && !lineAdded ? <span className="badge badge-brand">อีกขั้นเดียว</span> :
           theoryEval.eligible ? <span className="badge badge-brand">พร้อมออก</span> :
           <span className="badge badge-muted">ยังไม่พร้อม</span>}
       </div>
 
-      {/* Issued by the Hub — shown from there */}
-      {cert?.hubIssued && (session
-        ? <HubCertificateCard requested />
-        : (
-          <>
-            <div className="text-caption" style={{ marginTop: 8 }}>เข้าสู่ระบบเพื่อดูใบประกาศของคุณจากระบบกลาง JIA</div>
-            <AccountCard showSignedOut style={{ marginTop: 10 }} />
-          </>
-        ))}
+      {/* Issued — the Hub's certificate when there is one */}
+      {issued && hubCert && <HubCertificateCard cert={hubCert} />}
 
-      {/* Issued here before the Hub took over — locked preview + download */}
-      {cert && !cert.hubIssued && (
+      {/* Issued for the Hub, which hasn't given its certificate yet — no local one, say why and retry */}
+      {issued && cert.hubIssued && !hubCert && hub !== undefined && (
+        <div className="callout callout-info" data-testid="hub-certificate-pending" style={{ marginTop: 12 }}>
+          {hub?.signedIn === false ? (
+            <>
+              <div className="text-caption">เข้าสู่ระบบเพื่อดูใบประกาศของคุณจากระบบกลาง JIA</div>
+              <AccountCard showSignedOut style={{ marginTop: 10 }} />
+            </>
+          ) : (
+            <>
+              <div className="text-caption">
+                {hubError || 'ใบประกาศกำลังออกที่ระบบกลาง JIA — กดขอรับอีกครั้ง หรือเปิดหน้าใบประกาศของคุณที่ class.jiacpr.com'}
+              </div>
+              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
+                {busy ? 'กำลังขอรับ…' : 'ขอรับใบกลาง JIA'}
+              </button>
+              <a className="btn btn-secondary btn-block" style={{ marginTop: 8, textDecoration: 'none' }}
+                href={HUB_URL + '/portal/certificates'} target="_blank" rel="noreferrer">
+                เปิดใบประกาศของฉันที่ class.jiacpr.com ↗
+              </a>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Issued here before the switch, no Hub certificate yet — say why, offer to retry, keep this app's own one */}
+      {issued && !cert.hubIssued && !hubCert && hub !== undefined && (
         <>
+          {hub?.signedIn && (
+            <div className="callout callout-info" style={{ marginTop: 12 }}>
+              <div className="text-caption">
+                {hubError || 'ยังไม่ได้รับใบกลาง JIA (แบบใหม่ มี QR Code)'}
+              </div>
+              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
+                {busy ? 'กำลังขอรับ…' : 'ขอรับใบกลาง JIA'}
+              </button>
+            </div>
+          )}
           <div style={{ marginTop: 14 }}>
             <CertificatePreview
               kind="theory"
@@ -197,17 +259,17 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
       )}
 
       {/* Not yet eligible */}
-      {loaded && !cert && !theoryEval.eligible && (
+      {loaded && !issued && !theoryEval.eligible && (
         <div className="text-caption" style={{ marginTop: 8 }}>{theoryEval.reason}</div>
       )}
 
       {/* Eligible & not issued — LINE gate first, then form */}
-      {loaded && !cert && theoryEval.eligible && !lineAdded && (
+      {loaded && !issued && theoryEval.eligible && !lineAdded && (
         <LineGateCard onConfirm={confirmLine} />
       )}
 
       {/* Eligible — every certificate comes from the JIA Hub, so log in first */}
-      {loaded && !cert && theoryEval.eligible && lineAdded && hubMode && !session && !sessionLoading && (
+      {loaded && !issued && theoryEval.eligible && lineAdded && hubMode && hub?.signedIn === false && (
         <div style={{ marginTop: 12 }} data-testid="cert-login-gate">
           <div className="text-body-strong">เข้าสู่ระบบเพื่อรับใบประกาศ</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
@@ -218,19 +280,16 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
         </div>
       )}
 
-      {loaded && !cert && theoryEval.eligible && lineAdded && (!hubMode || session) && (
+      {loaded && !issued && theoryEval.eligible && lineAdded && (!hubMode || (hub !== undefined && hub?.signedIn !== false)) && (
         <div style={{ marginTop: 12 }}>
-          <label className="label">ชื่อ-นามสกุล</label>
+          <label className="label">ชื่อ-นามสกุล (ภาษาไทย)</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)}
-            readOnly={!!hubCard?.nameLocked}
-            placeholder="ชื่อที่จะแสดงบนใบประกาศ" />
-          {hubMode && (
-            <div className="text-caption" style={{ marginTop: 4 }}>
-              {hubCard?.nameLocked
-                ? 'ชื่อนี้ยืนยันแล้วบนบัตรนักเรียน JIA — แก้ไขได้โดยติดต่อเจ้าหน้าที่'
-                : 'ใช้เป็นชื่อบนบัตรนักเรียน JIA และใบประกาศของคุณที่ระบบกลาง'}
-            </div>
-          )}
+            placeholder="ชื่อที่จะแสดงบนใบประกาศ" readOnly={nameFixed} />
+          <div className="text-caption" style={{ marginTop: 4 }}>
+            {nameFixed
+              ? 'ชื่อนี้มาจากบัตรนักเรียน JIA ของคุณ — หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่'
+              : 'ชื่อนี้จะพิมพ์บนใบประกาศและบันทึกในบัตรนักเรียน JIA ของคุณ'}
+          </div>
 
           <label className="label" style={{ marginTop: 10 }}>เบอร์โทร</label>
           <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)}
@@ -253,7 +312,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
 
           <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }}
             disabled={!canIssue} onClick={issue}>
-            {busy ? 'กำลังออกใบประกาศ…' : hubMode ? 'รับใบประกาศ (ระบบกลาง JIA)' : 'ออกใบประกาศ'}
+            {busy ? 'กำลังออกใบประกาศ…' : 'รับใบประกาศ'}
           </button>
           {!consent && (
             <div className="text-caption" style={{ marginTop: 6, textAlign: 'center' }}>
@@ -262,9 +321,6 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
           )}
         </div>
       )}
-
-      {/* The Hub's central online certificate next to one issued here before (nothing until there is one) */}
-      {!cert?.hubIssued && <HubCertificateCard />}
     </div>
   )
 }
