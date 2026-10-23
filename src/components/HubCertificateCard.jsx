@@ -57,14 +57,23 @@ export default function HubCertificateCard() {
     const c = state.cert
     const expires = c.expiresAt ? new Date(c.expiresAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
     return (
-      <a className="card" data-testid="hub-certificate" href={HUB_URL + c.verifyPath} target="_blank" rel="noreferrer"
-        style={{ display: 'block', marginTop: 12, textDecoration: 'none', color: 'inherit' }}>
-        <div style={{ fontWeight: 700 }}>ใบประกาศออนไลน์กลาง JIA</div>
+      <div className="card" data-testid="hub-certificate" style={{ marginTop: 12 }}>
+        <div style={{ fontWeight: 700 }}>ใบประกาศออนไลน์กลาง JIA (แบบใหม่ มี QR Code)</div>
         <div className="text-caption" style={{ marginTop: 4 }}>
           เลขที่ <span style={{ fontFamily: 'monospace' }}>{c.number}</span>{expires ? ` · หมดอายุ ${expires}` : ''}
         </div>
-        <div className="text-caption" style={{ marginTop: 4, fontWeight: 700 }}>ตรวจสอบ / เปิดใบที่ class.jiacpr.com ↗</div>
-      </a>
+        <div className="text-caption" style={{ marginTop: 4 }}>
+          สแกน QR บนใบเพื่อตรวจสอบ — เจ้าของใบที่เข้าสู่ระบบจะเห็นคะแนนสอบของตัวเองด้วย
+        </div>
+        <a className="btn btn-primary btn-block" style={{ marginTop: 10, textDecoration: 'none' }}
+          href={HUB_URL + '/portal/certificates'} target="_blank" rel="noreferrer">
+          เปิด / พิมพ์ใบประกาศแบบใหม่ ↗
+        </a>
+        <div className="text-caption" style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', gap: 8, fontWeight: 700 }}>
+          <a href={HUB_URL + c.verifyPath} target="_blank" rel="noreferrer">ตรวจสอบใบ ↗</a>
+          <a href={HUB_URL + '/account'} target="_blank" rel="noreferrer">ใส่รูปบนใบประกาศ ↗</a>
+        </div>
+      </div>
     )
   }
 
