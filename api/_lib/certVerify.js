@@ -47,3 +47,18 @@ export function visibleCertificate(row, { needsName, name }) {
   if (needsName && !namesMatch(name, row.learner_name)) return null
   return row
 }
+
+// The post-test a theory certificate rests on, as printed on the public check: the learner's best
+// server-scored post-test attempt (the same one issue-theory.js issues on), judged by the pass mark.
+// null when there is no attempt. Never carries the learner id or answers.
+export function publicExam(attempt, passPercent) {
+  if (!attempt) return null
+  return {
+    score: attempt.score,
+    correct: attempt.correct ?? null,
+    total: attempt.total ?? null,
+    passPercent,
+    passed: attempt.passed === true && attempt.score >= passPercent,
+    at: attempt.finished_at ?? null,
+  }
+}
