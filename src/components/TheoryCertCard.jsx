@@ -1,23 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Award, Download, ImageDown } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Award } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { getCertificates, upsertLearner } from '../db/database'
 import { evaluateTheoryEligibility } from '../courses/firstaid/cert'
 import { issueTheoryCertificate } from '../utils/certIssue'
 import { fetchHubState, saveCardName, claimHubCertificate } from '../utils/hubCertificate'
-import CertificatePreview from './CertificatePreview'
 import LineGateCard from './LineGateCard'
 import HubCertificateCard from './HubCertificateCard'
 import AccountCard from './AccountCard'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import { HUB_URL } from '../utils/hubCertificate'
-// jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
+import { lineInterestUrl } from '../utils/lineLinks'
 import { track } from '../utils/analytics'
-
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
-}
 
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 const phoneDigits = (v) => v.replace(/\D/g, '')
@@ -39,15 +34,15 @@ async function getHubCertificate(state, onError) {
 
 // Self-service theory certificate card: collects name + phone + email + PDPA consent, records this
 // app's own theory certificate (practical certificate, LINE follow-up, FA- verification), then shows
-// the learner the JIA Hub's central certificate — the one they open, print and verify. Only when the
-// Hub can't give one (not signed in, Hub unreachable, result not at the Hub) does the learner see
-// this app's own certificate, so nobody is left without one.
+// the learner the JIA Hub's central certificate — the one they open, print and verify. This app never
+// renders its own certificate any more: a learner the Hub hasn't given one yet is sent there, and an
+// FA- certificate issued before the switch gets its new one by retaking the post-test while signed in.
 // Shared by the post-test results screen and the /certificate page.
 //
 // Every new certificate comes from the Hub (owner decision 23 Oct 2026): wherever Supabase is
 // configured the form waits for a login, issuance has no offline fallback, and a certificate issued
 // that way (hubIssued) is never shown as this app's own — until the Hub's is there the learner sees
-// "being issued" with a retry. Certificates issued here before keep their own preview and download.
+// "being issued" with a retry.
 export default function TheoryCertCard({ postAttempt, onIssued }) {
   const learner = useLearnerStore((s) => s.learner)
   const updateLearner = useLearnerStore((s) => s.updateLearner)
@@ -154,31 +149,6 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     }
   }
 
-  const certArgs = () => ({
-    kind: 'theory',
-    learnerName: cert.learnerName || learner?.name || '',
-    dateStr: fmtDate(cert.issuedAt),
-    code: cert.code,
-  })
-
-  const downloadPdf = () => {
-    import('../utils/certPdf')
-      .then(({ downloadCertPdf }) => downloadCertPdf(certArgs()))
-      .catch((err) => {
-        console.error('download cert pdf failed', err)
-        setError('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
-      })
-  }
-
-  const downloadPng = () => {
-    import('../utils/certImage')
-      .then(({ downloadCertPng }) => downloadCertPng(certArgs()))
-      .catch((err) => {
-        console.error('download cert png failed', err)
-        setError('บันทึกรูปไม่สำเร็จ กรุณาลองใหม่')
-      })
-  }
-
   const issued = !!cert
 
   return (
@@ -223,39 +193,46 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
         </div>
       )}
 
-      {/* Issued here before the switch, no Hub certificate yet — say why, offer to retry, keep this app's own one */}
+      {/* Issued here before the switch, no Hub certificate yet — this app no longer shows its own
+          certificate: send the learner to the Hub (log in / get the new one), where the old FA- code
+          still verifies. A post-test retake while signed in reaches the Hub (sync), then the claim issues it. */}
       {issued && !cert.hubIssued && !hubCert && hub !== undefined && (
-        <>
-          {hub?.signedIn && (
-            <div className="callout callout-info" style={{ marginTop: 12 }}>
-              <div className="text-caption">
-                {hubError || 'มีใบประกาศแบบใหม่ที่มี QR Code ตรวจสอบได้ — กดปุ่มด้านล่างเพื่อรับ'}
+        <div className="callout callout-info" data-testid="legacy-certificate" style={{ marginTop: 12 }}>
+          <div className="text-caption">
+            ใบประกาศดู / พิมพ์ได้ที่ระบบกลาง JIA (class.jiacpr.com) — ใบเดิมของคุณ (เลขที่ {cert.code}) ยังใช้ได้
+            และตรวจสอบได้ที่ระบบกลางด้วยเลขที่ + ชื่อ
+          </div>
+          {hub?.signedIn === false ? (
+            <>
+              <div className="text-caption" style={{ marginTop: 6 }}>
+                รับใบแบบใหม่ (มี QR Code): เข้าสู่ระบบ แล้วสอบ Post-test อีกครั้ง — ผ่านแล้วใบออกที่ระบบกลางให้
               </div>
-              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
-                {busy ? 'กำลังออกใบประกาศ…' : 'รับใบประกาศแบบใหม่ (มี QR Code)'}
+              <AccountCard showSignedOut style={{ marginTop: 10 }} />
+            </>
+          ) : (
+            <>
+              <div className="text-caption" style={{ marginTop: 6 }}>
+                รับใบแบบใหม่ (มี QR Code): สอบ Post-test อีกครั้ง — ผ่านแล้วกด "รับใบประกาศแบบใหม่"
+              </div>
+              {hubError && <div className="text-caption" style={{ marginTop: 6 }}>{hubError}</div>}
+              <Link className="btn btn-primary btn-block" style={{ marginTop: 8, textDecoration: 'none' }} to="/post-test">
+                สอบ Post-test อีกครั้ง
+              </Link>
+              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
+                {busy ? 'กำลังออกใบประกาศ…' : 'สอบผ่านแล้ว — รับใบประกาศแบบใหม่'}
               </button>
-            </div>
+              <a className="btn btn-secondary btn-block" style={{ marginTop: 8, textDecoration: 'none' }}
+                href={HUB_URL + '/portal/certificates'} target="_blank" rel="noreferrer">
+                เปิดใบประกาศของฉันที่ class.jiacpr.com ↗
+              </a>
+            </>
           )}
-          <div style={{ marginTop: 14 }}>
-            <CertificatePreview
-              kind="theory"
-              learnerName={cert.learnerName || learner?.name || ''}
-              dateStr={fmtDate(cert.issuedAt)}
-              code={cert.code}
-            />
+          <div className="text-caption" style={{ marginTop: 10, textAlign: 'center' }}>
+            มีปัญหา? ติดต่อ{' '}
+            <a href={lineInterestUrl(`ขอรับใบประกาศแบบใหม่ (ใบเดิม ${cert.code})`)} target="_blank" rel="noreferrer"
+              style={{ textDecoration: 'underline' }}>LINE OA @jiacpr</a>
           </div>
-          <div className="text-caption" style={{ marginTop: 8 }}>
-            ออกใบประกาศแล้ว — ข้อมูลถูกล็อก หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่
-          </div>
-          <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 10 }}
-            onClick={downloadPng}>
-            <ImageDown size={16} /> บันทึกเป็นรูปภาพ (PNG)
-          </button>
-          <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }}
-            onClick={downloadPdf}>
-            <Download size={16} /> ดาวน์โหลด PDF
-          </button>
-        </>
+        </div>
       )}
 
       {/* Not yet eligible */}

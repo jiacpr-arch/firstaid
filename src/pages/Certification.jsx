@@ -80,8 +80,8 @@ export default function Certification() {
   return (
     <div className="page-container">
       <Seo
-        title="ใบประกาศปฐมพยาบาล — สอบออนไลน์ฟรี ดาวน์โหลดได้ทันที | Jia Training Center"
-        description="เรียนจบ สอบผ่าน รับใบประกาศภาคทฤษฎีปฐมพยาบาลเบื้องต้นฟรี ดาวน์โหลดเป็น PDF/รูปได้ทันที โดย Jia Training Center"
+        title="ใบประกาศปฐมพยาบาล — สอบออนไลน์ฟรี รับใบได้ทันที | Jia Training Center"
+        description="เรียนจบ สอบผ่าน รับใบประกาศภาคทฤษฎีปฐมพยาบาลเบื้องต้นฟรี มี QR Code ตรวจสอบได้ พิมพ์/บันทึก PDF ได้ทันที โดย Jia Training Center"
         path="/certificate"
       />
       <div style={{ marginTop: 8 }}>
