@@ -1,92 +1,45 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../config/supabaseClient'
+import { Printer, ShieldCheck, Camera } from 'lucide-react'
+import { HUB_URL } from '../utils/hubCertificate'
 
-// The JIA Hub's central online certificate (class.jiacpr.com, learning_hub.person_certificates):
-// issued once the post-test this app sends to the Hub (api/_lib/hubResults.js) is accepted there.
-// It is shown alongside this app's own theory certificate, which stays exactly as it was (owner
-// decision). firstaid shares the Hub's Supabase project, so this is a plain RPC with the learner's
-// own session; with no session, or nothing at the Hub yet, it renders nothing.
-const HUB_URL = 'https://class.jiacpr.com'
-const HUB_COURSE_ID = 'firstaid'
-
-// null when there's nothing to show (no Supabase, no session, the Hub not ready): never throws.
-async function fetchHubCertificate() {
-  try {
-    if (!supabase) return null
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return null
-    const { data, error } = await supabase.rpc('jia_person_certificates', { action: 'mine', payload: {} })
-    if (error || !data) return null
-    return {
-      cert: (data.certificates || []).find((c) => c.courseId === HUB_COURSE_ID && c.status === 'issued') || null,
-      claimable: (data.claimable || []).some((c) => c.courseId === HUB_COURSE_ID),
-    }
-  } catch {
-    return null
-  }
+function fmtDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export default function HubCertificateCard() {
-  const [state, setState] = useState(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    let cancelled = false
-    fetchHubCertificate().then((next) => { if (!cancelled) setState(next) })
-    return () => { cancelled = true }
-  }, [])
-
-  async function claim() {
-    setBusy(true)
-    setError('')
-    try {
-      const { error: rpcError } = await supabase.rpc('jia_person_certificates', { action: 'claim', payload: { courseId: HUB_COURSE_ID } })
-      if (rpcError) setError(rpcError.message || 'ขอรับใบประกาศไม่สำเร็จ')
-      setState(await fetchHubCertificate())
-    } catch {
-      setError('ขอรับใบประกาศไม่สำเร็จ ลองใหม่อีกครั้ง')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  if (!state || (!state.cert && !state.claimable)) return null
-
-  if (state.cert) {
-    const c = state.cert
-    const expires = c.expiresAt ? new Date(c.expiresAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
-    return (
-      <div className="card" data-testid="hub-certificate" style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: 700 }}>ใบประกาศออนไลน์กลาง JIA (แบบใหม่ มี QR Code)</div>
-        <div className="text-caption" style={{ marginTop: 4 }}>
-          เลขที่ <span style={{ fontFamily: 'monospace' }}>{c.number}</span>{expires ? ` · หมดอายุ ${expires}` : ''}
-        </div>
-        <div className="text-caption" style={{ marginTop: 4 }}>
-          สแกน QR บนใบเพื่อตรวจสอบ — เจ้าของใบที่เข้าสู่ระบบจะเห็นคะแนนสอบของตัวเองด้วย
-        </div>
-        <a className="btn btn-primary btn-block" style={{ marginTop: 10, textDecoration: 'none' }}
-          href={HUB_URL + '/portal/certificates'} target="_blank" rel="noreferrer">
-          เปิด / พิมพ์ใบประกาศแบบใหม่ ↗
-        </a>
-        <div className="text-caption" style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', gap: 8, fontWeight: 700 }}>
-          <a href={HUB_URL + c.verifyPath} target="_blank" rel="noreferrer">ตรวจสอบใบ ↗</a>
-          <a href={HUB_URL + '/account'} target="_blank" rel="noreferrer">ใส่รูปบนใบประกาศ ↗</a>
-        </div>
-      </div>
-    )
-  }
-
+// The learner's certificate as the JIA Hub issued it (class.jiacpr.com): the same certificate every
+// JIA course prints, with a QR code to verify it. Opening and printing happen on the Hub, where the
+// learner picks portrait or landscape and whether to show their photo.
+export default function HubCertificateCard({ cert }) {
   return (
-    <div className="card" data-testid="hub-certificate-claim" style={{ marginTop: 12 }}>
-      <div style={{ fontWeight: 700 }}>รับใบประกาศออนไลน์กลางของ JIA</div>
-      <div className="text-caption" style={{ marginTop: 4 }}>
-        ผลสอบหลังเรียนผ่านและระบบกลางรับรองแล้ว — ใบนี้ตรวจสอบได้ด้วย QR ชื่อบนใบมาจากบัตรนักเรียน JIA ของคุณ
+    <div data-testid="hub-certificate" style={{
+      marginTop: 14, borderRadius: 14, overflow: 'hidden', border: '1px solid #d6bd72',
+      background: 'linear-gradient(165deg,#24377a 0%,#1b2a5b 55%,#121d42 100%)', color: '#fff',
+    }}>
+      <div style={{ padding: '18px 18px 16px', textAlign: 'center' }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: '#e6cc7a', fontWeight: 700 }}>CERTIFICATE OF COMPLETION</div>
+        <div style={{ fontSize: 24, fontWeight: 700, marginTop: 2 }}>ประกาศนียบัตร</div>
+        <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10 }}>มอบให้แก่</div>
+        <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.3 }}>{cert.name}</div>
+        {cert.nameEn && <div style={{ fontSize: 13, opacity: 0.85 }}>{cert.nameEn}</div>}
+        <div style={{ fontSize: 12.5, marginTop: 8, opacity: 0.9 }}>ปฐมพยาบาลเบื้องต้น — ภาคทฤษฎี (ออนไลน์)</div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 12, fontSize: 12 }}>
+          <div><div style={{ fontSize: 10, letterSpacing: 1.5, color: '#e6cc7a' }}>เลขที่</div><div style={{ fontWeight: 700, fontFamily: 'monospace' }}>{cert.number}</div></div>
+          {cert.expiresAt && <div><div style={{ fontSize: 10, letterSpacing: 1.5, color: '#e6cc7a' }}>หมดอายุ</div><div style={{ fontWeight: 700 }}>{fmtDate(cert.expiresAt)}</div></div>}
+        </div>
       </div>
-      <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={busy} onClick={claim}>
-        {busy ? 'กำลังขอรับ…' : 'ขอรับใบประกาศกลาง'}
-      </button>
-      {error && <div className="text-caption" style={{ marginTop: 6, color: 'var(--danger, #b3261e)' }}>{error}</div>}
+      <div style={{ background: '#fbf8f0', padding: 12, color: '#1b2a5b' }}>
+        <a className="btn btn-primary btn-block" style={{ textDecoration: 'none' }}
+          href={HUB_URL + '/portal/certificates'} target="_blank" rel="noreferrer">
+          <Printer size={16} /> เปิด / พิมพ์ / บันทึก PDF ↗
+        </a>
+        <div className="text-caption" style={{ marginTop: 6, textAlign: 'center' }}>
+          เลือกได้ทั้งแนวตั้งและแนวนอน · สแกน QR บนใบเพื่อตรวจสอบได้ทุกที่
+        </div>
+        <div className="text-caption" style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 8, fontWeight: 700 }}>
+          <a href={HUB_URL + cert.verifyPath} target="_blank" rel="noreferrer"><ShieldCheck size={13} /> ตรวจสอบใบ ↗</a>
+          <a href={HUB_URL + '/account'} target="_blank" rel="noreferrer"><Camera size={13} /> ใส่รูปบนใบประกาศ ↗</a>
+        </div>
+      </div>
     </div>
   )
 }
