@@ -187,7 +187,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
         <Award size={22} strokeWidth={1.6} color="#1b2a5b" />
         <div style={{ flex: 1 }}>
           <div className="text-body-strong">ใบประกาศภาคทฤษฎี</div>
-          <div className="text-caption">ออกเมื่อผ่าน Post-test ≥ 80% · ใบกลาง JIA ตรวจสอบได้ด้วย QR</div>
+          <div className="text-caption">ออกเมื่อผ่าน Post-test ≥ 80% · มี QR Code ตรวจสอบได้</div>
         </div>
         {issued || hubCert ? <span className="badge badge-success">ได้รับแล้ว</span> :
           theoryEval.eligible && !lineAdded ? <span className="badge badge-brand">อีกขั้นเดียว</span> :
@@ -212,7 +212,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
                 {hubError || 'ใบประกาศกำลังออกที่ระบบกลาง JIA — กดขอรับอีกครั้ง หรือเปิดหน้าใบประกาศของคุณที่ class.jiacpr.com'}
               </div>
               <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
-                {busy ? 'กำลังขอรับ…' : 'ขอรับใบกลาง JIA'}
+                {busy ? 'กำลังออกใบประกาศ…' : 'รับใบประกาศแบบใหม่ (มี QR Code)'}
               </button>
               <a className="btn btn-secondary btn-block" style={{ marginTop: 8, textDecoration: 'none' }}
                 href={HUB_URL + '/portal/certificates'} target="_blank" rel="noreferrer">
@@ -229,10 +229,10 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
           {hub?.signedIn && (
             <div className="callout callout-info" style={{ marginTop: 12 }}>
               <div className="text-caption">
-                {hubError || 'ยังไม่ได้รับใบกลาง JIA (แบบใหม่ มี QR Code)'}
+                {hubError || 'มีใบประกาศแบบใหม่ที่มี QR Code ตรวจสอบได้ — กดปุ่มด้านล่างเพื่อรับ'}
               </div>
               <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={retryHub}>
-                {busy ? 'กำลังขอรับ…' : 'ขอรับใบกลาง JIA'}
+                {busy ? 'กำลังออกใบประกาศ…' : 'รับใบประกาศแบบใหม่ (มี QR Code)'}
               </button>
             </div>
           )}
