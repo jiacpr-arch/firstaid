@@ -10,13 +10,8 @@ import HubCertificateCard from './HubCertificateCard'
 import AccountCard from './AccountCard'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import { HUB_URL } from '../utils/hubCertificate'
-// jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
+import { lineInterestUrl } from '../utils/lineLinks'
 import { track } from '../utils/analytics'
-
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
-}
 
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 const phoneDigits = (v) => v.replace(/\D/g, '')
@@ -40,7 +35,7 @@ async function getHubCertificate(state, onError) {
 // app's own theory certificate (practical certificate, LINE follow-up, FA- verification), then shows
 // the learner the JIA Hub's central certificate — the one they open, print and verify. This app never
 // renders its own certificate any more: a learner the Hub hasn't given one yet is sent there, and an
-// FA- certificate issued before the switch only keeps a small "download the old one" link.
+// FA- certificate issued before the switch is pointed there too (LINE OA if the Hub can't re-issue it).
 // Shared by the post-test results screen and the /certificate page.
 //
 // Every new certificate comes from the Hub (owner decision 23 Oct 2026): wherever Supabase is
@@ -153,22 +148,6 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     }
   }
 
-  const certArgs = () => ({
-    kind: 'theory',
-    learnerName: cert.learnerName || learner?.name || '',
-    dateStr: fmtDate(cert.issuedAt),
-    code: cert.code,
-  })
-
-  const downloadPdf = () => {
-    import('../utils/certPdf')
-      .then(({ downloadCertPdf }) => downloadCertPdf(certArgs()))
-      .catch((err) => {
-        console.error('download cert pdf failed', err)
-        setError('สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่')
-      })
-  }
-
   const issued = !!cert
 
   return (
@@ -215,7 +194,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
 
       {/* Issued here before the switch, no Hub certificate yet — this app no longer shows its own
           certificate: send the learner to the Hub (log in / get the new one), where the old FA- code
-          still verifies. The old file stays as a small link for a learner the Hub can't re-issue for. */}
+          still verifies. A learner the Hub can't re-issue for is pointed to LINE OA. */}
       {issued && !cert.hubIssued && !hubCert && hub !== undefined && (
         <div className="callout callout-info" data-testid="legacy-certificate" style={{ marginTop: 12 }}>
           <div className="text-caption">
@@ -240,12 +219,10 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
             </>
           )}
           <div className="text-caption" style={{ marginTop: 10, textAlign: 'center' }}>
-            <button type="button" onClick={downloadPdf}
-              style={{ background: 'none', border: 0, padding: 0, textDecoration: 'underline', color: 'inherit', cursor: 'pointer', font: 'inherit' }}>
-              ดาวน์โหลดใบเดิม (PDF)
-            </button>
+            ยังรับใบแบบใหม่ไม่ได้? ติดต่อ{' '}
+            <a href={lineInterestUrl(`ขอรับใบประกาศแบบใหม่ (ใบเดิม ${cert.code})`)} target="_blank" rel="noreferrer"
+              style={{ textDecoration: 'underline' }}>LINE OA @jiacpr</a>
           </div>
-          {error && <div className="callout callout-warning" style={{ marginTop: 10 }}>{error}</div>}
         </div>
       )}
 
