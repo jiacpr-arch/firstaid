@@ -16,6 +16,7 @@ import { HouseAdStrip } from './components/HouseAdBanner'
 import RequireAdmin from './components/RequireAdmin'
 import Seo from './components/Seo'
 import { initPostHog, identifyLearner, phCapture } from './lib/posthog'
+import { initAppUpdate, applyPendingUpdate } from './utils/appUpdate'
 
 import Home from './pages/Home'
 import Landing from './pages/Landing'
@@ -75,6 +76,10 @@ export default function App() {
   const learner = useLearnerStore((s) => s.learner)
 
   useEffect(() => { initPostHog() }, [])
+
+  // เวอร์ชันใหม่ deploy แล้วต้องถึงมือผู้ใช้เอง ไม่ต้องรอปิด-เปิดแท็บ (ดู utils/appUpdate)
+  useEffect(() => { initAppUpdate() }, [])
+  useEffect(() => { applyPendingUpdate(location.pathname) }, [location.pathname])
 
   // เปิด listener สถานะล็อกอิน (LINE → Supabase Auth) ครั้งเดียวตอนแอปเริ่ม — จำเป็นสำหรับ
   // ระบบปลดล็อกบทเรียนที่ผูกสิทธิ์กับ learner_id ถาวร ไม่ใช่แค่ local id ที่สลับได้
