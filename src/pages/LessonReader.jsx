@@ -488,9 +488,12 @@ export default function LessonReader() {
         </>
       )}
 
-      <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance} disabled={advanceLocked}>
-        {isLast ? 'จบบทเรียน' : 'ต่อไป'} <ChevronRight size={16} />
-      </button>
+      {/* สไลด์ mini quiz: ซ่อนปุ่มต่อไปจนตอบครบ ไม่ให้ซ้อนกับปุ่มส่งคำตอบ/ข้อต่อไปในการ์ด */}
+      {!(slide?.kind === 'videoQuiz' && advanceLocked) && (
+        <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance} disabled={advanceLocked}>
+          {isLast ? 'จบบทเรียน' : 'ต่อไป'} <ChevronRight size={16} />
+        </button>
+      )}
     </div>
   )
 }
