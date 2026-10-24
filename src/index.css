@@ -139,10 +139,11 @@ a { color: inherit; text-decoration: none; }
 .btn:active { transform: scale(0.98); }
 .btn:focus-visible { outline: 3px solid var(--color-brand); outline-offset: 3px; }
 .btn-primary { background: var(--color-brand); color: #fff; }
-.btn-primary:hover { background: var(--color-brand-dark); transform: translateY(-1px); }
+.btn-primary:hover:not(:disabled) { background: var(--color-brand-dark); transform: translateY(-1px); }
 .btn-danger { background: var(--color-danger); color: #fff; }
 .btn-danger:hover { background: var(--color-danger-dark); }
 .btn-secondary { background: #FFFFFF; color: var(--color-text-primary); border: 1px solid #B9CBC1; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .btn-secondary:hover { background: #EDF4EF; }
 .btn-ghost { background: transparent; color: var(--color-text-secondary); }
 .btn-block { width: 100%; }
