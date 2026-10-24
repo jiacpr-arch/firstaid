@@ -216,7 +216,7 @@ export default function AdminLessonVideos() {
           </div>
           {ytId && (
             <div style={{ marginTop: 10, maxWidth: form.orientation === 'portrait' ? 240 : undefined }}>
-              <LessonVideo youtube={ytId} title="พรีวิว" />
+              <LessonVideo youtube={ytId} title="พรีวิว" autoPlay={false} />
             </div>
           )}
 
