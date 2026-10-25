@@ -7,6 +7,7 @@ import { CERT_KINDS, evaluatePracticalEligibility } from '../courses/firstaid/ce
 import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
 import TheoryCertCard from '../components/TheoryCertCard'
+import AedRentalCard from '../components/AedRentalCard'
 import Seo from '../components/Seo'
 import AccountCard from '../components/AccountCard'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
@@ -93,6 +94,8 @@ export default function Certification() {
 
       {/* Theory — self-service issuance (name + phone + email + PDPA consent) */}
       <TheoryCertCard postAttempt={postAttempt} onIssued={onTheoryIssued} />
+
+      <AedRentalCard source="certificate_page" />
 
       {/* Practical */}
       <div className="card" style={{ marginTop: 16 }}>
