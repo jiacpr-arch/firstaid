@@ -20,7 +20,7 @@ function loadYouTubeApi() {
 }
 
 // Player วิดีโอบทเรียน — ใช้ YT IFrame API ติดตามเวลาที่เล่นจริง
-// เรียก onPlay ครั้งแรกที่กดเล่น และ onWatched เมื่อดูถึง ~watchThreshold (หรือคลิปจบ)
+// เรียก onPlay ครั้งแรกที่กดเล่น และ onWatched เมื่อดูถึง ~watchThreshold (หรือคลิปจบ), onEnded เมื่อคลิปจบ
 // เปลี่ยน videoId หรือ resetKey เพื่อเริ่มนับใหม่ (เช่น ให้ดูซ้ำหลังตก mini quiz)
 // เล่นเองอัตโนมัติ: ลองเล่นแบบมีเสียงก่อน ถ้าเบราว์เซอร์บล็อก (มือถือส่วนใหญ่) จะปิดเสียงแล้วเล่น
 // พร้อมปุ่ม "แตะเพื่อเปิดเสียง"
@@ -31,15 +31,18 @@ export default function YouTubeLessonPlayer({
   resetKey = 0,
   onPlay,
   onWatched,
+  onEnded,
 }) {
   const hostRef = useRef(null)
   const playerRef = useRef(null)
   const [muted, setMuted] = useState(false)
   const onPlayRef = useRef(onPlay)
   const onWatchedRef = useRef(onWatched)
+  const onEndedRef = useRef(onEnded)
   useEffect(() => {
     onPlayRef.current = onPlay
     onWatchedRef.current = onWatched
+    onEndedRef.current = onEnded
   })
 
   useEffect(() => {
@@ -97,7 +100,10 @@ export default function YouTubeLessonPlayer({
             } else {
               stopPoll()
             }
-            if (e.data === YT.PlayerState.ENDED) fireWatched()
+            if (e.data === YT.PlayerState.ENDED) {
+              fireWatched()
+              try { onEndedRef.current?.() } catch { /* ignore */ }
+            }
           },
         },
       })

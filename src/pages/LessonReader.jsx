@@ -462,6 +462,8 @@ export default function LessonReader() {
               setVideoWatched(true)
               track('video_watched', { lessonId: lesson.id, attempt: videoAttempt + 1, position: videoPosition })
             }}
+            // ดูจบแล้วไปทำคำถามต่อเลย ไม่ต้องกดปุ่ม
+            onEnded={() => setStepIdx((i) => (slides[i]?.kind === 'video' ? i + 1 : i))}
           />
           {!videoWatched && !skipVideoGate && (
             <div className="text-caption" style={{ marginTop: 8, textAlign: 'center' }}>
@@ -471,17 +473,14 @@ export default function LessonReader() {
         </div>
       ) : slide?.kind === 'videoQuiz' ? (
         <>
-          <VideoQuiz key={videoAttempt} questions={video.quiz} onComplete={setVideoResult} />
-          {videoResult && (
-            <div className={`callout ${videoPassed ? 'callout-info' : 'callout-danger'}`} style={{ marginTop: 12 }}>
-              <div className="text-body-strong">
-                ได้ {videoResult.correct} / {videoResult.total} ข้อ
-              </div>
-              <div className="text-body">
-                {videoPassed ? 'ผ่านแล้ว ไปเรียนต่อได้เลย' : 'ยังไม่ถึง 70% กดต่อไปเพื่อกลับไปดูคลิปอีกครั้ง'}
-              </div>
-            </div>
-          )}
+          <VideoQuiz
+            key={videoAttempt}
+            questions={video.quiz}
+            passRatio={VIDEO_QUIZ_PASS}
+            onComplete={setVideoResult}
+            onContinue={advance}
+            continueLabel={isLast ? 'จบบทเรียน' : 'ไปต่อ'}
+          />
         </>
       ) : (
         <>
@@ -495,10 +494,10 @@ export default function LessonReader() {
         </>
       )}
 
-      {/* สไลด์ quiz: ซ่อนปุ่มต่อไปจนตอบ ไม่ให้ซ้อนกับปุ่มส่งคำตอบ/ข้อต่อไปในการ์ด */}
-      {!(slide?.kind === 'videoQuiz' && advanceLocked) && !quizPending && (
+      {/* สไลด์ mini quiz มีปุ่มไปต่อในการ์ดเอง; สไลด์ quiz ในบทซ่อนปุ่มจนตอบ — ไม่ให้ปุ่มซ้อนกัน */}
+      {slide?.kind !== 'videoQuiz' && !quizPending && (
         <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance} disabled={advanceLocked}>
-          {isLast ? 'จบบทเรียน' : 'ต่อไป'} <ChevronRight size={16} />
+          {isLast ? 'จบบทเรียน' : slide?.kind === 'video' ? 'ทำคำถามจากคลิป' : 'ต่อไป'} <ChevronRight size={16} />
         </button>
       )}
     </div>

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
 
-export default function QuizQuestion({ question, choices, correctId, explanation, onAnswered }) {
+// footer = เนื้อหาที่แสดงท้ายการ์ดหลังส่งคำตอบ (เช่น ปุ่มข้อต่อไป) ให้อยู่ในการ์ดเดียวกัน
+export default function QuizQuestion({ question, choices, correctId, explanation, onAnswered, footer }) {
   const [selectedId, setSelectedId] = useState(null)
   const [revealed, setRevealed] = useState(false)
 
@@ -65,6 +66,7 @@ export default function QuizQuestion({ question, choices, correctId, explanation
           <div className="text-body">{explanation}</div>
         </div>
       )}
+      {revealed && footer}
     </div>
   )
 }
