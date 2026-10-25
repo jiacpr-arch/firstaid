@@ -118,8 +118,8 @@ export const houseAds = [
   {
     id: 'jiaaed',
     name: 'JiaAED.com',
-    tagline: 'รู้จักและใช้เครื่องกระตุกหัวใจไฟฟ้า (AED) อย่างถูกต้อง',
-    url: 'https://jiaaed.com',
+    tagline: 'เช่า AED พร้อมทีมดูแล เริ่ม ฿1,830/เดือน — ที่ทำงาน คอนโด งานอีเวนต์',
+    url: 'https://jiaaed.com/aed/rental?utm_source=firstaid.morroo.com&utm_medium=house_ad&utm_campaign=aed_rental',
     color: '#D97706',
     tags: ['aed', 'emergency', 'training'],
   },
