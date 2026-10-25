@@ -72,6 +72,8 @@ export default function LessonReader() {
   const [videoResult, setVideoResult] = useState(null)
   const [videoAttempt, setVideoAttempt] = useState(0)
   const [videoRetry, setVideoRetry] = useState(false)
+  // สไลด์ quiz ล่าสุดที่ตอบแล้ว — ซ่อนปุ่มต่อไปจนกว่าจะส่งคำตอบ
+  const [answeredSlideIdx, setAnsweredSlideIdx] = useState(-1)
 
   // Reset state when lessonId changes — set-during-render pattern
   if (prevLessonId !== lessonId) {
@@ -86,6 +88,7 @@ export default function LessonReader() {
     setVideoResult(null)
     setVideoAttempt(0)
     setVideoRetry(false)
+    setAnsweredSlideIdx(-1)
     setDbVideo(undefined)
   }
 
@@ -276,6 +279,7 @@ export default function LessonReader() {
   }
 
   const onAnswered = (_id, correct) => {
+    setAnsweredSlideIdx(stepIdx)
     setQuizCount((c) => c + 1)
     if (correct) setCorrectCount((c) => c + 1)
   }
@@ -321,6 +325,9 @@ export default function LessonReader() {
   const advanceLocked =
     !skipVideoGate &&
     ((slide?.kind === 'video' && !videoWatched) || (slide?.kind === 'videoQuiz' && !videoResult))
+
+  const quizPending =
+    slide?.kind === 'step' && slide.step.type === 'quiz' && answeredSlideIdx !== stepIdx
 
   const advance = () => {
     if (slide?.kind === 'videoQuiz' && !skipVideoGate) {
@@ -478,7 +485,7 @@ export default function LessonReader() {
         </>
       ) : (
         <>
-          <LessonStep step={slide.step} onQuizAnswered={onAnswered} />
+          <LessonStep key={stepIdx} step={slide.step} onQuizAnswered={onAnswered} />
           {/* รูป/วิดีโอที่ผูกกับขั้นนี้ — แสดงใต้เนื้อหาในสไลด์เดียวกัน */}
           {slide.media?.map((row) => (
             <div key={row.id} style={{ marginTop: 12 }}>
@@ -488,8 +495,8 @@ export default function LessonReader() {
         </>
       )}
 
-      {/* สไลด์ mini quiz: ซ่อนปุ่มต่อไปจนตอบครบ ไม่ให้ซ้อนกับปุ่มส่งคำตอบ/ข้อต่อไปในการ์ด */}
-      {!(slide?.kind === 'videoQuiz' && advanceLocked) && (
+      {/* สไลด์ quiz: ซ่อนปุ่มต่อไปจนตอบ ไม่ให้ซ้อนกับปุ่มส่งคำตอบ/ข้อต่อไปในการ์ด */}
+      {!(slide?.kind === 'videoQuiz' && advanceLocked) && !quizPending && (
         <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={advance} disabled={advanceLocked}>
           {isLast ? 'จบบทเรียน' : 'ต่อไป'} <ChevronRight size={16} />
         </button>
