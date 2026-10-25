@@ -7,6 +7,7 @@ import { CERT_KINDS, evaluatePracticalEligibility } from '../courses/firstaid/ce
 import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
 import TheoryCertCard from '../components/TheoryCertCard'
+import CertGuideVideo from '../components/CertGuideVideo'
 import Seo from '../components/Seo'
 import AccountCard from '../components/AccountCard'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
@@ -23,6 +24,7 @@ export default function Certification() {
 
   const [postAttempt, setPostAttempt] = useState(null)
   const [certs, setCerts] = useState([])
+  const [certsLoaded, setCertsLoaded] = useState(false)
 
   useEffect(() => {
     if (!learner?.id) return
@@ -34,6 +36,7 @@ export default function Certification() {
       if (cancelled) return
       setPostAttempt(best)
       setCerts(c)
+      setCertsLoaded(true)
     })
     return () => { cancelled = true }
   }, [learner?.id])
@@ -93,6 +96,9 @@ export default function Certification() {
 
       {/* Theory — self-service issuance (name + phone + email + PDPA consent) */}
       <TheoryCertCard postAttempt={postAttempt} onIssued={onTheoryIssued} />
+
+      {/* วิดีโอสอนขั้นตอนรับใบประกาศ — เฉพาะคนที่ยังไม่มีใบภาคทฤษฎี (ไม่แสดงในหน้าสอบ) */}
+      {certsLoaded && !theoryCert && <CertGuideVideo />}
 
       {/* Practical */}
       <div className="card" style={{ marginTop: 16 }}>
