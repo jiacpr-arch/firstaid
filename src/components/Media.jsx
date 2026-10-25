@@ -9,13 +9,14 @@ export function LessonImage({ src, alt, caption }) {
   )
 }
 
-export function LessonVideo({ src, youtube, poster, caption, title }) {
+// autoPlay: เล่นเองแบบปิดเสียง (เบราว์เซอร์อนุญาตให้ autoplay ได้เฉพาะตอนปิดเสียง) — ผู้ใช้กดเปิดเสียงที่ตัว player
+export function LessonVideo({ src, youtube, poster, caption, title, autoPlay = true }) {
   if (youtube) {
     return (
       <figure className="lesson-video">
         <div className="lesson-video-frame">
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${youtube}`}
+            src={`https://www.youtube-nocookie.com/embed/${youtube}${autoPlay ? '?autoplay=1&mute=1&playsinline=1' : ''}`}
             title={title || caption || 'วิดีโอบทเรียน'}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             referrerPolicy="strict-origin-when-cross-origin"
@@ -29,7 +30,7 @@ export function LessonVideo({ src, youtube, poster, caption, title }) {
   if (src) {
     return (
       <figure className="lesson-video">
-        <video controls preload="metadata" poster={poster} playsInline>
+        <video controls preload="metadata" poster={poster} playsInline autoPlay={autoPlay} muted={autoPlay}>
           <source src={src} />
         </video>
         {caption && <figcaption className="text-caption">{caption}</figcaption>}

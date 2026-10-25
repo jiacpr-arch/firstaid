@@ -12,6 +12,7 @@ import { saveExamAttempt } from '../db/database'
 import { flushSync } from '../db/sync'
 import ProgressBar from '../components/ProgressBar'
 import TheoryCertCard from '../components/TheoryCertCard'
+import AedRentalCard from '../components/AedRentalCard'
 import CertUpsellCard from '../components/CertUpsellCard'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
@@ -164,6 +165,7 @@ export default function ExamPage({ kind }) {
 
         {passedTheory && <TheoryCertCard postAttempt={done} />}
         {passedTheory && <CertUpsellCard source="post_test_pass" />}
+        {passedTheory && <AedRentalCard source="post_test_pass" />}
 
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {exam.questions.map((qq, i) => {

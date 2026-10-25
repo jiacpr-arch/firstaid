@@ -8,6 +8,7 @@ import CertificatePreview from '../components/CertificatePreview'
 import CertUpsellCard from '../components/CertUpsellCard'
 import TheoryCertCard from '../components/TheoryCertCard'
 import CertGuideVideo from '../components/CertGuideVideo'
+import AedRentalCard from '../components/AedRentalCard'
 import Seo from '../components/Seo'
 import AccountCard from '../components/AccountCard'
 // jspdf/html-to-image หนักรวม ~450KB — โหลดเฉพาะตอนกดดาวน์โหลด ไม่ให้ปนใน chunk หลัก
@@ -99,6 +100,7 @@ export default function Certification() {
 
       {/* วิดีโอสอนขั้นตอนรับใบประกาศ — เฉพาะคนที่ยังไม่มีใบภาคทฤษฎี (ไม่แสดงในหน้าสอบ) */}
       {certsLoaded && !theoryCert && <CertGuideVideo />}
+      <AedRentalCard source="certificate_page" />
 
       {/* Practical */}
       <div className="card" style={{ marginTop: 16 }}>
