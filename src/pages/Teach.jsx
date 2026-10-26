@@ -80,7 +80,7 @@ export default function Teach() {
   if (!classId) {
     return (
       <div className="page-container">
-        <Seo title="สำหรับผู้สอน | Jia Training Center" noindex path="/admin/teach" />
+        <Seo title="คลาสของฉัน | Jia Training Center" noindex path="/admin/teach" />
         {header}
         <div className="text-caption">ผู้สอน (แอดมิน)</div>
         <div className="text-title">เปิดคลาสสอน CPR</div>
@@ -104,7 +104,7 @@ export default function Teach() {
 
   return (
     <div className="page-container">
-      <Seo title="สำหรับผู้สอน | Jia Training Center" noindex path="/teach" />
+      <Seo title="คลาสของฉัน | Jia Training Center" noindex path="/teach" />
       {header}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1 }}>

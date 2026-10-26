@@ -34,7 +34,7 @@ export default function AdminTeachGuide() {
       <p className="text-caption" style={{ marginTop: 4 }}>
         เปิดคลาส ให้นักเรียนเข้าร่วม เช็คชื่อด้วย QR สอบสถานี และดูว่านักเรียนพร้อมหรือยัง
       </p>
-      <Link to="/admin/teach" className="btn btn-primary" style={{ marginTop: 12 }}>ไปหน้าสำหรับผู้สอน</Link>
+      <Link to="/admin/teach" className="btn btn-primary" style={{ marginTop: 12 }}>ไปหน้าคลาสของฉัน</Link>
 
       <h2 style={h2}>ใครทำอะไรได้</h2>
       <Table
@@ -57,7 +57,7 @@ export default function AdminTeachGuide() {
       <h2 style={h2}>เข้าและสร้างคลาส</h2>
       <ol style={list}>
         <li>เข้า <code>/admin/login</code> ด้วยบัญชี admin (ลิงก์ /teach เก่าจะพาไปหน้าที่ถูกเอง)</li>
-        <li>ที่หน้าควบคุมเลือก <b>สำหรับผู้สอน</b> จะเข้า /admin/teach</li>
+        <li>ที่หน้าควบคุมเลือก <b>คลาสของฉัน</b> จะเข้า /admin/teach</li>
         <li>กด <b>สร้างคลาสใหม่</b> ใส่ชื่อคลาสและสถานที่ (ไม่บังคับ) หรือเลือกคลาสที่เปิดอยู่แล้ว</li>
         <li>ระบบแสดง <b>รหัสคลาส</b> (6 หลัก แจกนักเรียน) และ <b>รหัสผู้ช่วย</b> (8 หลัก ให้คนช่วยสแกน) ดูรหัสผู้ช่วยซ้ำได้ที่แท็บคลาส/QR</li>
       </ol>

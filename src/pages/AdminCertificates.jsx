@@ -17,7 +17,7 @@ export default function AdminCertificates() {
         </div>
         <div className="text-body" style={{ marginTop: 8 }}>
           ใบประกาศภาคปฏิบัติออกอัตโนมัติเมื่อครูผู้สอนกด "อนุมัติ" ใน{' '}
-          <Link to="/admin/sessions" style={{ color: 'var(--color-brand)' }}>หน้าคลาสภาคปฏิบัติ</Link>
+          <Link to="/admin/teach" style={{ color: 'var(--color-brand)' }}>คลาสของฉัน</Link> (แท็บภาคปฏิบัติ)
         </div>
         <div className="text-caption" style={{ marginTop: 8 }}>
           (หน้าค้นหา/เพิกถอน — เพิ่มในเฟสถัดไป)
