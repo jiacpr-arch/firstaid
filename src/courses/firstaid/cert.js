@@ -1,26 +1,4 @@
-// Certificate templates (Theory + Practical) + pass criteria
-
-// Logo shown on the certificate. Drop the official artwork at /public/cert-logo.png
-// (or .svg) and update this path; it ships same-origin so html-to-image can embed it.
-export const CERT_LOGO_SRC = '/cert-logo.png'
-export const CERT_ORG_NAME = 'Jia Training Center'
-
-export const CERT_KINDS = {
-  theory: {
-    kind: 'theory',
-    title: 'ใบประกาศนียบัตรภาคทฤษฎี',
-    subtitle: 'หลักสูตรปฐมพยาบาลเบื้องต้นสำหรับประชาชน',
-    description: 'ผ่านการอบรมและทดสอบความรู้ทางทฤษฎี ตามมาตรฐาน TH-FirstAid-Layperson-2026',
-    accent: '#16A34A',
-  },
-  practical: {
-    kind: 'practical',
-    title: 'ใบประกาศนียบัตรภาคปฏิบัติ',
-    subtitle: 'หลักสูตรปฐมพยาบาลเบื้องต้นสำหรับประชาชน',
-    description: 'ผ่านการฝึกปฏิบัติกับครูผู้สอน ณ หน่วยงานสอน',
-    accent: '#2563EB',
-  },
-}
+// Certificate pass criteria + FA- verification codes (the certificates themselves come from the JIA Hub)
 
 export function evaluateTheoryEligibility({ postTestAttempt }) {
   if (!postTestAttempt) return { eligible: false, reason: 'ยังไม่ได้ทำแบบทดสอบหลังเรียน' }
