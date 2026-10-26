@@ -33,7 +33,7 @@ export default function AdminCohorts() {
   }, [])
 
   const closeClass = async (c) => {
-    if (!confirm(`ปิดคลาส “${c.name}”? รหัสผู้สอนจะใช้ไม่ได้อีก (ข้อมูลนักเรียนไม่ถูกลบ)`)) return
+    if (!confirm(`ปิดคลาส “${c.name}”? รหัสผู้ช่วยจะใช้ไม่ได้อีก (ข้อมูลนักเรียนไม่ถูกลบ)`)) return
     const resp = await adminFetch('/api/classes/close', { method: 'POST', body: JSON.stringify({ cohortId: c.id }) })
     const body = await resp.json().catch(() => ({}))
     if (!resp.ok) { alert(body.error || 'ปิดคลาสไม่สำเร็จ'); return }
@@ -91,7 +91,7 @@ export default function AdminCohorts() {
             </Link>
             {(c.instructorCode || !c.closed) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                {c.instructorCode && <div className="text-caption" style={{ flex: 1 }}>รหัสผู้สอน (กู้คืน): <b style={{ letterSpacing: 2 }}>{c.instructorCode}</b></div>}
+                {c.instructorCode && <div className="text-caption" style={{ flex: 1 }}>รหัสผู้ช่วย: <b style={{ letterSpacing: 2 }}>{c.instructorCode}</b></div>}
                 {!c.closed && c.createdVia === 'app' && (
                   <button type="button" className="btn btn-ghost" style={{ fontSize: 13, color: '#B42318' }} onClick={() => closeClass(c)}>ปิดคลาส</button>
                 )}

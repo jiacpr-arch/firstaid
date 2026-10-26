@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, FolderOpen, GraduationCap, Plus, RefreshCw } from 'lucide-react'
+import { ArrowLeft, BookOpen, FolderOpen, GraduationCap, Plus, RefreshCw } from 'lucide-react'
 import { useClassStore } from '../stores/classStore'
 import { adminFetch } from '../utils/adminFetch'
 import { summarizeReadiness } from '../../api/_lib/readiness.js'
@@ -15,6 +15,12 @@ import Seo from '../components/Seo'
 // หน้าผู้สอน (แบบ ACLS): ไม่ต้องมีบัญชี — สิทธิ์มาจากรหัสผู้สอนของคลาสที่เครื่องนี้ถืออยู่
 const REFRESH_MS = 30_000
 const TABS = [['class', 'คลาส/QR'], ['overview', 'ภาพรวม'], ['theory', 'ทฤษฎี'], ['practice', 'ปฏิบัติ']]
+const TAB_HINTS = {
+  class: 'ให้นักเรียนสแกน QR เข้าคลาส · ดูรหัสผู้ช่วย · ปิดคลาสเมื่อจบ',
+  overview: 'ก่อนวันอบรม: ดูว่าใครพร้อม ใครยังขาดอะไร',
+  theory: 'คะแนนเรียนออนไลน์ละเอียดรายคน',
+  practice: 'วันอบรม: สแกนเช็คชื่อ ให้คะแนนสถานี ส่งรายงาน LINE',
+}
 
 const readTab = () => { try { return sessionStorage.getItem('fa.teach.tab') || 'class' } catch { return 'class' } }
 
@@ -71,9 +77,14 @@ export default function Teach() {
   }, [learners])
 
   const header = (
-    <Link to="/admin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
-      <ArrowLeft size={16} /> หน้าควบคุม
-    </Link>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Link to="/admin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+        <ArrowLeft size={16} /> หน้าควบคุม
+      </Link>
+      <Link to="/admin/guide" className="btn btn-ghost" style={{ fontSize: 13 }}>
+        <BookOpen size={14} /> คู่มือ
+      </Link>
+    </div>
   )
 
   // ยังไม่มีคลาส: การ์ดแนะนำ 3 ขั้น (แบบ ACLS)
@@ -86,9 +97,9 @@ export default function Teach() {
         <div className="text-title">เปิดคลาสสอน CPR</div>
         <div className="card" style={{ marginTop: 12 }}>
           <ol className="text-body" style={{ margin: 0, paddingLeft: 22, lineHeight: 1.8, listStyle: 'decimal' }}>
-            <li><b>สร้างคลาส</b> — ได้รหัสคลาส (แจกนักเรียน) และรหัสผู้ช่วย (ให้คนช่วยสแกนเช็คชื่อ)</li>
-            <li><b>ให้นักเรียนเข้าร่วม</b> — สแกน QR หรือใส่รหัสคลาสจากมือถือของตัวเอง แล้วเรียนออนไลน์</li>
-            <li><b>ติดตามผล</b> — ดูว่าใครพร้อมเข้าอบรมภาคปฏิบัติแล้ว วันอบรมสแกน QR เช็คชื่อและให้คะแนน</li>
+            <li><b>สร้างคลาส</b> — ได้รหัสคลาส (แจกนักเรียน) และรหัสผู้ช่วย (ให้คนที่มาช่วยสแกน ห้ามแจกนักเรียน)</li>
+            <li><b>ให้นักเรียนเข้าร่วม</b> — นักเรียนสแกน QR หรือใส่รหัสคลาสในมือถือตัวเอง แล้วเรียนออนไลน์ก่อนวันอบรม</li>
+            <li><b>ติดตามผล</b> — ดูว่าใคร “พร้อม” (สอบหลังเรียนผ่าน) วันอบรมสแกน QR ของนักเรียนเพื่อเช็คชื่อและให้คะแนน</li>
           </ol>
           <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={() => setGate('create')}>
             <Plus size={16} /> สร้างคลาสใหม่
@@ -127,7 +138,7 @@ export default function Teach() {
       )}
 
       <div className="card" style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, textAlign: 'center' }}>
-        {[['นักเรียน', stats.students], ['พร้อม', stats.ready], ['ทำ Pre', stats.pre], ['ทำ Post', stats.post]].map(([label, n]) => (
+        {[['นักเรียน', stats.students], ['พร้อม', stats.ready], ['สอบก่อนเรียน', stats.pre], ['สอบหลังเรียน', stats.post]].map(([label, n]) => (
           <div key={label}>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-brand)' }}>{n}</div>
             <div className="text-caption">{label}</div>
@@ -142,6 +153,8 @@ export default function Teach() {
           </button>
         ))}
       </div>
+
+      <div className="text-caption" style={{ marginTop: 2 }}>{TAB_HINTS[tab]}</div>
 
       {tab === 'class' && <ClassHome onNewClass={() => setGate('create')} onPick={() => setGate('pick')} />}
       {tab === 'overview' && <ClassOverview learners={learners} classCode={classCode} />}
