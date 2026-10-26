@@ -25,7 +25,7 @@ const GROUPS = [
     title: 'ขาย & ใบประกาศ',
     items: [
       { to: '/admin/vouchers', label: 'โค้ดปลดล็อกบทเรียน', desc: 'สร้าง/ดูโค้ดขายเรียนออนไลน์รายหมวด', icon: Ticket, color: '#0891B2' },
-      { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ใบออกอัตโนมัติ — ดูเงื่อนไขการออกใบ (ค้นหา/เพิกถอนยังไม่เปิด)', icon: Award, color: '#D97706' },
+      { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ออกจากระบบกลาง JIA — ค้นหา / แก้ชื่อ / เพิกถอน', icon: Award, color: '#D97706' },
     ],
   },
 ]
