@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabaseClient'
+import { authHeader } from './authHeader'
 
 // The JIA Hub's central online certificate (class.jiacpr.com, learning_hub.person_certificates) is
 // the certificate learners see and print. firstaid shares the Hub's Supabase project, so these are
@@ -14,7 +15,9 @@ async function rpc(fn, action, payload = {}) {
   return data
 }
 
-// { signedIn, cert, claimable, profile } — signedIn:false when there is no Supabase or no session;
+// { signedIn, cert, practicalCert, claimable, profile } — cert is the online theory certificate,
+// practicalCert the Hub's practical one (reported by this app after the practical day).
+// — signedIn:false when there is no Supabase or no session;
 // null when the Hub couldn't be reached (callers fall back to this app's own certificate). Never throws.
 export async function fetchHubState() {
   try {
@@ -27,7 +30,8 @@ export async function fetchHubState() {
     ])
     return {
       signedIn: true,
-      cert: (mine?.certificates || []).find((c) => c.courseId === HUB_COURSE_ID && c.status === 'issued') || null,
+      cert: issuedOf(mine, (c) => c.kind !== 'practical'),
+      practicalCert: issuedOf(mine, (c) => c.kind === 'practical'),
       claimable: (mine?.claimable || []).some((c) => c.courseId === HUB_COURSE_ID),
       profile,
     }
@@ -42,6 +46,18 @@ export async function saveCardName(profile, { name, phone }) {
   if (!profile || profile.nameLocked) return
   if ((profile.nameTh || '').trim() === name && (profile.phone || '') === phone) return
   await rpc('jia_identity', 'saveProfile', { nameTh: name, nameEn: profile.nameEn || '', phone, pdpaConsent: true })
+}
+
+const issuedOf = (mine, pick) =>
+  (mine?.certificates || []).find((c) => c.courseId === HUB_COURSE_ID && c.status === 'issued' && pick(c)) || null
+
+// Asks this app's server to send the learner's practical pass to the Hub (api/certificates/hub-practical.js)
+// — for a pass made before logging in. { certificate, pending }; throws when the Hub didn't answer.
+export async function syncPracticalToHub() {
+  const res = await fetch('/api/certificates/hub-practical', { method: 'POST', headers: { ...(await authHeader()) } })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(body.error || 'ระบบกลางไม่ตอบกลับ')
+  return body
 }
 
 export function claimHubCertificate() {

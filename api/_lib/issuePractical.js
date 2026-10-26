@@ -1,5 +1,6 @@
 import { generateCertCode } from './certCode.js'
 import { notifyCertIssued } from './certNotify.js'
+import { recordPracticalAtHub } from './hubPractical.js'
 
 // ออกใบเซอร์ภาคปฏิบัติจากแถว attendance ที่อนุมัติแล้ว (idempotent)
 // คืน { status, body } ให้ผู้เรียกส่งต่อเป็น HTTP response หรือใช้ภายในเซิร์ฟเวอร์
@@ -39,7 +40,7 @@ export async function issuePracticalCertificate(admin, attendanceId) {
     .eq('learner_id', att.learner_id)
     .eq('kind', 'practical')
     .maybeSingle()
-  if (existing) return { status: 200, body: { certificate: existing } }
+  if (existing) return withHub(admin, existing, att.learner_id)
 
   const cert = {
     learner_id: att.learner_id,
@@ -60,7 +61,7 @@ export async function issuePracticalCertificate(admin, attendanceId) {
         .eq('learner_id', att.learner_id)
         .eq('kind', 'practical')
         .maybeSingle()
-      if (winner) return { status: 200, body: { certificate: winner } }
+      if (winner) return withHub(admin, winner, att.learner_id)
     }
     return { status: 500, body: { error: error.message } }
   }
@@ -76,7 +77,15 @@ export async function issuePracticalCertificate(admin, attendanceId) {
     issuedAt: data.issued_at,
   })
 
-  return { status: 200, body: { certificate: data } }
+  return withHub(admin, data, att.learner_id)
+}
+
+// The learner is shown the Hub's practical certificate, not this row: report the pass there too.
+// Re-sending is a no-op at the Hub (keyed on the attendance that earned the certificate), so every
+// path that lands on an issued certificate — new, already there, or a retry — sends it. Non-fatal.
+async function withHub(admin, certificate, learnerId) {
+  const hub = await recordPracticalAtHub(admin, { learnerId, attendanceId: certificate.source_ref })
+  return { status: 200, body: { certificate, hub } }
 }
 
 // ลองออกใบเซอร์ภาคปฏิบัติอีกครั้งเมื่อเงื่อนไขที่ขาดมาถึงทีหลัง — ใช้ตอนเพิ่งได้ใบเซอร์ทฤษฎี
