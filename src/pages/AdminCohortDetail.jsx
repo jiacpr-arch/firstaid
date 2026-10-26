@@ -148,7 +148,7 @@ export default function AdminCohortDetail() {
   return (
     <div className="page-container" style={{ maxWidth: 900 }}>
       <Link to="/admin/cohorts" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
-        <ArrowLeft size={16} /> กลุ่มผู้เรียน
+        <ArrowLeft size={16} /> กลุ่มผู้เรียนแบบเดิม
       </Link>
 
       {data?.cohort && (

@@ -25,7 +25,9 @@ export default async function handler(req, res) {
   const seats = Number.isInteger(seatsNum) && seatsNum > 0 ? Math.min(seatsNum, 500) : null
 
   try {
-    const cls = await createClass(admin, { name, location: location || null, includesCpr, startsOn, seats })
+    const cls = await createClass(admin, {
+      name, location: location || null, instructorName: req.body?.instructorName, includesCpr, startsOn, seats,
+    })
     res.setHeader('Cache-Control', 'no-store')
     res.status(200).json({ ok: true, ...cls })
   } catch (err) {

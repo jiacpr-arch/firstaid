@@ -8,7 +8,7 @@ import {
   fetchAllLessonVideos, saveLessonVideo, deleteLessonVideo, validateLessonVideo,
 } from '../utils/lessonVideo'
 import { LessonVideo } from '../components/Media'
-import VideoQuiz from '../components/VideoQuiz'
+import LessonQuiz from '../components/LessonQuiz'
 
 const CHOICE_IDS = ['a', 'b', 'c', 'd']
 
@@ -289,7 +289,7 @@ export default function AdminLessonVideos() {
           {previewing && previewQuiz.length > 0 && (
             <div style={{ marginTop: 16 }}>
               <div className="text-caption" style={{ marginBottom: 6 }}>พรีวิว (ไม่บันทึกผล)</div>
-              <VideoQuiz key={JSON.stringify(previewQuiz)} questions={previewQuiz} onComplete={() => {}} />
+              <LessonQuiz key={JSON.stringify(previewQuiz)} questions={previewQuiz} onComplete={() => {}} />
             </div>
           )}
         </div>

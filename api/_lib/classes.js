@@ -38,6 +38,13 @@ export function cprPromoRow({ classCode, className, startsOn = null, seats = nul
   }
 }
 
+// ชื่อผู้สอนที่พิมพ์บนใบประกาศภาคปฏิบัติ: ตัดช่องว่างซ้ำ ห้าม < > ยาวไม่เกิน 100 — สั้นกว่า 2 ตัว = ไม่ระบุ (null)
+export function cleanInstructorName(value) {
+  if (typeof value !== 'string') return null
+  const v = value.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 100)
+  return v.length >= 2 ? v : null
+}
+
 async function insertWithUniqueCode(admin, table, makeRow, select) {
   for (let i = 0; i < ATTEMPTS; i += 1) {
     const { data, error } = await admin.from(table).insert(makeRow()).select(select).single()
@@ -48,7 +55,7 @@ async function insertWithUniqueCode(admin, table, makeRow, select) {
 }
 
 export async function createClass(admin, {
-  name, location = null, includesCpr = false, startsOn = null, seats = null, now = new Date(),
+  name, location = null, instructorName = null, includesCpr = false, startsOn = null, seats = null, now = new Date(),
 }) {
   const instructorCode = generateInstructorCode()
 
@@ -68,6 +75,7 @@ export async function createClass(admin, {
       instructor_id: null,
       title: name,
       location,
+      instructor_name: cleanInstructorName(instructorName),
       qr_token: generateCode(6),
       kind: 'session',
       starts_at: now.toISOString(),

@@ -128,7 +128,7 @@ export default function AdminSessionDetail() {
   }, [id])
 
   const makeInstructorCode = async (action) => {
-    if (action === 'rotate' && !confirm('เปลี่ยนรหัสผู้สอนใหม่? ผู้ช่วยที่ใช้รหัสเดิมอยู่จะถูกเด้งออก')) return
+    if (action === 'rotate' && !confirm('เปลี่ยนรหัสผู้ช่วยใหม่? ผู้ช่วยที่ใช้รหัสเดิมอยู่จะถูกเด้งออก')) return
     const resp = await adminFetch('/api/attendance/instructor-code', {
       method: 'POST', body: JSON.stringify({ action, sessionId: id }),
     })
@@ -185,7 +185,7 @@ export default function AdminSessionDetail() {
   }
 
   const closeSession = async () => {
-    if (!confirm('ปิด session นี้? — นักเรียนจะเช็คชื่อเข้ามาไม่ได้แล้ว')) return
+    if (!confirm('ปิดรอบอบรมนี้? — นักเรียนจะเช็คชื่อเข้ามาไม่ได้แล้ว')) return
     await supabase.from('practical_sessions').update({ closed_at: new Date().toISOString() }).eq('id', id)
     load()
   }
@@ -210,7 +210,7 @@ export default function AdminSessionDetail() {
           </div>
 
           <div className="card" style={{ marginTop: 12, textAlign: 'center' }}>
-            <div className="text-body-strong">รหัส session</div>
+            <div className="text-body-strong">รหัสรอบอบรม</div>
             <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: 6, color: 'var(--color-brand)' }}>
               {session.qr_token}
             </div>
@@ -228,12 +228,12 @@ export default function AdminSessionDetail() {
 
           {!session.closed_at && session.cohort_id && (
             <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={openRoster}>
-              <ListChecks size={16} /> เช็คชื่อมือจากรายชื่อ cohort
+              <ListChecks size={16} /> เช็คชื่อมือจากรายชื่อในกลุ่ม
             </button>
           )}
           {showRoster && (
             <div className="card" style={{ marginTop: 8 }}>
-              {roster.length === 0 && <div className="text-caption">ไม่มีนักเรียนใน cohort นี้</div>}
+              {roster.length === 0 && <div className="text-caption">ไม่มีนักเรียนในกลุ่มนี้</div>}
               {roster.map((r) => {
                 const done = attendance.some((a) => a.learner_id === r.learner_id && a.status === 'approved')
                 return (
@@ -249,7 +249,7 @@ export default function AdminSessionDetail() {
           )}
           {!session.closed_at && (
             <div className="card" style={{ marginTop: 8 }}>
-              <div className="text-body-strong">รหัสผู้สอน (สำหรับผู้ช่วย)</div>
+              <div className="text-body-strong">รหัสผู้ช่วย</div>
               {instructorCode ? (
                 <>
                   <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 4, color: 'var(--color-brand)', textAlign: 'center', marginTop: 4 }}>
@@ -264,7 +264,7 @@ export default function AdminSessionDetail() {
                 </>
               ) : (
                 <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 6 }} onClick={() => makeInstructorCode('create')}>
-                  สร้างรหัสผู้สอน
+                  สร้างรหัสผู้ช่วย
                 </button>
               )}
             </div>
@@ -289,7 +289,7 @@ export default function AdminSessionDetail() {
             </button>
             {!session.closed_at && (
               <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={closeSession}>
-                ปิด session
+                ปิดรอบอบรม
               </button>
             )}
           </div>

@@ -10,6 +10,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
   const [mode, setMode] = useState(initialMode)
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
+  const [instructorName, setInstructorName] = useState('')
   // คลาสรวม CPR + ปฐมพยาบาล: สร้างโค้ดเรียน CPR ออนไลน์ (cpr.morroo.com) + เปิดทุกบทให้คนในคลาส
   const [includesCpr, setIncludesCpr] = useState(false)
   const [startsOn, setStartsOn] = useState('')
@@ -42,7 +43,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
       const resp = await adminFetch('/api/classes/create', {
         method: 'POST',
         body: JSON.stringify({
-          name: name.trim(), location: location.trim(),
+          name: name.trim(), location: location.trim(), instructorName: instructorName.trim(),
           includesCpr, startsOn: includesCpr ? startsOn || null : null, seats: includesCpr ? Number(seats) || null : null,
         }),
       })
@@ -125,6 +126,9 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น รุ่นที่ 7 / ต.ค. 69" maxLength={80} autoFocus />
             <label className="label" style={{ marginTop: 10 }}>สถานที่ (ไม่บังคับ)</label>
             <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="เช่น ห้องอบรม รพ.ตัวอย่าง" maxLength={120} />
+            <label className="label" style={{ marginTop: 10 }}>ชื่อผู้สอน (พิมพ์บนใบประกาศภาคปฏิบัติ)</label>
+            <input className="input" value={instructorName} onChange={(e) => setInstructorName(e.target.value)} placeholder="เช่น นพ.สมชาย ใจดี" maxLength={100} />
+            <div className="text-caption" style={{ marginTop: 4 }}>เว้นว่างได้ — ใบจะพิมพ์ว่า Jia Training Center · แก้ทีหลังได้ที่หน้าคลาส</div>
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, cursor: 'pointer' }}>
               <input type="checkbox" checked={includesCpr} onChange={(e) => setIncludesCpr(e.target.checked)} style={{ marginTop: 3 }} />
               <span>

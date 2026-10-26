@@ -3,13 +3,14 @@ import { Users, Calendar, Award, Image, Film, Clapperboard, Ticket, LogOut, Grad
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { OPEN_ADMIN } from '../config/adminAccess'
 
-// จัดเป็นหมวด: งานสอนอยู่บนสุด (ครูส่วนใหญ่ใช้แค่หมวดนี้) เมนูเก่า/ขั้นสูงอยู่ล่างสุด
-const SECTIONS = [
+// จัดเมนูตามงานที่ทำ ไม่ใช่ตามตาราง — "คลาสของฉัน" รวมกลุ่มผู้เรียน + วันอบรมไว้แล้ว
+// หน้า Cohorts / Sessions แบบเดิมยังเข้าได้ แต่พับไว้ใน "เครื่องมือขั้นสูง"
+const GROUPS = [
   {
-    title: 'สอนคลาส', hint: 'ครูใช้แค่หมวดนี้ก็พอ',
+    title: 'งานสอน',
     items: [
-      { to: '/admin/teach', label: 'สำหรับผู้สอน', desc: 'เปิดคลาส → แจกรหัสให้นักเรียน → ดูว่าใครพร้อม → วันอบรมสแกนเช็คชื่อ', icon: GraduationCap, color: '#0F766E' },
-      { to: '/admin/guide', label: 'คู่มือผู้สอน (อ่านก่อนใช้ครั้งแรก)', desc: 'ทำทีละขั้น ตั้งแต่ก่อนวันอบรมจนปิดคลาส + ปัญหาที่เจอบ่อย', icon: BookOpen, color: '#475569' },
+      { to: '/admin/teach', label: 'คลาสของฉัน', desc: 'สร้างคลาส · ดูความพร้อมนักเรียน · เช็คชื่อวันอบรม · รายงาน LINE', icon: GraduationCap, color: '#0F766E' },
+      { to: '/admin/guide', label: 'คู่มือผู้สอน', desc: 'วิธีสร้างคลาส รหัสผู้ช่วย เช็คชื่อ สถานี และรายงาน LINE', icon: BookOpen, color: '#475569' },
     ],
   },
   {
@@ -21,20 +22,37 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'ขายและใบเซอร์',
+    title: 'ขาย & ใบประกาศ',
     items: [
       { to: '/admin/vouchers', label: 'โค้ดปลดล็อกบทเรียน', desc: 'สร้าง/ดูโค้ดขายเรียนออนไลน์รายหมวด', icon: Ticket, color: '#0891B2' },
-      { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ใบเซอร์ออกอย่างไร (ออกให้อัตโนมัติ)', icon: Award, color: '#D97706' },
-    ],
-  },
-  {
-    title: 'เมนูเก่า / ขั้นสูง', hint: 'คลาสปกติไม่ต้องเข้า — ใช้ “สำหรับผู้สอน” แทน',
-    items: [
-      { to: '/admin/cohorts', label: 'รายการคลาสทั้งหมด (Cohorts)', desc: 'ดูทุกคลาสรวมกัน รวมคลาสที่สร้างจากหน้าผู้สอนและคลาสแบบเก่า', icon: Users, color: '#16A34A' },
-      { to: '/admin/sessions', label: 'บูธ / รอบเช็คชื่อแยก', desc: 'ใช้กับงานบูธหรืออีเวนต์ที่ไม่มีคลาสออนไลน์', icon: Calendar, color: '#2563EB' },
+      { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ออกจากระบบกลาง JIA — ค้นหา / แก้ชื่อ / เพิกถอน', icon: Award, color: '#D97706' },
     ],
   },
 ]
+
+const ADVANCED = [
+  { to: '/admin/cohorts', label: 'กลุ่มผู้เรียนแบบเดิม', desc: 'กลุ่มที่สร้างก่อนมีระบบคลาส / แก้รายชื่อเป็นจุด ๆ', icon: Users, color: '#16A34A' },
+  { to: '/admin/sessions', label: 'วันอบรม & บูธแบบเดิม', desc: 'เปิดรอบเช็คชื่อแยก (เช่น บูธงาน) / แก้ข้อมูลรอบอบรม', icon: Calendar, color: '#2563EB' },
+]
+
+const h2 = { margin: '20px 0 8px', fontSize: 15, fontWeight: 700, color: 'var(--color-text-secondary, #64748B)' }
+
+function MenuCard({ to, label, desc, icon: Icon, color }) {
+  return (
+    <Link to={to} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 12, background: `${color}15`,
+        color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={22} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div className="text-headline">{label}</div>
+        <div className="text-caption">{desc}</div>
+      </div>
+    </Link>
+  )
+}
 
 export default function AdminDashboard() {
   const logout = async () => {
@@ -55,28 +73,24 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {SECTIONS.map((sec) => (
-        <section key={sec.title} style={{ marginTop: 18 }}>
-          <div className="text-body-strong">{sec.title}</div>
-          {sec.hint && <div className="text-caption">{sec.hint}</div>}
-          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {sec.items.map(({ to, label, desc, icon: Icon, color }) => (
-              <Link key={to} to={to} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 12, background: `${color}15`,
-                  color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  <Icon size={22} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div className="text-headline">{label}</div>
-                  <div className="text-caption">{desc}</div>
-                </div>
-              </Link>
-            ))}
+      {GROUPS.map((g) => (
+        <section key={g.title}>
+          <h2 style={h2}>{g.title}</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {g.items.map((item) => <MenuCard key={item.to} {...item} />)}
           </div>
         </section>
       ))}
+
+      <details style={{ marginTop: 20 }}>
+        <summary className="text-caption" style={{ cursor: 'pointer' }}>⚙️ เครื่องมือขั้นสูง</summary>
+        <div className="text-caption" style={{ margin: '8px 0' }}>
+          ปกติไม่ต้องใช้ — "คลาสของฉัน" จัดการให้ครบแล้ว ข้อมูลชุดเดียวกัน
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {ADVANCED.map((item) => <MenuCard key={item.to} {...item} />)}
+        </div>
+      </details>
     </div>
   )
 }

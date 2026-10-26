@@ -10,16 +10,18 @@ import ClassHome from '../components/teach/ClassHome'
 import ClassOverview from '../components/teach/ClassOverview'
 import ClassTheory from '../components/teach/ClassTheory'
 import ClassPractice from '../components/teach/ClassPractice'
+import ClassCertificates from '../components/teach/ClassCertificates'
 import Seo from '../components/Seo'
 
 // หน้าผู้สอน (แบบ ACLS): ไม่ต้องมีบัญชี — สิทธิ์มาจากรหัสผู้สอนของคลาสที่เครื่องนี้ถืออยู่
 const REFRESH_MS = 30_000
-const TABS = [['class', 'คลาส/QR'], ['overview', 'ภาพรวม'], ['theory', 'ทฤษฎี'], ['practice', 'ปฏิบัติ']]
+const TABS = [['class', 'คลาส/QR'], ['overview', 'ภาพรวม'], ['theory', 'ทฤษฎี'], ['practice', 'ปฏิบัติ'], ['certs', 'ใบประกาศ']]
 const TAB_HINTS = {
-  class: 'ให้นักเรียนสแกน QR เข้าคลาส · ดูรหัสผู้ช่วย · ปิดคลาสเมื่อจบ',
+  class: 'ให้นักเรียนสแกน QR เข้าคลาส · ชื่อผู้สอนบนใบ · รหัสผู้ช่วย · ปิดคลาสเมื่อจบ',
   overview: 'ก่อนวันอบรม: ดูว่าใครพร้อม ใครยังขาดอะไร',
   theory: 'คะแนนเรียนออนไลน์ละเอียดรายคน',
   practice: 'วันอบรม: สแกนเช็คชื่อ ให้คะแนนสถานี ส่งรายงาน LINE',
+  certs: 'หลังอบรม: ใครได้ใบประกาศแล้ว ใครยังค้างเพราะอะไร',
 }
 
 const readTab = () => { try { return sessionStorage.getItem('fa.teach.tab') || 'class' } catch { return 'class' } }
@@ -91,7 +93,7 @@ export default function Teach() {
   if (!classId) {
     return (
       <div className="page-container">
-        <Seo title="สำหรับผู้สอน | Jia Training Center" noindex path="/admin/teach" />
+        <Seo title="คลาสของฉัน | Jia Training Center" noindex path="/admin/teach" />
         {header}
         <div className="text-caption">ผู้สอน (แอดมิน)</div>
         <div className="text-title">เปิดคลาสสอน CPR</div>
@@ -115,7 +117,7 @@ export default function Teach() {
 
   return (
     <div className="page-container">
-      <Seo title="สำหรับผู้สอน | Jia Training Center" noindex path="/teach" />
+      <Seo title="คลาสของฉัน | Jia Training Center" noindex path="/teach" />
       {header}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1 }}>
@@ -148,7 +150,7 @@ export default function Teach() {
 
       <div style={{ display: 'flex', gap: 4, marginTop: 12, position: 'sticky', top: 0, zIndex: 5, background: 'var(--color-bg, #fff)', padding: '6px 0' }}>
         {TABS.map(([k, label]) => (
-          <button key={k} type="button" className={tab === k ? 'btn btn-primary' : 'btn btn-secondary'} style={{ flex: 1, whiteSpace: 'nowrap', padding: '8px 2px', fontSize: 14 }} onClick={() => setTab(k)}>
+          <button key={k} type="button" className={tab === k ? 'btn btn-primary' : 'btn btn-secondary'} style={{ flex: 1, whiteSpace: 'nowrap', padding: '8px 2px', fontSize: 13 }} onClick={() => setTab(k)}>
             {label}
           </button>
         ))}
@@ -160,6 +162,7 @@ export default function Teach() {
       {tab === 'overview' && <ClassOverview learners={learners} classCode={classCode} />}
       {tab === 'theory' && <ClassTheory learners={learners} classCode={classCode} />}
       {tab === 'practice' && <ClassPractice sessionId={sessionId} classCode={classCode} />}
+      {tab === 'certs' && <ClassCertificates classId={classId} />}
 
       {gate && <ClassGate mode={gate} onClose={() => setGate(null)} />}
     </div>

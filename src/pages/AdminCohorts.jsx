@@ -59,7 +59,7 @@ export default function AdminCohorts() {
       </Link>
       <div style={{ marginTop: 4 }}>
         <div className="text-caption">จัดการ</div>
-        <div className="text-title">กลุ่มผู้เรียน (Cohorts)</div>
+        <div className="text-title">กลุ่มผู้เรียนแบบเดิม</div>
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>
@@ -91,7 +91,7 @@ export default function AdminCohorts() {
             </Link>
             {(c.instructorCode || !c.closed) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                {c.instructorCode && <div className="text-caption" style={{ flex: 1 }}>รหัสผู้ช่วย: <b style={{ letterSpacing: 2 }}>{c.instructorCode}</b></div>}
+                {c.instructorCode && <div className="text-caption" style={{ flex: 1 }}>รหัสผู้ช่วย (กู้คืน): <b style={{ letterSpacing: 2 }}>{c.instructorCode}</b></div>}
                 {!c.closed && c.createdVia === 'app' && (
                   <button type="button" className="btn btn-ghost" style={{ fontSize: 13, color: '#B42318' }} onClick={() => closeClass(c)}>ปิดคลาส</button>
                 )}
