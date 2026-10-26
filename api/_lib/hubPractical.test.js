@@ -96,3 +96,10 @@ test('a Hub that is down does not stop this app issuing its own practical certif
   assert.equal(r.body.hub.failed, 'network')
   assert.equal(db.tables.certificates.filter((c) => c.kind === 'practical').length, 1)
 })
+
+test('the session\'s own instructor name wins over the account name', async () => {
+  const db = seed()
+  db.tables.practical_sessions[0].instructor_name = 'นพ.สมชาย ใจดี'
+  await recordPracticalAtHub(db, { learnerId: L, attendanceId: 'att-1' })
+  assert.equal(db.calls[0].args.payload.instructorName, 'นพ.สมชาย ใจดี')
+})

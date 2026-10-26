@@ -126,3 +126,21 @@ test('createClass rolls back the whole class if the CPR code cannot be created',
   assert.equal(db.tables.cohorts.length, 0)
   assert.equal(db.tables.practical_sessions.length, 0)
 })
+
+test('cleanInstructorName trims, strips < >, and treats too-short as not set', async () => {
+  const { cleanInstructorName } = await import('./classes.js')
+  assert.equal(cleanInstructorName('  นพ.สมชาย   ใจดี '), 'นพ.สมชาย ใจดี')
+  assert.equal(cleanInstructorName('<b>ครูเจีย</b>'), 'bครูเจีย/b')
+  assert.equal(cleanInstructorName('x'), null)
+  assert.equal(cleanInstructorName(''), null)
+  assert.equal(cleanInstructorName(42), null)
+  assert.equal(cleanInstructorName('ก'.repeat(150)).length, 100)
+})
+
+test('createClass stores the instructor name on the session', async () => {
+  const db = fakeDb()
+  await createClass(db, { name: 'รุ่น 13', instructorName: ' ครูเจีย ' })
+  assert.equal(db.tables.practical_sessions[0].instructor_name, 'ครูเจีย')
+  await createClass(db, { name: 'รุ่น 14' })
+  assert.equal(db.tables.practical_sessions[1].instructor_name, null)
+})

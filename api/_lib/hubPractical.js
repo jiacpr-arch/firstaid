@@ -9,6 +9,9 @@
 // check-in, grading or this app's own certificate.
 import { HUB_RESULTS_CLIENT, HUB_COURSE_ID } from './hubResults.js'
 
+// The instructor printed on the certificate: the session's instructor_name (set when the class is
+// created, editable at /admin/teach), else the instructor account's name, else the training centre.
+//
 // The Hub's firstaid skills (courses.definition.skills). This app's practical rule — every practice
 // station attended and the exam station passed with every ★ item (or an approved check-in for a
 // session without stations) — is the instructor's pass for the whole practical course, so a learner
@@ -68,11 +71,12 @@ export async function recordPracticalAtHub(admin, { learnerId, attendanceId, use
     if (!att || att.status !== 'approved') return { skipped: 'no-approved-attendance' }
     const { data: session } = await admin
       .from('practical_sessions')
-      .select('title, starts_at, ends_at, instructor_id')
+      .select('title, starts_at, ends_at, instructor_id, instructor_name')
       .eq('id', att.session_id)
       .maybeSingle()
     const payload = buildPracticalPayload({
-      userId: uid, attendanceId, session, instructorName: await instructorNameFor(admin, session?.instructor_id),
+      userId: uid, attendanceId, session,
+      instructorName: session?.instructor_name || await instructorNameFor(admin, session?.instructor_id),
     })
     const { data, error } = await admin.rpc('jia_results', { action: 'recordPractical', payload })
     if (error) throw error
