@@ -1,26 +1,51 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, KeyRound, QrCode, Users, ShieldCheck } from 'lucide-react'
+import { READINESS } from '../../api/_lib/readiness.js'
 
 // คู่มือระบบผู้สอนสำหรับ admin (/admin/guide) — เนื้อหาตรงกับ /admin/teach และ /scan/:id
+// เขียนให้ครูอ่านเข้าใจ: เรียงตามลำดับเวลา (ก่อนวันอบรม → วันอบรม → หลังอบรม) เรื่องตั้งค่าระบบแยกไว้ท้ายสุด
 
-const table = { width: '100%', borderCollapse: 'collapse', fontSize: 14 }
-const cell = { textAlign: 'left', verticalAlign: 'top', padding: '8px 10px', borderBottom: '1px solid var(--color-border)' }
-const head = { ...cell, fontSize: 12, color: 'var(--color-text-muted)' }
 const h2 = { fontSize: 18, fontWeight: 700, margin: '28px 0 8px' }
 const list = { margin: '6px 0 0', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }
+const badgeClass = (tone) => (tone === 'success' ? 'badge badge-success' : tone === 'warning' ? 'badge badge-warning' : 'badge')
 
-function Table({ cols, rows }) {
+function Step({ n, title, when }) {
   return (
-    <div className="card" style={{ padding: 0, overflowX: 'auto', marginTop: 8 }}>
-      <table style={{ ...table, minWidth: 460 }}>
-        <thead><tr>{cols.map((c) => <th key={c} style={head}>{c}</th>)}</tr></thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>{r.map((v, j) => <td key={j} style={{ ...cell, borderBottom: i === rows.length - 1 ? 0 : cell.borderBottom }}>{v}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '32px 0 8px' }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 16, background: 'var(--color-brand)', color: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0,
+      }}>{n}</div>
+      <div>
+        <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
+        <div className="text-caption">{when}</div>
+      </div>
     </div>
+  )
+}
+
+function CodeCard({ icon: Icon, color, title, who, children }) {
+  return (
+    <div className="card" style={{ display: 'flex', gap: 12 }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 10, background: `${color}15`, color, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}><Icon size={20} /></div>
+      <div style={{ flex: 1 }}>
+        <div className="text-body-strong">{title}</div>
+        <div className="text-caption" style={{ color }}>{who}</div>
+        <div className="text-body" style={{ marginTop: 4 }}>{children}</div>
+      </div>
+    </div>
+  )
+}
+
+function Faq({ q, children }) {
+  return (
+    <details className="card" style={{ padding: '12px 14px' }}>
+      <summary className="text-body-strong" style={{ cursor: 'pointer' }}>{q}</summary>
+      <div className="text-body" style={{ marginTop: 8 }}>{children}</div>
+    </details>
   )
 }
 
@@ -30,114 +55,176 @@ export default function AdminTeachGuide() {
       <Link to="/admin" className="text-caption" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
         <ArrowLeft size={16} /> หน้าควบคุม
       </Link>
-      <div className="text-title" style={{ marginTop: 4 }}>คู่มือระบบผู้สอน</div>
+      <div className="text-title" style={{ marginTop: 4 }}>คู่มือผู้สอน</div>
       <p className="text-caption" style={{ marginTop: 4 }}>
-        เปิดคลาส ให้นักเรียนเข้าร่วม เช็คชื่อด้วย QR สอบสถานี และดูว่านักเรียนพร้อมหรือยัง
+        ใช้เมนู <b>คลาสของฉัน</b> เมนูเดียวพอ — ตั้งแต่เปิดคลาส จนจบวันอบรม
       </p>
-      <Link to="/admin/teach" className="btn btn-primary" style={{ marginTop: 12 }}>ไปหน้าคลาสของฉัน</Link>
 
-      <h2 style={h2}>ใครทำอะไรได้</h2>
-      <Table
-        cols={['บทบาท', 'เข้าด้วย', 'ทำได้']}
-        rows={[
-          [<b key="a">admin / ผู้สอน</b>, 'ล็อกอิน admin แล้วเข้า /admin/teach', 'สร้าง/ปิดคลาส ดูความคืบหน้าออนไลน์ของนักเรียน จัดการสถานี สแกน เช็คชื่อ ส่งรายงาน LINE'],
-          [<b key="b">ผู้ช่วย</b>, 'ลิงก์ /scan/… + รหัสผู้ช่วย 8 หลัก (ไม่ต้องล็อกอิน)', 'สแกนและเช็คชื่อ ตรวจสถานี บันทึกผลสอบของรอบนั้น ดูกระดานสถานีของรอบนั้น'],
-          [<b key="c">นักเรียน</b>, 'QR หรือรหัสคลาส 6 หลักที่ /join/รหัส', 'เข้าร่วมคลาส เรียนออนไลน์ แสดง QR ของตัวเองให้ครูสแกน'],
-        ]}
-      />
-      <p className="text-caption" style={{ marginTop: 8 }}>ผู้ช่วยดูความคืบหน้าออนไลน์ของนักเรียน (คะแนน บทเรียน) ไม่ได้ เห็นได้เฉพาะ admin</p>
+      <div className="card" style={{ marginTop: 12, background: 'var(--color-brand-soft, #ECFDF5)' }}>
+        <div className="text-body-strong">สรุปใน 3 ขั้น</div>
+        <ol style={{ ...list, listStyle: 'decimal' }}>
+          <li><b>ก่อนวันอบรม</b> — สร้างคลาส แจกรหัสคลาสให้นักเรียนไปเรียนออนไลน์ในมือถือ แล้วคอยดูว่าใคร “พร้อม”</li>
+          <li><b>วันอบรม</b> — สแกน QR ของนักเรียนเพื่อเช็คชื่อ ให้คะแนนตามสถานี ใบเซอร์ออกให้เอง</li>
+          <li><b>หลังอบรม</b> — เช็คว่าทุกคนได้ใบประกาศ ส่งสรุปเข้า LINE แล้วกดปิดคลาส</li>
+        </ol>
+        <Link to="/admin/teach" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>เริ่มเลย → ไปหน้าคลาสของฉัน</Link>
+      </div>
 
-      <h2 style={h2}>ก่อนเริ่ม</h2>
+      <h2 style={h2}>รหัสและ QR มี 3 อย่าง อย่าสับสน</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <CodeCard icon={Users} color="#0F766E" title="รหัสคลาส (6 ตัว) + QR เข้าคลาส" who="แจกให้นักเรียน — แจกในกลุ่ม LINE ได้">
+          นักเรียนใช้ <b>ครั้งเดียว</b> ตอนเข้าร่วมคลาส จากนั้นเรียนออนไลน์ได้เลย ระบบจะรู้ว่าเป็นนักเรียนของคลาสเรา
+        </CodeCard>
+        <CodeCard icon={KeyRound} color="#B45309" title="รหัสผู้ช่วย (8 ตัว)" who="ให้เฉพาะคนที่มาช่วยครูสแกน — ห้ามให้นักเรียน">
+          เหมือนรหัสผ่านชั่วคราว ผู้ช่วยเปิดลิงก์ผู้ช่วย ใส่รหัสนี้ แล้วช่วยเช็คชื่อและให้คะแนนสถานีได้โดยไม่ต้องมีบัญชีแอดมิน
+        </CodeCard>
+        <CodeCard icon={QrCode} color="#2563EB" title="QR ประจำตัวนักเรียน" who="นักเรียนเปิดในมือถือตัวเอง แล้วยื่นให้ครูสแกน">
+          ใช้ในวันอบรม นักเรียนกดเมนู “QR ของฉัน” (หรือเปิด firstaid.morroo.com/my-qr) ครูหรือผู้ช่วยสแกนเพื่อเช็คชื่อและบันทึกคะแนน
+        </CodeCard>
+      </div>
+
+      <h2 style={h2}>หน้าคลาสของฉันมี 5 แท็บ</h2>
+      <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <tbody>
+            {[
+              ['คลาส/QR', 'โชว์ QR/รหัสให้นักเรียนเข้าคลาส · ชื่อผู้สอนบนใบประกาศ · รหัสผู้ช่วย · สลับหรือปิดคลาส', 'ตอนเปิดคลาส'],
+              ['ภาพรวม', 'ใครพร้อม ใครยังขาดอะไร (แตะชื่อเพื่อดูรายคน)', 'ก่อนวันอบรม'],
+              ['ทฤษฎี', 'ตารางคะแนนเรียนออนไลน์ละเอียดรายคน', 'อยากดูละเอียด'],
+              ['ปฏิบัติ', 'สแกนเช็คชื่อ · ตั้งสถานี · กระดานผล · ส่งรายงาน LINE', 'วันอบรม'],
+              ['ใบประกาศ', 'ใครได้ใบทฤษฎี/ปฏิบัติแล้ว ใครยังค้างเพราะอะไร', 'หลังอบรม'],
+            ].map(([tab, what, when], i, arr) => (
+              <tr key={tab} style={{ borderBottom: i === arr.length - 1 ? 0 : '1px solid var(--color-border)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 700, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{tab}</td>
+                <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>{what}</td>
+                <td style={{ padding: '10px 12px', verticalAlign: 'top', whiteSpace: 'nowrap' }} className="text-caption">{when}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-caption" style={{ marginTop: 6 }}>ตัวเลขในหน้าคลาสของฉันอัปเดตเองทุก 30 วินาที หรือกดปุ่มรีเฟรชมุมขวาบน</p>
+
+      <Step n={1} title="ก่อนวันอบรม" when="ล่วงหน้า 1–2 สัปดาห์" />
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li>เข้า <b>หน้าควบคุม → คลาสของฉัน</b> แล้วกด <b>สร้างคลาสใหม่</b></li>
+        <li>ตั้งชื่อคลาส เช่น “รุ่นที่ 7 / ต.ค. 69” (สถานที่ใส่หรือไม่ใส่ก็ได้)
+          <div className="text-caption">ถ้าเป็นคลาสที่สอน CPR ด้วย ให้ติ๊ก “คลาสรวม CPR + ปฐมพยาบาล” ระบบจะสร้างโค้ดเรียน CPR ออนไลน์ให้นักเรียนเอง</div>
+        </li>
+        <li>ระบบจะโชว์ <b>รหัสคลาส</b> และ <b>รหัสผู้ช่วย</b> — ไม่ต้องรีบจด ดูซ้ำได้ที่แท็บ คลาส/QR</li>
+        <li>ที่แท็บ <b>คลาส/QR</b> ใส่ <b>ชื่อผู้สอนบนใบประกาศ</b> (ถ้าเว้นว่าง ใบจะขึ้นว่า Jia Training Center)</li>
+        <li>บอกนักเรียนให้ <b>เข้าสู่ระบบด้วย LINE</b> ในแอป — ไม่งั้นจะเรียนได้แต่ไม่ได้รับใบประกาศ</li>
+        <li>ส่งรหัสคลาส (หรือปุ่ม “คัดลอกลิงก์”) เข้ากลุ่ม LINE ของนักเรียน หรือฉาย QR ขึ้นจอให้สแกน</li>
+        <li>นักเรียนเรียนออนไลน์ในมือถือ — ครูเข้าแท็บ <b>ภาพรวม</b> เพื่อดูว่าใครพร้อมแล้ว</li>
+      </ol>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <div className="text-body-strong">ป้ายสถานะนักเรียนหมายความว่า</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          {[
+            ['ready', 'สอบหลังเรียน (Post-test) ผ่านแล้ว พร้อมมาอบรมปฏิบัติ'],
+            ['almost', 'อ่านบทเรียนครบแล้ว เหลือแค่สอบหลังเรียนให้ผ่าน'],
+            ['in_progress', 'เริ่มเรียนแล้ว แต่ยังอ่านบทเรียนไม่ครบ'],
+            ['not_started', 'เข้าคลาสแล้ว แต่ยังไม่ได้เริ่มเรียนเลย — ควรทักไปเตือน'],
+          ].map(([k, desc]) => (
+            <div key={k} style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+              <span className={badgeClass(READINESS[k].tone)} style={{ minWidth: 76, textAlign: 'center' }}>{READINESS[k].label}</span>
+              <span className="text-body">{desc}</span>
+            </div>
+          ))}
+        </div>
+        <div className="text-caption" style={{ marginTop: 8 }}>ใต้ชื่อแต่ละคนจะมีบรรทัด “ขาด: …” บอกว่ายังต้องทำอะไรอีก กดปุ่ม CSV เพื่อโหลดรายชื่อไปเปิดใน Excel ได้</div>
+      </div>
+
+      <Step n={2} title="วันอบรมภาคปฏิบัติ" when="ใช้แท็บ “ปฏิบัติ”" />
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li><b>เช็คสถานีก่อนเริ่ม</b> — ระบบเตรียมสถานีไว้ให้แล้ว 7 สถานี (สถานีฝึก + สถานีสอบ) แก้ไขได้ในหัวข้อ “สถานีฝึก/สอบ”</li>
+        <li><b>เช็คชื่อ</b> — ให้นักเรียนเปิด QR ประจำตัว แล้วกด <b>สแกน QR นักเรียน</b>
+          <div className="text-caption">ถ้ามือถือนักเรียนมีปัญหา เลื่อนลงไปที่ “เช็คชื่อมือจากรายชื่อคลาส” แล้วกด เช็คชื่อ ข้างชื่อได้เลย</div>
+        </li>
+        <li><b>ให้คะแนนที่แต่ละสถานี</b> — ในหน้าสแกน เลือกสถานีก่อน แล้วสแกนนักเรียน ติ๊กตามเช็คลิสต์
+          <div className="text-caption">สถานีสอบจะเปิดให้ก็ต่อเมื่อนักเรียนผ่านสถานีฝึกครบแล้ว</div>
+        </li>
+        <li><b>ดูกระดานสถานี</b> — เห็นทั้งห้องว่าใครผ่านสถานีไหนแล้ว ใครยังค้าง</li>
+      </ol>
+      <div className="callout callout-info" style={{ marginTop: 10 }}>
+        <b>ใบเซอร์ภาคปฏิบัติออกให้เองอัตโนมัติ</b> จากระบบกลาง JIA ทันทีที่นักเรียนสอบสถานีผ่าน
+        แต่นักเรียนต้อง <b>ผ่านสอบหลังเรียนแล้ว</b> (สถานะ “พร้อม”) และ <b>เข้าสู่ระบบด้วย LINE</b> ถ้ายังขาดข้อไหน
+        ระบบจะเก็บผลไว้ แล้วออกใบให้เมื่อนักเรียนทำครบ
+      </div>
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '20px 0 6px' }}>มีผู้ช่วยหลายคน? แจกรหัสผู้ช่วย</h3>
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li>แท็บ <b>คลาส/QR</b> → กล่องสีเหลือง “รหัสผู้ช่วย” → กด <b>คัดลอกลิงก์</b> และ <b>คัดลอกรหัส</b></li>
+        <li>ส่งทั้งสองอย่างให้ผู้ช่วยทาง LINE ส่วนตัว (ไม่ใช่กลุ่มนักเรียน)</li>
+        <li>ผู้ช่วยเปิดลิงก์ ใส่รหัส แล้วสแกนได้ทันที ไม่ต้องสมัครหรือล็อกอิน</li>
+      </ol>
+      <div className="callout" style={{ marginTop: 10 }}>
+        ผู้ช่วย <b>ทำได้</b>: เช็คชื่อ ให้คะแนนสถานี ดูกระดานผล (เห็นชื่อและเบอร์โทรนักเรียน)<br />
+        ผู้ช่วย <b>ทำไม่ได้</b>: ดูคะแนนเรียนออนไลน์ สร้าง/ปิดคลาส<br />
+        ถ้ารหัสหลุดไปถึงคนอื่น กด <b>เปลี่ยนรหัส</b> — รหัสเก่าจะใช้ไม่ได้ทันที (แล้วส่งรหัสใหม่ให้ผู้ช่วยตัวจริง)
+      </div>
+
+      <Step n={3} title="หลังอบรม" when="จบวัน" />
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li>แท็บ <b>ใบประกาศ</b> — ดูว่าใครได้ใบภาคทฤษฎีและภาคปฏิบัติแล้ว คนที่ยังไม่ได้จะมีเหตุผลเขียนบอก
+          <div className="text-caption">ถ้ามีคน “ผ่านแล้วแต่ยังไม่ได้ใบ” กด <b>ส่งผลที่ค้าง</b> ได้ กดซ้ำได้ ไม่ออกใบซ้ำ</div>
+        </li>
+        <li>ท้ายแท็บ <b>ปฏิบัติ</b> มีการ์ด “รายงานสรุป” บอกว่าผ่านกี่คน ค้างกี่คน — กด <b>ส่งเข้า LINE</b> เพื่อเก็บไว้
+          <div className="text-caption">ข้อความเป็นตัวเลขรวม ไม่มีชื่อนักเรียน ส่งเข้า LINE ของแอดมิน</div>
+        </li>
+        <li>แท็บ <b>คลาส/QR</b> → กด <b>ปิดคลาสนี้</b> (ตัวแดงด้านล่าง)
+          <div className="text-caption">ปิดแล้วรหัสผู้ช่วยใช้ไม่ได้อีก แต่ข้อมูลและใบเซอร์ของนักเรียนยังอยู่ครบ</div>
+        </li>
+      </ol>
+
+      <h2 style={h2}>เมนูอื่นในหน้าควบคุมต้องใช้ไหม?</h2>
       <ul style={list}>
-        <li>อีเมลของผู้สอนทุกคนต้องอยู่ใน <code>ADMIN_EMAILS</code> (หรือมี role admin)</li>
-        <li>ถ้าจะส่งรายงานเข้า LINE ต้องตั้ง <code>LINE_CHANNEL_ACCESS_TOKEN</code> และ <code>LINE_ADMIN_USER_ID</code> ใน Vercel</li>
-        <li>เมนูผู้สอนอยู่ในหน้าควบคุม admin เท่านั้น ไม่มีในหน้าแรกหรือหน้าตั้งค่าของนักเรียน</li>
+        <li><b>ใบประกาศ</b> — ใช้เมื่อต้องค้นหา แก้ชื่อ หรือเพิกถอนใบรายคน (ทำที่ระบบกลาง JIA)</li>
+        <li><b>เครื่องมือขั้นสูง</b> (พับไว้ล่างสุด: Cohorts / คลาสภาคปฏิบัติ) — คลาสปกติไม่ต้องเข้า ข้อมูลชุดเดียวกับคลาสของฉัน
+          ใช้เฉพาะงานบูธหรืออีเวนต์ที่ไม่มีคลาสออนไลน์</li>
       </ul>
 
-      <h2 style={h2}>เข้าและสร้างคลาส</h2>
-      <ol style={list}>
-        <li>เข้า <code>/admin/login</code> ด้วยบัญชี admin (ลิงก์ /teach เก่าจะพาไปหน้าที่ถูกเอง)</li>
-        <li>ที่หน้าควบคุมเลือก <b>คลาสของฉัน</b> จะเข้า /admin/teach</li>
-        <li>กด <b>สร้างคลาสใหม่</b> ใส่ชื่อคลาสและสถานที่ (ไม่บังคับ) หรือเลือกคลาสที่เปิดอยู่แล้ว</li>
-        <li>ระบบแสดง <b>รหัสคลาส</b> (6 หลัก แจกนักเรียน) และ <b>รหัสผู้ช่วย</b> (8 หลัก ให้คนช่วยสแกน) ดูรหัสผู้ช่วยซ้ำได้ที่แท็บคลาส/QR</li>
-      </ol>
-      <p className="text-caption" style={{ marginTop: 6 }}>1 คลาสมี 1 รอบอบรมปฏิบัติ สลับคลาสได้ด้วยปุ่ม <b>เลือกคลาสอื่น</b></p>
-
-      <h2 style={h2}>ให้นักเรียนเข้าร่วม</h2>
-      <p>แท็บ <b>คลาส/QR</b> มี QR และรหัสคลาส</p>
-      <ul style={list}>
-        <li>ให้นักเรียนสแกน QR (มีปุ่มขยายเต็มจอสำหรับฉายขึ้นจอ)</li>
-        <li>หรือคัดลอกรหัส/ลิงก์ส่งใน LINE กลุ่ม นักเรียนกรอกที่ /join</li>
-        <li>นักเรียนที่เข้าร่วมแล้วจะเห็นแถบคลาสที่หน้าแรกของแอป</li>
-      </ul>
-      <div className="callout callout-info">ลิงก์ QR ถูกตั้งให้เด้งออกไปเปิดในเบราว์เซอร์จริงเมื่อสแกนใน LINE เพราะเบราว์เซอร์ใน LINE ใช้ข้อมูลร่วมกับแอปไม่ได้</div>
-
-      <h2 style={h2}>รหัสผู้ช่วย</h2>
-      <p>ใช้เมื่อมีคนช่วยสแกนหลายจุด โดยไม่ต้องให้สิทธิ์ admin</p>
-      <ol style={list}>
-        <li>แท็บ <b>คลาส/QR</b> ส่วนรหัสผู้ช่วย กดแสดงรหัส แล้วคัดลอกรหัสและลิงก์ผู้ช่วย (/scan/…)</li>
-        <li>ส่งให้ผู้ช่วยทาง LINE ผู้ช่วยเปิดลิงก์ ใส่รหัส ก็เริ่มสแกนได้</li>
-        <li>ถ้ารหัสหลุด กด <b>เปลี่ยนรหัส</b> ผู้ช่วยที่ใช้รหัสเดิมจะถูกเด้งออก</li>
-      </ol>
-      <div className="callout">
-        <b>ดูแลรหัสเหมือนรหัสผ่าน</b> ผู้ช่วยที่มีรหัสเช็คชื่อได้ บันทึกผลสอบสถานี และทำให้ระบบออกใบเซอร์ของรอบนั้นได้
-        กระดานและรายชื่อของรอบนั้นแสดงชื่อและเบอร์โทรนักเรียน รหัสใช้ไม่ได้ทันทีเมื่อปิดคลาส
+      <h2 style={h2}>ปัญหาที่เจอบ่อย</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Faq q="กดเข้าคลาสของฉันแล้วเด้งไปหน้าล็อกอิน">
+          ต้องล็อกอินด้วยอีเมลที่ได้รับสิทธิ์แอดมินเท่านั้น ถ้าเป็นครูใหม่ ให้ผู้ดูแลระบบเพิ่มอีเมลให้ก่อน (ดูหัวข้อท้ายหน้า)
+        </Faq>
+        <Faq q="นักเรียนสแกน QR ใน LINE แล้วเข้าไม่ได้ / ข้อมูลหาย">
+          ลิงก์จะพยายามเด้งออกไปเปิดใน Chrome/Safari เอง เพราะเบราว์เซอร์ใน LINE เก็บข้อมูลไม่ได้
+          ถ้าไม่เด้ง ให้นักเรียนกด “…” มุมขวาบน → เปิดในเบราว์เซอร์
+        </Faq>
+        <Faq q="ไม่เห็นชื่อนักเรียนในแท็บภาพรวม">
+          กดรีเฟรช แล้วถามนักเรียนว่าใส่รหัสคลาสถูกคลาสหรือเปล่า (รหัสของคลาสที่เปิดอยู่แสดงอยู่บนสุดของหน้าคลาสของฉัน)
+        </Faq>
+        <Faq q="ผู้ช่วยใส่รหัสแล้วเข้าไม่ได้">
+          เช็คว่าคลาสยังไม่ถูกปิด และครูไม่ได้กดเปลี่ยนรหัสไปแล้ว ถ้าใส่ผิดหลายครั้งติดกันระบบจะล็อกชั่วคราว รอสักครู่แล้วลองใหม่
+        </Faq>
+        <Faq q="นักเรียนสอบสถานีผ่านแล้วแต่ไม่ได้ใบเซอร์ภาคปฏิบัติ">
+          เปิดแท็บ <b>ใบประกาศ</b> ดูเหตุผลข้างชื่อ ส่วนใหญ่เป็นเพราะนักเรียนยังไม่ผ่านสอบหลังเรียน หรือยังไม่ได้เข้าสู่ระบบด้วย LINE
+          ไม่ต้องสแกนซ้ำ — ให้นักเรียนทำข้อที่ขาดให้ครบ แล้วใบจะออกตามมาเอง (หรือกด ส่งผลที่ค้าง ในแท็บนั้น)
+        </Faq>
+        <Faq q="ทำหน้าคลาสหาย / เปลี่ยนเครื่อง">
+          เข้า คลาสของฉัน → <b>เลือกคลาสที่มีอยู่แล้ว</b> แล้วแตะชื่อคลาส ข้อมูลทั้งหมดอยู่บนเซิร์ฟเวอร์ ไม่หาย
+        </Faq>
       </div>
 
-      <h2 style={h2}>ดูว่านักเรียนพร้อมหรือยัง</h2>
-      <p>แท็บ <b>ภาพรวม</b> และ <b>ทฤษฎี</b> รีเฟรชเองทุก 30 วินาที (กดปุ่มรีเฟรชได้)</p>
-      <Table
-        cols={['สถานะ', 'ความหมาย']}
-        rows={[
-          ['ready', 'พร้อม: ผ่าน Post-test แล้ว'],
-          ['almost', 'เกือบพร้อม'],
-          ['in_progress', 'กำลังเรียน'],
-          ['not_started', 'ยังไม่เริ่ม'],
-        ]}
-      />
-      <p className="text-caption" style={{ marginTop: 8 }}>กดชื่อนักเรียนเพื่อดูรายละเอียดรายคน</p>
-
-      <h2 style={h2}>วันอบรมภาคปฏิบัติ</h2>
-      <p>แท็บ <b>ปฏิบัติ</b> ใช้ในวันสอนจริง</p>
-      <ol style={list}>
-        <li><b>ตั้งสถานี</b> ระบบมีสถานีเริ่มต้น 7 สถานี แบ่งเป็นสถานีฝึกและสถานีสอบ</li>
-        <li><b>สแกนเช็คชื่อ</b> ให้นักเรียนเปิด /my-qr แล้วครูสแกน QR ถ้าสแกนไม่ได้ กด <b>เช็คชื่อ</b> ด้วยมือ</li>
-        <li><b>ตรวจสถานี</b> สแกนนักเรียนที่แต่ละสถานีแล้วให้คะแนนตามเช็คลิสต์ สถานีสอบเปิดได้เมื่อผ่านสถานีฝึกครบแล้วเท่านั้น</li>
-        <li><b>ดูกระดานสถานี</b> เห็นว่าใครผ่านที่ไหน ใครค้าง</li>
-      </ol>
-      <div className="callout callout-info">
-        ใบเซอร์ภาคปฏิบัติออกอัตโนมัติเมื่อสอบสถานีผ่าน (หรือตอนเช็คชื่อ ถ้ารอบนั้นไม่มีสถานี)
-        นักเรียนต้องมีใบเซอร์ภาคทฤษฎีก่อน ถ้ายังไม่มี ระบบจะข้ามไปและไม่ลองออกให้อีกเอง
-      </div>
-      <div className="callout">
-        <b>ให้ครูตรวจเช็คลิสต์สถานี</b> เนื้อหาเช็คลิสต์ปฐมพยาบาลร่างโดย Claude และถูกตั้งเป็น &quot;ตรวจแล้ว&quot; ตามคำสั่งเจ้าของระบบ
-        แต่ยังไม่มีผู้สอนทบทวนเนื้อหาทางการแพทย์ ควรให้ครูอ่านตรวจก่อนใช้สอบจริง
-      </div>
-
-      <h2 style={h2}>รายงานสรุปเข้า LINE</h2>
-      <p>ท้ายแท็บ <b>ปฏิบัติ</b> มีการ์ดรายงานสรุปรอบอบรม บอกว่าผ่านกี่คน เหลือกี่รายการ</p>
-      <ol style={list}>
-        <li>ดูตัวอย่างข้อความในหน้าจอก่อน</li>
-        <li>กด <b>ส่งเข้า LINE</b> ข้อความไปที่ LINE ของ admin เป็นตัวเลขรวม ไม่มีชื่อนักเรียน</li>
-        <li>ถ้าขึ้นว่าส่งไม่สำเร็จ ให้ตรวจตัวแปร LINE ใน Vercel</li>
-      </ol>
-
-      <h2 style={h2}>ปิดคลาส</h2>
-      <p>เมื่อจบ กด <b>ปิดคลาสนี้</b> ที่แท็บคลาส/QR รหัสผู้ช่วยจะใช้ไม่ได้อีก ข้อมูลนักเรียนไม่ถูกลบ</p>
-
-      <h2 style={h2}>แก้ปัญหาเบื้องต้น</h2>
-      <Table
-        cols={['อาการ', 'ลองทำ']}
-        rows={[
-          ['เข้า /admin/teach แล้วเด้งไปหน้าล็อกอิน', 'ล็อกอินด้วยอีเมลที่อยู่ใน ADMIN_EMAILS'],
-          ['ผู้ช่วยใส่รหัสแล้วเข้าไม่ได้', 'ตรวจว่าคลาสยังไม่ปิดและรหัสไม่ถูกเปลี่ยนใหม่ การลองผิดหลายครั้งติดกันจะถูกจำกัดชั่วคราว'],
-          ['ใบเซอร์ภาคปฏิบัติไม่ออก', 'ตรวจว่านักเรียนมีใบเซอร์ทฤษฎีแล้ว และสอบสถานีสอบผ่าน (ต้องผ่านสถานีฝึกครบก่อน)'],
-          ['ไม่เห็นนักเรียนในภาพรวม', 'กดรีเฟรช และดูว่านักเรียนเข้าร่วมด้วยรหัสของคลาสนี้แล้ว'],
-        ]}
-      />
-      <p className="text-caption" style={{ marginTop: 16 }}>
-        คู่มือเขียนจากโค้ดที่ merge แล้ว ยังไม่ได้ทดสอบกับฐานข้อมูลจริง กล้องสแกน และการส่ง LINE ควรลองเดินระบบหนึ่งรอบก่อนใช้งานวันจริง
-      </p>
+      <details className="card" style={{ marginTop: 28, padding: '12px 14px' }}>
+        <summary className="text-body-strong" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <ShieldCheck size={16} /> สำหรับผู้ดูแลระบบ (ตั้งค่าครั้งเดียว)
+        </summary>
+        <ul style={list}>
+          <li>เพิ่มครูใหม่: ใส่อีเมลของครูใน <code>ADMIN_EMAILS</code> บน Vercel (หรือให้ role admin ใน Supabase)</li>
+          <li>ส่งรายงานเข้า LINE ได้ต้องตั้ง <code>LINE_CHANNEL_ACCESS_TOKEN</code> และ <code>LINE_ADMIN_USER_ID</code> บน Vercel — ถ้ากดส่งแล้วขึ้นว่าไม่สำเร็จ ให้ตรวจสองค่านี้</li>
+          <li>ลิงก์ <code>/teach</code> แบบเก่าจะพาไป <code>/admin/teach</code> ให้เอง</li>
+        </ul>
+        <div className="callout" style={{ marginTop: 10 }}>
+          <b>เช็คลิสต์สถานียังไม่ผ่านการทบทวนทางการแพทย์</b> — เนื้อหาร่างโดย AI ควรให้ครูผู้เชี่ยวชาญอ่านตรวจก่อนใช้สอบจริง
+        </div>
+        <p className="text-caption" style={{ marginTop: 8 }}>
+          ควรลองเดินระบบครบหนึ่งรอบ (สร้างคลาส → เข้าคลาส → สแกน → ส่ง LINE) ก่อนใช้ในวันอบรมจริง
+        </p>
+      </details>
     </div>
   )
 }
