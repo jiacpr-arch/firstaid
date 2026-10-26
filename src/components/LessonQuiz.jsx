@@ -11,11 +11,11 @@ function shuffled(list) {
   return a
 }
 
-// mini quiz หลังดูคลิป — ถามทีละข้อในการ์ดเดียว มีปุ่มเดียวต่อจังหวะ:
-// ส่งคำตอบ → ข้อต่อไป → … → สรุปคะแนน + ปุ่มไปต่อ/ดูคลิปอีกครั้ง (เรียก onContinue)
+// แบบทดสอบท้ายบท (คำถามจากคลิป + คำถามในบท) — ถามทีละข้อในการ์ดเดียว มีปุ่มเดียวต่อจังหวะ:
+// ส่งคำตอบ → ข้อต่อไป → … → สรุปคะแนน + ปุ่มไปต่อ/ทบทวนอีกครั้ง (เรียก onContinue)
 // เรียก onComplete({ correct, total }) เมื่อตอบครบ
-// ให้ parent ใส่ key ใหม่ทุกรอบที่ดูคลิปซ้ำ เพื่อสลับตัวเลือกและล้างคำตอบ
-export default function VideoQuiz({ questions, passRatio, onComplete, onContinue, continueLabel }) {
+// ให้ parent ใส่ key ใหม่ทุกรอบที่ทบทวนซ้ำ เพื่อสลับตัวเลือกและล้างคำตอบ
+export default function LessonQuiz({ questions, passRatio = 0.7, onComplete, onContinue, continueLabel, retryLabel = 'ทบทวนอีกครั้ง' }) {
   const [items] = useState(() => questions.map((q) => ({ ...q, choices: shuffled(q.choices) })))
   const [idx, setIdx] = useState(0)
   const [correct, setCorrect] = useState(0)
@@ -50,11 +50,13 @@ export default function VideoQuiz({ questions, passRatio, onComplete, onContinue
       <div className={`callout ${passed ? 'callout-info' : 'callout-danger'}`} style={{ marginTop: 14 }}>
         <div className="text-body-strong">ได้ {result.correct} / {result.total} ข้อ</div>
         <div className="text-body">
-          {passed ? 'ผ่านแล้ว ไปเรียนต่อได้เลย' : 'ยังไม่ถึง 70% ลองดูคลิปอีกครั้งแล้วตอบใหม่นะ'}
+          {passed
+            ? 'ผ่านแล้ว ไปเรียนต่อได้เลย'
+            : `ยังไม่ถึง ${Math.round(passRatio * 100)}% ลอง${retryLabel}แล้วตอบใหม่นะ`}
         </div>
       </div>
       <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={onContinue}>
-        {passed ? continueLabel : 'ดูคลิปอีกครั้ง'} <ChevronRight size={16} />
+        {passed ? continueLabel : retryLabel} <ChevronRight size={16} />
       </button>
     </>
   ) : null
@@ -62,7 +64,7 @@ export default function VideoQuiz({ questions, passRatio, onComplete, onContinue
   return (
     <div>
       <div className="text-caption" style={{ marginBottom: 8 }}>
-        คำถามจากคลิป ข้อ {idx + 1} / {items.length}
+        แบบทดสอบท้ายบท ข้อ {idx + 1} / {items.length}
       </div>
       <QuizQuestion key={idx} {...q} onAnswered={onAnswered} footer={footer} />
     </div>
