@@ -14,6 +14,9 @@ export default function ClassHome({ onNewClass, onPick }) {
   const [copied, setCopied] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [instructorName, setInstructorName] = useState('')
+  const [savedName, setSavedName] = useState(null) // null = loading
+  const [nameNote, setNameNote] = useState('')
 
   const base = import.meta.env.VITE_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
   // openExternalBrowser=1 — สแกนใน LINE แล้วให้เด้งออก browser จริง (in-app browser แชร์ storage ไม่ได้)
@@ -25,6 +28,35 @@ export default function ClassHome({ onNewClass, onPick }) {
     if (!joinUrl) return
     QRCode.toDataURL(joinUrl, { width: 560, margin: 1 }).then(setQr).catch(() => {})
   }, [joinUrl])
+
+  useEffect(() => {
+    if (!cls.sessionId) return
+    let cancelled = false
+    adminFetch(`/api/classes/instructor-name?sessionId=${cls.sessionId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => { if (!cancelled && b) { setInstructorName(b.instructorName); setSavedName(b.instructorName) } })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [cls.sessionId])
+
+  const saveInstructorName = async () => {
+    setBusy(true)
+    setNameNote('')
+    try {
+      const resp = await adminFetch('/api/classes/instructor-name', {
+        method: 'POST', body: JSON.stringify({ sessionId: cls.sessionId, instructorName: instructorName.trim() }),
+      })
+      const body = await resp.json().catch(() => ({}))
+      if (!resp.ok) { setNameNote(body.error || 'บันทึกไม่สำเร็จ'); return }
+      setInstructorName(body.instructorName)
+      setSavedName(body.instructorName)
+      setNameNote('บันทึกแล้ว')
+    } catch {
+      setNameNote('เครือข่ายขัดข้อง ลองใหม่')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const copy = async (key, text) => {
     try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(''), 1500) } catch { /* ignore */ }
@@ -108,6 +140,23 @@ export default function ClassHome({ onNewClass, onPick }) {
           </button>
         </div>
       </div>
+
+      {cls.sessionId && (
+        <div className="card" style={{ marginTop: 10 }}>
+          <div className="text-body-strong">ชื่อผู้สอนบนใบประกาศภาคปฏิบัติ</div>
+          <div className="text-caption" style={{ marginTop: 2 }}>
+            พิมพ์บนใบที่ระบบกลาง JIA ออกให้นักเรียนที่สอบผ่าน · ว่าง = Jia Training Center · ใบที่ออกไปแล้วไม่เปลี่ยนตาม
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <input className="input" style={{ flex: 1 }} value={instructorName} maxLength={100}
+              disabled={savedName === null} placeholder="เช่น นพ.สมชาย ใจดี"
+              onChange={(e) => { setInstructorName(e.target.value); setNameNote('') }} />
+            <button type="button" className="btn btn-primary" disabled={busy || savedName === null || instructorName.trim() === savedName}
+              onClick={saveInstructorName}>บันทึก</button>
+          </div>
+          {nameNote && <div className="text-caption" style={{ marginTop: 6 }}>{nameNote}</div>}
+        </div>
+      )}
 
       <div className="card" style={{ marginTop: 10, borderColor: '#E3C27A', background: '#FBF3DF' }}>
         <div className="text-body-strong" style={{ color: '#7A5A1F' }}>รหัสผู้ช่วย — ให้เฉพาะคนที่ช่วยสแกน</div>

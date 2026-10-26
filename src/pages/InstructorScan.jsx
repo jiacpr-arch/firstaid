@@ -56,11 +56,11 @@ export default function InstructorScan() {
 
   return (
     <div className="page-container">
-      <Seo title="รหัสผู้สอน | Jia Training Center" noindex path="/scan" />
-      <div className="text-title" style={{ marginTop: 8 }}>รหัสผู้สอน</div>
-      <div className="text-caption">ขอรหัสผู้สอนจากครูผู้สอน เพื่อสแกนเช็คชื่อนักเรียนในรอบอบรมนี้</div>
+      <Seo title="รหัสผู้ช่วย | Jia Training Center" noindex path="/scan" />
+      <div className="text-title" style={{ marginTop: 8 }}>รหัสผู้ช่วย</div>
+      <div className="text-caption">ขอรหัสผู้ช่วยจากครูผู้สอน เพื่อสแกนเช็คชื่อนักเรียนในรอบอบรมนี้</div>
       <div className="card" style={{ marginTop: 12 }}>
-        <label className="label">รหัสผู้สอน (8 ตัว)</label>
+        <label className="label">รหัสผู้ช่วย (8 ตัว)</label>
         <input
           className="input"
           value={code}

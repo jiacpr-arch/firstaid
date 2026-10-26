@@ -67,8 +67,8 @@ export default function AdminSessions() {
       </Link>
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 4 }}>
         <div style={{ flex: 1 }}>
-          <div className="text-caption">ภาคปฏิบัติ</div>
-          <div className="text-title">คลาสที่เปิดอยู่</div>
+          <div className="text-caption">ขั้นสูง</div>
+          <div className="text-title">วันอบรม & บูธแบบเดิม</div>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
           <Plus size={16} /> เปิดคลาส
@@ -108,7 +108,7 @@ export default function AdminSessions() {
                 {cohorts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <div className="text-caption" style={{ marginTop: 4 }}>
-                ผูกแล้วผลเช็คชื่อจะขึ้นใน dashboard ของคลาสนั้น — สร้าง 1 session ต่อ 1 ฐาน (เช่น "ฐาน CPR", "ฐาน AED")
+                ผูกแล้วผลเช็คชื่อจะขึ้นใน dashboard ของคลาสนั้น — สร้าง 1 รอบต่อ 1 ฐาน (เช่น "ฐาน CPR", "ฐาน AED")
               </div>
             </>
           )}
@@ -124,7 +124,7 @@ export default function AdminSessions() {
         {!loading && sessions.length === 0 && (
           <div className="card">
             <div className="text-body-strong">ยังไม่มีคลาส</div>
-            <div className="text-caption">กดปุ่ม "เปิดคลาส" เพื่อสร้างคลาสภาคปฏิบัติใหม่</div>
+            <div className="text-caption">กดปุ่ม "เปิดคลาส" เพื่อสร้างรอบอบรมใหม่</div>
             {!isSupabaseConfigured && (
               <div className="callout callout-info" style={{ marginTop: 8 }}>
                 ยังไม่ได้เชื่อมต่อ Supabase — กรอก VITE_SUPABASE_URL/ANON_KEY ใน .env แล้ว deploy ใหม่

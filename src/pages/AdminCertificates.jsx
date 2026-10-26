@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { HUB_URL } from '../utils/hubCertificate'
 
+// ใบประกาศทั้งสองแบบออกจากระบบกลาง JIA — ค้นหา แก้ชื่อ เพิกถอน ทำที่หน้าเจ้าหน้าที่ของระบบกลาง
 export default function AdminCertificates() {
   return (
     <div className="page-container">
@@ -13,14 +15,21 @@ export default function AdminCertificates() {
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <div className="text-body">
-          ใบประกาศภาคทฤษฎีออกอัตโนมัติเมื่อผู้เรียนผ่าน post-test ≥ 80%
+          ใบประกาศทั้งภาคทฤษฎี (ออนไลน์) และภาคปฏิบัติ ออกจาก<b>ระบบกลาง JIA</b> (class.jiacpr.com)
         </div>
-        <div className="text-body" style={{ marginTop: 8 }}>
-          ใบประกาศภาคปฏิบัติออกอัตโนมัติเมื่อครูผู้สอนกด "อนุมัติ" ใน{' '}
-          <Link to="/admin/sessions" style={{ color: 'var(--color-brand)' }}>หน้าคลาสภาคปฏิบัติ</Link>
-        </div>
-        <div className="text-caption" style={{ marginTop: 8 }}>
-          (หน้าค้นหา/เพิกถอน — เพิ่มในเฟสถัดไป)
+        <ul className="text-body" style={{ margin: '8px 0 0', paddingLeft: 20, lineHeight: 1.7 }}>
+          <li>ภาคทฤษฎี: ออกอัตโนมัติเมื่อผู้เรียนเข้าสู่ระบบและผ่าน Post-test ≥ 80%</li>
+          <li>
+            ภาคปฏิบัติ: ออกอัตโนมัติเมื่อสอบสถานีผ่านใน{' '}
+            <Link to="/admin/teach" style={{ color: 'var(--color-brand)' }}>คลาสของฉัน</Link> — ดูว่าใครได้ใบแล้วที่แท็บ "ใบประกาศ"
+          </li>
+        </ul>
+        <a className="btn btn-primary btn-block" style={{ marginTop: 12, textDecoration: 'none' }}
+          href={`${HUB_URL}/operations/certificates`} target="_blank" rel="noreferrer">
+          <ExternalLink size={16} /> ค้นหา / แก้ชื่อ / เพิกถอน ที่ระบบกลาง
+        </a>
+        <div className="text-caption" style={{ marginTop: 6 }}>
+          เข้าด้วยบัญชีเจ้าหน้าที่ของระบบกลาง · แก้ชื่อและเพิกถอนได้เฉพาะแอดมิน
         </div>
       </div>
     </div>
