@@ -83,7 +83,7 @@ export default function ClassHome({ onNewClass, onPick }) {
   }
 
   const closeClass = async () => {
-    if (!confirm(`ปิดคลาส “${cls.className}”? รหัสผู้ช่วยจะใช้ไม่ได้อีก (ข้อมูลนักเรียนไม่ถูกลบ)`)) return
+    if (!confirm(`ปิดคลาส “${cls.className}”? รหัสผู้ช่วยจะใช้ไม่ได้อีก (ข้อมูลนักเรียนไม่ถูกลบ)\n\nอย่าลืมออก “รายงานประจำรุ่น” ก่อนปิด (การ์ดเหนือแท็บ)`)) return
     setBusy(true)
     setError('')
     try {
