@@ -64,11 +64,23 @@ export default async function handler(req, res) {
       return
     }
 
+    // A JIA account with LINE linked was adopted through public.line_identities — the same row
+    // api/auth/line.js writes — so hand back that LINE identity like the LINE bridge does. Best
+    // effort: without it the learner is still signed in, just shown as a "บัญชี JIA" login.
+    const { data: lineRow } = await admin
+      .from('line_identities')
+      .select('line_user_id, display_name, picture_url')
+      .eq('learner_id', adopted.learnerId)
+      .limit(1)
+      .maybeSingle()
+
     res.status(200).json({
       tokenHash,
       learnerId: adopted.learnerId,
-      displayName: profile.nameTh || profile.nameEn || '',
+      displayName: profile.nameTh || profile.nameEn || lineRow?.display_name || '',
       email,
+      lineUserId: lineRow?.line_user_id || null,
+      pictureUrl: lineRow?.picture_url || null,
     })
   } catch (err) {
     console.error('Hub auth bridge error', err)

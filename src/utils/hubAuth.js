@@ -54,13 +54,17 @@ async function codeChallengeFor(codeVerifier) {
 
 export const hubCallbackUri = () => `${window.location.origin}/auth/hub/callback`
 
-// Kick off the Hub login redirect.
-export async function startHubLogin(learnerId) {
+// Kick off the Hub login redirect. returnTo (optional) = in-app path to land on afterwards (e.g. a
+// /redeem/<code> QR link). line=true is the "เข้าสู่ระบบด้วย LINE" button: login_hint=line makes the
+// Hub start its LINE sign-in straight away (LINE app on a phone, then back to this browser) instead of
+// asking the learner to pick LINE again on its page. LINE login goes through the Hub, not a channel of
+// this app's own, so a learner ends up with one JIA account across every JIA app.
+export async function startHubLogin(learnerId, returnTo, { line = false } = {}) {
   const state = randomToken()
   const codeVerifier = randomCodeVerifier()
   const codeChallenge = await codeChallengeFor(codeVerifier)
   const redirectUri = hubCallbackUri()
-  const payload = JSON.stringify({ state, codeVerifier, learnerId, redirectUri })
+  const payload = JSON.stringify({ state, codeVerifier, learnerId, redirectUri, returnTo })
   sessionStorage.setItem(SS_KEY, payload)
   setCookie(SS_KEY, payload, COOKIE_MAX_AGE)
 
@@ -71,6 +75,7 @@ export async function startHubLogin(learnerId) {
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
   })
+  if (line) params.set('login_hint', 'line')
   window.location.assign(`${HUB_SSO_URL}?${params.toString()}`)
 }
 

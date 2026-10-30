@@ -3,7 +3,7 @@ import { LogIn, LogOut, MessageCircle, UserCheck, UserRound } from 'lucide-react
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import { useAuthSession } from '../hooks/useAuthSession'
 import { useLearnerStore } from '../stores/learnerStore'
-import { startLineLogin, isLineLoginConfigured } from '../utils/lineAuth'
+import { isLineLoginConfigured } from '../utils/lineAuth'
 import { startHubLogin } from '../utils/hubAuth'
 import { logoutEverywhere } from '../utils/accountLogout'
 
@@ -37,7 +37,7 @@ export default function AccountCard({ showSignedOut = false, style }) {
         {isLineLoginConfigured && (
           <button
             type="button"
-            onClick={() => startLineLogin(learner?.id)}
+            onClick={() => startHubLogin(learner?.id, undefined, { line: true })}
             className="btn btn-block"
             style={{ marginTop: 12, background: '#06C755', color: '#fff', fontWeight: 700 }}
           >

@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { MessageCircle, UserRound } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
-import { startLineLogin } from '../utils/lineAuth'
 import { startHubLogin } from '../utils/hubAuth'
 import { track } from '../utils/analytics'
 
@@ -15,7 +14,7 @@ function fbqTrack(...args) {
 }
 
 // ด่านสมัคร/ล็อกอิน — ต้องล็อกอินทางใดทางหนึ่งจึงเรียนบทที่ 2 ขึ้นไปได้ (LessonReader เป็นคนกั้น)
-// LINE เป็นทางหลัก (ระหว่างล็อกอินจะเพิ่มเพื่อน OA @jiacpr อัตโนมัติผ่าน bot_prompt) สร้างบัญชีจริง
+// LINE เป็นทางหลัก (ผ่านระบบกลาง class.jiacpr.com เหมือนทุกแอป JIA — บัญชีเดียวกัน) สร้างบัญชีจริง
 // ผ่าน Supabase Auth ทั้งคู่ — ทางที่สอง (เข้าสู่ระบบด้วยบัญชี JIA กลาง ผ่าน class.jiacpr.com) สำหรับ
 // คนไม่มี/ไม่อยากใช้ LINE เท่านั้น จำเป็นเพราะด่านนี้บังคับ ถ้ามีแค่ LINE คนไม่มี LINE จะเรียนต่อไม่ได้เลย
 //
@@ -36,7 +35,7 @@ export default function LineLoginGate({ inline = false, title = 'เรียน
       source: `${source}_line_login`,
       channel: 'line',
     })
-    startLineLogin(learner?.id)
+    startHubLogin(learner?.id, undefined, { line: true })
   }
 
   // ทางเลือกสำรอง (LINE เป็นหลัก) สำหรับคนไม่มี/ไม่อยากใช้ LINE — ด่านนี้บังคับต้องล็อกอินทางใด

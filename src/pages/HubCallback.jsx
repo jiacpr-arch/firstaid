@@ -81,15 +81,23 @@ export default function HubCallback() {
 
         await linkLearnerToAuth({
           session: verified.session,
+          // Set when this JIA account has LINE linked (the learner signed in with LINE at the Hub):
+          // the same LINE identity api/auth/line.js used to record, so nurture/certificate rules see it.
+          lineUserId: data.lineUserId || undefined,
           displayName: data.displayName,
+          pictureUrl: data.pictureUrl || undefined,
           lineEmail: data.email,
           canonicalLearnerId: data.learnerId,
         })
 
-        fbqTrack('track', 'CompleteRegistration', { content_name: 'hub_login', status: true })
-        phCapture('student_registered', { method: 'hub' })
+        const method = data.lineUserId ? 'line' : 'hub'
+        fbqTrack('track', 'CompleteRegistration', { content_name: `${method}_login`, status: true })
+        phCapture('student_registered', { method, via: 'hub' })
         clearHubAuthState()
-        if (!cancelled) navigate('/learn', { replace: true })
+        // รับเฉพาะ path ภายในแอป (กัน open redirect เช่น //evil.com)
+        const returnTo = typeof saved.returnTo === 'string' && /^\/(?!\/)/.test(saved.returnTo)
+          ? saved.returnTo : '/learn'
+        if (!cancelled) navigate(returnTo, { replace: true })
       } catch (err) {
         console.error('Hub callback failed', err)
         if (!cancelled) setError('เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง (อาจเป็นปัญหาเครือข่ายชั่วคราว)')
