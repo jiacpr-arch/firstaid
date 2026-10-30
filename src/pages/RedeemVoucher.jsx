@@ -5,7 +5,8 @@ import { useAuthStore } from '../stores/authStore'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useEntitlementStore } from '../stores/entitlementStore'
 import { useEnsureLearner } from '../hooks/useLearner'
-import { startLineLogin, isLineLoginConfigured } from '../utils/lineAuth'
+import { isLineLoginConfigured } from '../utils/lineAuth'
+import { startHubLogin } from '../utils/hubAuth'
 import { authHeader } from '../utils/authHeader'
 import { track } from '../utils/analytics'
 import { COURSE_BUNDLE_CHAPTER } from '../config/pricing'
@@ -94,7 +95,7 @@ export default function RedeemVoucher() {
           {isLineLoginConfigured ? (
             <button
               type="button"
-              onClick={() => startLineLogin(learner?.id, `/redeem/${encodeURIComponent(code.trim())}`)}
+              onClick={() => startHubLogin(learner?.id, `/redeem/${encodeURIComponent(code.trim())}`, { line: true })}
               className="btn btn-block"
               style={{ marginTop: 12, padding: '14px', borderRadius: 12, background: '#06C755', color: '#fff', fontWeight: 800, border: 'none' }}
             >

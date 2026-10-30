@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MessageCircle, AlertTriangle, Copy, Check } from 'lucide-react'
 import { supabase } from '../config/supabaseClient'
-import { readLineAuthState, clearLineAuthState, startLineLogin } from '../utils/lineAuth'
+import { readLineAuthState, clearLineAuthState } from '../utils/lineAuth'
+import { startHubLogin } from '../utils/hubAuth'
 import { detectInAppBrowser } from '../utils/inAppBrowser'
 import { linkLearnerToAuth } from '../utils/linkLearner'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -144,7 +145,7 @@ export default function LineCallback() {
           )}
           <button
             type="button"
-            onClick={() => startLineLogin(learner?.id)}
+            onClick={() => startHubLogin(learner?.id, undefined, { line: true })}
             className="btn btn-block"
             style={{ marginTop: 16, padding: '13px', borderRadius: 12, background: '#06C755', color: '#fff', fontWeight: 800, border: 'none' }}
           >

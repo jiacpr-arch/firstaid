@@ -5,7 +5,8 @@ import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE } from '../config/pricing'
 import { useAuthStore } from '../stores/authStore'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useEntitlementStore } from '../stores/entitlementStore'
-import { startLineLogin, isLineLoginConfigured } from '../utils/lineAuth'
+import { isLineLoginConfigured } from '../utils/lineAuth'
+import { startHubLogin } from '../utils/hubAuth'
 import { lineInterestUrl } from '../utils/lineLinks'
 import { authHeader } from '../utils/authHeader'
 import { track } from '../utils/analytics'
@@ -98,7 +99,7 @@ export default function ChapterUnlockCard({ chapter }) {
           {isLineLoginConfigured ? (
             <button
               type="button"
-              onClick={() => startLineLogin(learner?.id)}
+              onClick={() => startHubLogin(learner?.id, undefined, { line: true })}
               className="btn btn-block"
               style={{ marginTop: 12, padding: '14px', borderRadius: 12, background: '#06C755', color: '#fff', fontWeight: 800, border: 'none' }}
             >
