@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FolderOpen, GraduationCap, Plus, RefreshCw } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileText, FolderOpen, GraduationCap, Plus, RefreshCw } from 'lucide-react'
 import { useClassStore } from '../stores/classStore'
 import { adminFetch } from '../utils/adminFetch'
 import { summarizeReadiness } from '../../api/_lib/readiness.js'
@@ -12,6 +12,7 @@ import ClassTheory from '../components/teach/ClassTheory'
 import ClassPractice from '../components/teach/ClassPractice'
 import ClassCertificates from '../components/teach/ClassCertificates'
 import Seo from '../components/Seo'
+import { lastReportAt } from '../utils/cohortReportLog'
 
 // หน้าผู้สอน (แบบ ACLS): ไม่ต้องมีบัญชี — สิทธิ์มาจากรหัสผู้สอนของคลาสที่เครื่องนี้ถืออยู่
 const REFRESH_MS = 30_000
@@ -68,6 +69,7 @@ export default function Teach() {
   }, [classId, fetchSummary, apply])
 
   const learners = useMemo(() => data?.learners || [], [data])
+  const reportAt = lastReportAt(classId)
   const stats = useMemo(() => {
     const s = summarizeReadiness(learners, { totalLessons: lessons.length })
     return {
@@ -147,6 +149,21 @@ export default function Teach() {
           </div>
         ))}
       </div>
+
+      {/* รายงานประจำรุ่น — ทุกคลาสต้องออก 1 ฉบับเมื่อจบการสอน (สถานะจำในเครื่องนี้) */}
+      <Link to="/admin/teach/report" className="card" data-testid="cohort-report-card"
+        style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <FileText size={20} style={{ color: reportAt ? '#15803d' : '#b45309', flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div className="text-body-strong">รายงานประจำรุ่น</div>
+          <div className="text-caption">
+            {reportAt
+              ? `ออกล่าสุด ${new Date(reportAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} — ออกใหม่ได้เมื่อผลอัปเดต`
+              : 'รุ่นนี้ยังไม่ได้ออกรายงาน — ออกทุกครั้งเมื่อจบการสอน'}
+          </div>
+        </div>
+        <span className="btn btn-primary" style={{ fontSize: 13 }}>เปิด</span>
+      </Link>
 
       <div style={{ display: 'flex', gap: 4, marginTop: 12, position: 'sticky', top: 0, zIndex: 5, background: 'var(--color-bg, #fff)', padding: '6px 0' }}>
         {TABS.map(([k, label]) => (
