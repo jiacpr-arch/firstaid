@@ -67,8 +67,11 @@ export default function SimulationSelect() {
   const focusChapter = Number(searchParams.get('chapter')) || null
   useEffect(() => {
     if (!focusChapter) return
-    const el = document.getElementById(`chapter-${focusChapter}`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const go = () => document.getElementById(`chapter-${focusChapter}`)?.scrollIntoView({ block: 'start' })
+    go()
+    // เนื้อหาด้านบน (แบนเนอร์/รูป) ยังเปลี่ยนความสูงหลังโหลด → จัดตำแหน่งซ้ำอีกรอบเมื่อหน้านิ่ง
+    const t = setTimeout(go, 600)
+    return () => clearTimeout(t)
   }, [focusChapter])
 
   return (
