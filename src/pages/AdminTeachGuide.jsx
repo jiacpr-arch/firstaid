@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, KeyRound, QrCode, Users, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, KeyRound, QrCode, Users, ShieldCheck, Copy, Check } from 'lucide-react'
 import { READINESS } from '../../api/_lib/readiness.js'
+import { DEFAULT_STATIONS } from '../data/checkinStations'
+import { FIRST_AID_CHECKLISTS } from '../data/checklists/firstAidChecklists'
 
 // คู่มือระบบผู้สอนสำหรับ admin (/admin/guide) — เนื้อหาตรงกับ /admin/teach และ /scan/:id
 // เขียนให้ครูอ่านเข้าใจ: เรียงตามลำดับเวลา (ก่อนวันอบรม → วันอบรม → หลังอบรม) เรื่องตั้งค่าระบบแยกไว้ท้ายสุด
@@ -46,6 +49,51 @@ function Faq({ q, children }) {
       <summary className="text-body-strong" style={{ cursor: 'pointer' }}>{q}</summary>
       <div className="text-body" style={{ marginTop: 8 }}>{children}</div>
     </details>
+  )
+}
+
+// ข้อความสำเร็จรูปให้ครูคัดลอกไปวางในกลุ่ม LINE นักเรียน (ใส่รหัสคลาสเองตรง ______)
+const STUDENT_LINE_MESSAGE = [
+  'ขั้นตอนสำหรับนักเรียน — อบรมปฐมพยาบาลภาคปฏิบัติ',
+  '',
+  'ก่อนวันอบรม',
+  '1. เปิด firstaid.morroo.com ในมือถือของตัวเอง แล้วกด "เข้าสู่ระบบด้วย LINE" (ไม่ล็อกอินจะไม่ได้ใบประกาศ)',
+  '2. ใส่รหัสคลาส ______ (ทำครั้งเดียว ใช้มือถือเครื่องเดียวกับที่เรียน)',
+  '3. เรียนบทเรียนให้ครบ แล้วสอบหลังเรียน (Post-test) ให้ผ่านก่อนวันอบรม',
+  '4. ใส่ชื่อ-นามสกุลที่จะขึ้นบนใบประกาศให้ถูกต้อง',
+  '',
+  'วันอบรม',
+  '5. เปิดเมนู "QR ของฉัน" (firstaid.morroo.com/my-qr) ยื่นให้ครูสแกนเช็คชื่อและทุกฐาน',
+  '',
+  'หลังอบรม',
+  '6. ดูและดาวน์โหลดใบประกาศที่ firstaid.morroo.com/certificate (ล็อกอิน LINE บัญชีเดิม)',
+  '',
+  'ถ้าเปิดลิงก์ใน LINE แล้วข้อมูลหาย ให้กด "…" มุมขวาบน → เปิดในเบราว์เซอร์',
+].join('\n')
+
+function CopyStudentMessage() {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(STUDENT_LINE_MESSAGE)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch { /* clipboard blocked — the text is shown below to select by hand */ }
+  }
+  return (
+    <div className="card" style={{ marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="text-body-strong" style={{ flex: 1 }}>ข้อความส่งนักเรียน (วางในกลุ่ม LINE)</div>
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 13 }} onClick={copy}>
+          {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+        </button>
+      </div>
+      <div className="text-caption">เติมรหัสคลาสแทน ______ ก่อนส่ง</div>
+      <pre style={{
+        whiteSpace: 'pre-wrap', margin: '8px 0 0', padding: 10, borderRadius: 8, fontSize: 13,
+        fontFamily: 'inherit', background: 'var(--color-bg-tertiary)', userSelect: 'all',
+      }}>{STUDENT_LINE_MESSAGE}</pre>
+    </div>
   )
 }
 
@@ -136,6 +184,8 @@ export default function AdminTeachGuide() {
         <div className="text-caption" style={{ marginTop: 8 }}>ใต้ชื่อแต่ละคนจะมีบรรทัด “ขาด: …” บอกว่ายังต้องทำอะไรอีก กดปุ่ม CSV เพื่อโหลดรายชื่อไปเปิดใน Excel ได้</div>
       </div>
 
+      <CopyStudentMessage />
+
       <Step n={2} title="วันอบรมภาคปฏิบัติ" when="ใช้แท็บ “ปฏิบัติ”" />
       <ol style={{ ...list, listStyle: 'decimal' }}>
         <li><b>เช็คสถานีก่อนเริ่ม</b> — ระบบเตรียมสถานีไว้ให้แล้ว 7 สถานี (สถานีฝึก + สถานีสอบ) แก้ไขได้ในหัวข้อ “สถานีฝึก/สอบ”</li>
@@ -151,6 +201,39 @@ export default function AdminTeachGuide() {
         <b>ใบเซอร์ภาคปฏิบัติออกให้เองอัตโนมัติ</b> จากระบบกลาง JIA ทันทีที่นักเรียนสอบสถานีผ่าน
         แต่นักเรียนต้อง <b>ผ่านสอบหลังเรียนแล้ว</b> (สถานะ “พร้อม”) และ <b>เข้าสู่ระบบด้วย LINE</b> ถ้ายังขาดข้อไหน
         ระบบจะเก็บผลไว้ แล้วออกใบให้เมื่อนักเรียนทำครบ
+      </div>
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '20px 0 6px' }}>ฐานที่ระบบเตรียมไว้ให้</h3>
+      <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <tbody>
+            {DEFAULT_STATIONS.map((st, i, arr) => (
+              <tr key={st.name} style={{ borderBottom: i === arr.length - 1 ? 0 : '1px solid var(--color-border)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 700, verticalAlign: 'top' }}>{st.name}</td>
+                <td style={{ padding: '10px 8px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                  <span className={st.kind === 'exam' ? 'badge badge-warning' : 'badge'}>{st.kind === 'exam' ? 'สอบ' : 'ฝึก'}</span>
+                </td>
+                <td style={{ padding: '10px 12px', verticalAlign: 'top' }} className="text-caption">
+                  เช็คลิสต์: {FIRST_AID_CHECKLISTS[st.checklistId]?.title || '-'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-caption" style={{ marginTop: 6 }}>แก้ชื่อ ลบ หรือเพิ่มฐานได้เอง และเปลี่ยนเช็คลิสต์ได้ตอนให้คะแนน</p>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <div className="text-body-strong">ใบเซอร์ภาคปฏิบัติออกเมื่อครบ 3 ข้อ</div>
+        <ol style={{ ...list, listStyle: 'decimal' }}>
+          <li>ผ่านภาคปฏิบัติ — เข้าครบทุกฐานฝึก และผ่านฐานสอบทุกข้อที่มี ★</li>
+          <li>สอบหลังเรียน (ภาคทฤษฎี) ผ่านแล้ว</li>
+          <li>มีชื่อบนบัตรนักเรียน JIA และเข้าสู่ระบบด้วย LINE</li>
+        </ol>
+        <div className="text-caption" style={{ marginTop: 8 }}>
+          ข้อไหนครบเป็นข้อสุดท้าย ใบจะออกตอนนั้น · ผ่านครบทั้งสองภาคได้ 2 ใบ (ทฤษฎี + ปฏิบัติ เลข JIA-FIRSTAID-PRC-…)
+          · 1 คนมีใบปฏิบัติ 1 ใบต่อหลักสูตร ส่งผลซ้ำไม่ออกใบใหม่
+        </div>
       </div>
 
       <h3 style={{ fontSize: 16, fontWeight: 700, margin: '20px 0 6px' }}>มีผู้ช่วยหลายคน? แจกรหัสผู้ช่วย</h3>
@@ -203,6 +286,12 @@ export default function AdminTeachGuide() {
         <Faq q="นักเรียนสอบสถานีผ่านแล้วแต่ไม่ได้ใบเซอร์ภาคปฏิบัติ">
           เปิดแท็บ <b>ใบประกาศ</b> ดูเหตุผลข้างชื่อ ส่วนใหญ่เป็นเพราะนักเรียนยังไม่ผ่านสอบหลังเรียน หรือยังไม่ได้เข้าสู่ระบบด้วย LINE
           ไม่ต้องสแกนซ้ำ — ให้นักเรียนทำข้อที่ขาดให้ครบ แล้วใบจะออกตามมาเอง (หรือกด ส่งผลที่ค้าง ในแท็บนั้น)
+        </Faq>
+        <Faq q="ชื่อบนใบประกาศผิด">
+          แจ้งแอดมินให้แก้ชื่อที่ระบบกลาง JIA (class.jiacpr.com → ใบประกาศ) ค้นหา แก้ชื่อ เพิกถอน และพิมพ์ใบแทนนักเรียนได้ที่นั่น
+        </Faq>
+        <Faq q="นักเรียนสอบทฤษฎีไว้นานแล้ว ระบบกลางไม่เห็นผลสอบ">
+          แอดมินรับรองผลทฤษฎีย้อนหลังได้ที่ระบบกลาง JIA (class.jiacpr.com → ใบประกาศ → รายการภาคปฏิบัติที่รอรับรอง) แล้วใบภาคปฏิบัติจะออกตามมา
         </Faq>
         <Faq q="ทำหน้าคลาสหาย / เปลี่ยนเครื่อง">
           เข้า คลาสของฉัน → <b>เลือกคลาสที่มีอยู่แล้ว</b> แล้วแตะชื่อคลาส ข้อมูลทั้งหมดอยู่บนเซิร์ฟเวอร์ ไม่หาย
