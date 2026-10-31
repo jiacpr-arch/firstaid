@@ -18,6 +18,7 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [linkSentTo, setLinkSentTo] = useState(null)
 
   // โหมดไม่มีรหัส: ไม่ต้องโชว์หน้า login เลย เด้งกลับเข้า admin
   if (OPEN_ADMIN) return <Navigate to="/admin" replace />
@@ -35,6 +36,31 @@ export default function AdminLogin() {
     setBusy(false)
     if (e2) setError(PASSCODE_MODE ? 'รหัสผ่านไม่ถูกต้อง' : e2.message)
     else navigate('/admin', { replace: true })
+  }
+
+  // ทางสำรองเมื่อลืมรหัส/รหัสถูกเปลี่ยนจากแอป JIA อื่น (ใช้ Supabase project เดียวกัน):
+  // ส่งลิงก์เข้าสู่ระบบไปที่อีเมล กดลิงก์แล้วเด้งกลับมา /admin พร้อม session
+  // shouldCreateUser: false → ส่งได้เฉพาะบัญชีที่มีอยู่แล้ว ไม่สร้าง user ใหม่ให้ใครก็ได้
+  const sendLink = async () => {
+    if (!isSupabaseConfigured) {
+      setError('ระบบยังไม่ได้เชื่อมต่อ Supabase — ตั้งค่า VITE_SUPABASE_URL และ ANON_KEY ใน Vercel ก่อน')
+      return
+    }
+    const linkEmail = (PASSCODE_MODE ? ADMIN_EMAIL : email).trim()
+    if (!linkEmail.includes('@')) {
+      setError('กรอกอีเมลก่อน แล้วกดส่งลิงก์อีกครั้ง')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    setLinkSentTo(null)
+    const { error: e2 } = await supabase.auth.signInWithOtp({
+      email: linkEmail,
+      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/admin` },
+    })
+    setBusy(false)
+    if (e2) setError(`ส่งลิงก์ไม่สำเร็จ: ${e2.message}`)
+    else setLinkSentTo(linkEmail)
   }
 
   return (
@@ -67,6 +93,15 @@ export default function AdminLogin() {
         <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 14 }} disabled={busy}>
           {busy ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
         </button>
+        <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} disabled={busy} onClick={sendLink}>
+          ลืมรหัส? ส่งลิงก์เข้าสู่ระบบทางอีเมล
+        </button>
+        {linkSentTo && (
+          <div className="callout callout-info" style={{ marginTop: 12 }}>
+            ส่งลิงก์ไปที่ {linkSentTo} แล้ว — เปิดอีเมลแล้วกดลิงก์ในเครื่องนี้เพื่อเข้าสู่ระบบ
+            (ถ้าไม่เจอ ลองดูในโฟลเดอร์ Spam)
+          </div>
+        )}
       </form>
     </div>
   )
