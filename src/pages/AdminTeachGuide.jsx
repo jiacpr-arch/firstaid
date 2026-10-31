@@ -108,6 +108,22 @@ export default function AdminTeachGuide() {
         ใช้เมนู <b>คลาสของฉัน</b> เมนูเดียวพอ — ตั้งแต่เปิดคลาส จนจบวันอบรม
       </p>
 
+      <div className="card" style={{ marginTop: 12, padding: 12 }}>
+        <div className="text-body-strong">ดูวิดีโอก่อน (4 นาที)</div>
+        <div className="text-caption">จัดวันอบรมภาคปฏิบัติ ตั้งแต่สร้างคลาสจนนักเรียนได้ใบเซอร์ · มีเสียงบรรยายและคำบรรยาย · หน้าจอในคลิปเป็นภาพจำลอง</div>
+        <video
+          src="/guide-videos/teacher-guide.mp4"
+          poster="/guide-videos/teacher-guide.jpg"
+          controls
+          playsInline
+          preload="none"
+          style={{
+            display: 'block', width: '100%', maxWidth: 360, aspectRatio: '9 / 16', margin: '10px auto 0',
+            borderRadius: 12, background: '#163D3A',
+          }}
+        />
+      </div>
+
       <div className="card" style={{ marginTop: 12, background: 'var(--color-brand-soft, #ECFDF5)' }}>
         <div className="text-body-strong">สรุปใน 3 ขั้น</div>
         <ol style={{ ...list, listStyle: 'decimal' }}>
