@@ -12,7 +12,8 @@ import { fetchContentMedia } from '../utils/lessonMediaSteps'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 import { breadcrumbJsonLd } from '../lib/seo'
-import { firstPendingPracticeChapter, practiceLink } from '../utils/practice'
+import { firstPendingPracticeChapter, practiceLink, practiceGateChapter } from '../utils/practice'
+import { lessons } from '../courses/firstaid/lessons'
 
 export default function SimulationRun() {
   useEnsureLearner()
@@ -22,6 +23,7 @@ export default function SimulationRun() {
   const learner = useLearnerStore((s) => s.learner)
   const markScenarioPassed = useProgressStore((s) => s.markScenarioPassed)
   const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
+  const readLessonIds = useProgressStore((s) => s.readLessonIds)
   const [result, setResult] = useState(null)
   const [media, setMedia] = useState([])
 
@@ -76,6 +78,9 @@ export default function SimulationRun() {
 
   if (result) {
     // ผ่านแล้ว → บอกขั้นต่อไป: หมวดถัดไปที่ยังไม่ผ่าน หรือ Post-test ถ้าฝึกครบทุกหมวดแล้ว
+    // ลำดับ: เรียนบทถัดไปที่เพิ่งปลดล็อก → ฝึกหมวดที่ยังขาด (ของหมวดที่เรียนจบแล้ว) → Post-test
+    const nextLesson = lessons.find((l) => !readLessonIds.has(l.id))
+    const nextLessonOpen = nextLesson && !practiceGateChapter(nextLesson, readLessonIds, passedScenarioIds)
     const pending = result.passed ? firstPendingPracticeChapter(passedScenarioIds) : null
     const backToList = scenario?.chapter ? `/simulation?chapter=${scenario.chapter}` : '/simulation'
     return (
@@ -101,7 +106,11 @@ export default function SimulationRun() {
           </button>
         </div>
         {result.passed && learner?.id && (
-          pending ? (
+          nextLessonOpen ? (
+            <Link to={`/learn/${nextLesson.id}`} className="btn btn-primary btn-block" style={{ marginTop: 8 }}>
+              เรียนต่อ: บทที่ {nextLesson.order} {nextLesson.title}
+            </Link>
+          ) : pending ? (
             <Link to={practiceLink(passedScenarioIds, pending.chapter)} className="btn btn-primary btn-block" style={{ marginTop: 8 }}>
               ไปฝึกหมวด {pending.chapter}: {pending.title}
             </Link>

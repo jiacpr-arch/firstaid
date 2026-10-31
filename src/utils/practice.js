@@ -53,3 +53,13 @@ export function isLastLessonOfChapter(lesson, allLessons) {
   const inChapter = allLessons.filter((l) => l.chapter === lesson.chapter)
   return inChapter.length > 0 && inChapter[inChapter.length - 1].id === lesson.id
 }
+
+// ด่านบังคับฝึกท้ายหมวด: บทที่ยังไม่เคยเรียนในหมวด N เปิดได้ต่อเมื่อฝึกผ่านทุกหมวดก่อนหน้าแล้ว
+// คืนเลขหมวดที่ต้องฝึกให้ผ่านก่อน (null = เปิดได้) — บทที่เคยเรียนแล้วเปิดทบทวนได้เสมอ
+export function practiceGateChapter(lesson, readLessonIds, passedScenarioIds) {
+  if (!lesson || readLessonIds.has(lesson.id)) return null
+  const blocking = chapterIdsWithScenarios
+    .filter((id) => id < lesson.chapter)
+    .find((id) => !isChapterPracticeDone(id, passedScenarioIds))
+  return blocking ?? null
+}
