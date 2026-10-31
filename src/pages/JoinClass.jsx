@@ -89,7 +89,7 @@ export default function JoinClass() {
         <div className="card" style={{ marginTop: 12 }}>
           <div className="text-body-strong"><BookOpen size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 1: ปฐมพยาบาล (เว็บนี้)</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
-            ทำ pre-test → เรียนทุกบท → post-test ผ่าน 80% (ล็อกอิน LINE เพื่อเปิดบทที่ 2 เป็นต้นไป — คนในคลาสเรียนฟรีทุกบท)
+            ทำ pre-test → เรียนทุกบท → ฝึกสถานการณ์ผ่านหมวดละ 1 ฉาก → post-test ผ่าน 80% (ล็อกอิน LINE เพื่อเปิดบทที่ 2 เป็นต้นไป — คนในคลาสเรียนฟรีทุกบท)
           </div>
           <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 10 }} onClick={() => navigate('/')}>
             เริ่มเรียนปฐมพยาบาล

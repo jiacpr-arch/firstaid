@@ -3,30 +3,37 @@ import { QrCode, ArrowRight, CheckCircle2, Circle } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { lessons } from '../courses/firstaid/lessons'
+import { isPracticeDone, practiceChaptersRemaining, practiceLink } from '../utils/practice'
 
 // แบนเนอร์คลาสบนหน้าหลักของนักเรียน (แบบ ACLS class banner + progress card): เห็นชื่อคลาส,
-// ขั้นตอนถัดไป (Pre-test → บทเรียน → Post-test → วันอบรมภาคปฏิบัติ) และปุ่ม QR ของฉัน
+// ขั้นตอนถัดไป (Pre-test → บทเรียน → ฝึกสถานการณ์ → Post-test → วันอบรมภาคปฏิบัติ) และปุ่ม QR ของฉัน
 export default function ClassBanner() {
   const learner = useLearnerStore((s) => s.learner)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
   const postTestDone = useProgressStore((s) => s.postTestDone)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
 
   if (!learner?.cohortCode) return null
 
   const lessonsDone = lessons.filter((l) => readLessonIds.has(l.id)).length
   const allLessons = lessons.length > 0 && lessonsDone === lessons.length
   const nextLesson = lessons.find((l) => !readLessonIds.has(l.id))
+  // Post-test ปลดล็อกเมื่อเรียนครบ + ฝึกผ่านหมวดละ 1 ฉาก (ExamPage) — ต้องพาไปฝึกก่อน ไม่งั้นกดแล้วเจอหน้าล็อก
+  const practiceDone = isPracticeDone(passedScenarioIds)
+  const practiceRemaining = practiceChaptersRemaining(passedScenarioIds)
 
   let next
   if (!preTestDone) next = { to: '/pre-test', label: 'ทำ Pre-test' }
   else if (!allLessons && nextLesson) next = { to: `/learn/${nextLesson.id}`, label: `เรียนต่อ: ${nextLesson.title}` }
+  else if (!practiceDone && !postTestDone) next = { to: practiceLink(passedScenarioIds), label: `ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด)` }
   else if (!postTestDone) next = { to: '/post-test', label: 'ทำ Post-test' }
   else next = { to: '/my-qr', label: 'พร้อมแล้ว — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติ' }
 
   const steps = [
     ['Pre-test', preTestDone],
     [`บทเรียน ${lessonsDone}/${lessons.length}`, allLessons],
+    ['ฝึกสถานการณ์', practiceDone],
     ['Post-test', postTestDone],
   ]
 
