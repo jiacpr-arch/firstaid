@@ -1,5 +1,9 @@
-import { Link } from 'react-router-dom'
-import { Activity, ChevronRight, Gamepad2 } from 'lucide-react'
+import { useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Activity, CheckCircle2, ChevronRight, Gamepad2 } from 'lucide-react'
+import { useLearnerStore } from '../stores/learnerStore'
+import { useProgressStore } from '../stores/progressStore'
+import { useEnsureProgress } from '../hooks/useProgress'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { chapters } from '../courses/firstaid/lessons'
 import CallEmergencyButton from '../components/CallEmergencyButton'
@@ -14,7 +18,7 @@ const grouped = chapters.map((c) => ({
 // ฉากที่ไม่ได้ระบุบท (ถ้ามี) เก็บไว้ท้ายสุด
 const ungrouped = scenarios.filter((s) => !chapters.some((c) => c.id === s.chapter))
 
-function ScenarioCard({ s }) {
+function ScenarioCard({ s, passed = false }) {
   return (
     <Link
       to={`/simulation/${s.id}`}
@@ -30,6 +34,7 @@ function ScenarioCard({ s }) {
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
       <div className="text-body-strong" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         {s.title}
+        {passed && <CheckCircle2 size={16} color="#347053" aria-label="ผ่านแล้ว" style={{ flexShrink: 0 }} />}
         {s.bonus && (
           <span
             className="text-caption"
@@ -54,6 +59,18 @@ function ScenarioCard({ s }) {
 }
 
 export default function SimulationSelect() {
+  const learner = useLearnerStore((st) => st.learner)
+  const passedScenarioIds = useProgressStore((st) => st.passedScenarioIds)
+  useEnsureProgress(learner?.id)
+  // ?chapter=N — มาจากปุ่ม "ฝึกท้ายหมวด" / "ไปฝึกสถานการณ์" → เลื่อนไปหมวดนั้นเลย ไม่ต้องไล่จากหมวด 1
+  const [searchParams] = useSearchParams()
+  const focusChapter = Number(searchParams.get('chapter')) || null
+  useEffect(() => {
+    if (!focusChapter) return
+    const el = document.getElementById(`chapter-${focusChapter}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [focusChapter])
+
   return (
     <div className="page-container">
       <Seo
@@ -78,13 +95,23 @@ export default function SimulationSelect() {
 
       {grouped.map((c) => (
         c.scenarios.length > 0 && (
-          <div key={c.id} style={{ marginTop: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+          <div key={c.id} id={`chapter-${c.id}`} style={{ marginTop: 20, scrollMarginTop: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
               <span style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: 'var(--color-brand)' }}>{c.id}</span>
-              <h2 className="text-body-strong" style={{ margin: 0 }}>{c.title}</h2>
+              <h2 className="text-body-strong" style={{ margin: 0, flex: 1 }}>{c.title}</h2>
+              {c.scenarios.some((s) => passedScenarioIds.has(s.id)) && (
+                <span className="text-caption" style={{ color: '#347053', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle2 size={14} /> หมวดนี้ผ่านแล้ว
+                </span>
+              )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {c.scenarios.map((s) => <ScenarioCard key={s.id} s={s} />)}
+            {focusChapter === c.id && !c.scenarios.some((s) => passedScenarioIds.has(s.id)) && (
+              <div className="text-caption" style={{ marginBottom: 8, color: 'var(--color-brand-dark)' }}>
+                เลือกฉากไหนก็ได้ในหมวดนี้ 1 ฉาก แล้วทำให้ผ่าน
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
+              {c.scenarios.map((s) => <ScenarioCard key={s.id} s={s} passed={passedScenarioIds.has(s.id)} />)}
             </div>
           </div>
         )

@@ -12,6 +12,7 @@ import { fetchContentMedia } from '../utils/lessonMediaSteps'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 import { breadcrumbJsonLd } from '../lib/seo'
+import { firstPendingPracticeChapter, practiceLink } from '../utils/practice'
 
 export default function SimulationRun() {
   useEnsureLearner()
@@ -20,6 +21,7 @@ export default function SimulationRun() {
   const scenario = scenariosById[scenarioId]
   const learner = useLearnerStore((s) => s.learner)
   const markScenarioPassed = useProgressStore((s) => s.markScenarioPassed)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   const [result, setResult] = useState(null)
   const [media, setMedia] = useState([])
 
@@ -73,6 +75,9 @@ export default function SimulationRun() {
   }
 
   if (result) {
+    // ผ่านแล้ว → บอกขั้นต่อไป: หมวดถัดไปที่ยังไม่ผ่าน หรือ Post-test ถ้าฝึกครบทุกหมวดแล้ว
+    const pending = result.passed ? firstPendingPracticeChapter(passedScenarioIds) : null
+    const backToList = scenario?.chapter ? `/simulation?chapter=${scenario.chapter}` : '/simulation'
     return (
       <div className="page-container">
         {seo}
@@ -87,7 +92,7 @@ export default function SimulationRun() {
         </div>
         <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
           <button type="button" className="btn btn-secondary" style={{ flex: 1 }}
-            onClick={() => navigate('/simulation')}>
+            onClick={() => navigate(backToList)}>
             เลือกฉากอื่น
           </button>
           <button type="button" className="btn btn-primary" style={{ flex: 1 }}
@@ -95,6 +100,17 @@ export default function SimulationRun() {
             ฝึกใหม่
           </button>
         </div>
+        {result.passed && learner?.id && (
+          pending ? (
+            <Link to={practiceLink(passedScenarioIds, pending.chapter)} className="btn btn-primary btn-block" style={{ marginTop: 8 }}>
+              ไปฝึกหมวด {pending.chapter}: {pending.title}
+            </Link>
+          ) : (
+            <Link to="/post-test" className="btn btn-primary btn-block" style={{ marginTop: 8 }}>
+              ฝึกครบทุกหมวดแล้ว — ทำ Post-test
+            </Link>
+          )
+        )}
       </div>
     )
   }

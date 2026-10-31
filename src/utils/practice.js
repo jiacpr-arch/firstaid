@@ -30,3 +30,26 @@ export function isPracticeDone(passedScenarioIds) {
 export function practiceChaptersRemaining(passedScenarioIds) {
   return practiceChapterStatus(passedScenarioIds).filter((c) => !c.done).length
 }
+
+// หมวดนี้ฝึกผ่านแล้วหรือยัง (หมวดที่ไม่มีฉากฝึก = ถือว่าผ่าน)
+export function isChapterPracticeDone(chapterId, passedScenarioIds) {
+  if (!chapterIdsWithScenarios.includes(chapterId)) return true
+  return scenarios.some((s) => s.chapter === chapterId && passedScenarioIds.has(s.id))
+}
+
+// หมวดแรกที่ยังฝึกไม่ผ่าน (null = ครบแล้ว)
+export function firstPendingPracticeChapter(passedScenarioIds) {
+  return practiceChapterStatus(passedScenarioIds).find((c) => !c.done) ?? null
+}
+
+// ลิงก์หน้าฝึกที่เลื่อนไปหมวดนั้นเลย — ไม่ระบุหมวด = หมวดแรกที่ยังขาด
+export function practiceLink(passedScenarioIds, chapterId = null) {
+  const ch = chapterId ?? firstPendingPracticeChapter(passedScenarioIds)?.chapter
+  return ch ? `/simulation?chapter=${ch}` : '/simulation'
+}
+
+// บทนี้เป็นบทสุดท้ายของหมวดหรือไม่ (ใช้ชวนฝึกท้ายหมวด)
+export function isLastLessonOfChapter(lesson, allLessons) {
+  const inChapter = allLessons.filter((l) => l.chapter === lesson.chapter)
+  return inChapter.length > 0 && inChapter[inChapter.length - 1].id === lesson.id
+}

@@ -7,7 +7,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
-import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
+import { isPracticeDone, practiceChaptersRemaining, practiceChapterStatus, practiceLink } from '../utils/practice'
 import { saveExamAttempt } from '../db/database'
 import { flushSync } from '../db/sync'
 import ProgressBar from '../components/ProgressBar'
@@ -127,13 +127,21 @@ export default function ExamPage({ kind }) {
                 ? <CheckCircle2 size={18} color="#347053" />
                 : <Lock size={16} color="var(--color-text-secondary)" />}
               <span className="text-body">
-                ฝึกสถานการณ์ให้ผ่านอย่างน้อย 1 ฉากทุกบท
-                {practiceDone ? '' : ` (เหลืออีก ${chaptersRemaining} บท)`}
+                ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก
+                {practiceDone ? '' : ` (เหลืออีก ${chaptersRemaining} หมวด)`}
               </span>
             </div>
+            {!practiceDone && practiceChapterStatus(passedScenarioIds).map((c) => (
+              <div key={c.chapter} style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 26 }}>
+                {c.done
+                  ? <CheckCircle2 size={14} color="#347053" />
+                  : <Lock size={13} color="var(--color-text-secondary)" />}
+                <span className="text-caption">หมวด {c.chapter} {c.title}</span>
+              </div>
+            ))}
           </div>
         </div>
-        <Link to={needLessons ? '/learn' : '/simulation'} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
+        <Link to={needLessons ? '/learn' : practiceLink(passedScenarioIds)} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
           <ArrowLeft size={16} /> {needLessons ? 'ไปเรียนต่อ' : 'ไปฝึกสถานการณ์'}
         </Link>
       </div>

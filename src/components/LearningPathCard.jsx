@@ -11,6 +11,7 @@ export default function LearningPathCard({
   allLessonsDone,
   practiceDone,
   practiceRemaining,
+  practiceTo = '/simulation',
   postTestDone,
 }) {
   const steps = [
@@ -29,11 +30,11 @@ export default function LearningPathCard({
       done: allLessonsDone,
     },
     {
-      to: '/simulation',
+      to: practiceTo,
       label: 'ฝึกสถานการณ์จำลอง',
       desc: practiceDone
-        ? 'ฝึกครบทุกบทแล้ว'
-        : `ผ่านอย่างน้อย 1 ฉากในทุกบท (เหลืออีก ${practiceRemaining} บท)`,
+        ? 'ฝึกครบทุกหมวดแล้ว'
+        : `ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด)`,
       cta: 'ไปฝึก',
       done: practiceDone,
     },

@@ -10,7 +10,7 @@ import { useEnsureProgress } from '../hooks/useProgress'
 import { useEntitlementStore } from '../stores/entitlementStore'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { isChapterUnlocked, CHAPTER_PRICES } from '../config/pricing'
-import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
+import { isPracticeDone, practiceChaptersRemaining, practiceChapterStatus, practiceLink } from '../utils/practice'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import { computeBadges } from '../utils/badges'
@@ -56,7 +56,7 @@ export default function Learn() {
     : !allLessonsDone
       ? `ขั้นที่ 2: เรียนให้ครบทุกบท (เหลืออีก ${total - done} บท)`
       : !practiceDone
-        ? `ขั้นที่ 3: ฝึกสถานการณ์ให้ผ่านอย่างน้อย 1 ฉากทุกบท (เหลืออีก ${practiceRemaining} บท) เพื่อปลดล็อก Post-test`
+        ? `ขั้นที่ 3: ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด) เพื่อปลดล็อก Post-test`
         : 'ขั้นที่ 4: พร้อมทำ Post-test เพื่อรับใบประกาศ'
 
   return (
@@ -98,9 +98,32 @@ export default function Learn() {
           </Link>
         )}
         {/* เรียนครบแล้วแต่ยังฝึกไม่ครบ → ดันให้ไปฝึกก่อน (ขั้นก่อน Post-test) */}
+        {/* สถานะฝึกรายหมวด — หมวดที่เรียนจบแล้วแต่ยังไม่ผ่านฉากฝึก มีปุ่มพาไปหมวดนั้นตรง ๆ
+            (รองรับคนที่เรียนจบไปก่อนมีด่านฝึกท้ายหมวดด้วย) */}
+        {!lessonsLocked && done > 0 && !practiceDone && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="text-caption">ฝึกสถานการณ์ท้ายหมวด (ผ่านหมวดละ 1 ฉาก)</div>
+            {practiceChapterStatus(passedScenarioIds).map((c) => {
+              const chapterRead = lessons.filter((l) => l.chapter === c.chapter).every((l) => readSet.has(l.id))
+              return (
+                <div key={c.chapter} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {c.done
+                    ? <CheckCircle2 size={16} color="#347053" style={{ flexShrink: 0 }} />
+                    : <Activity size={16} color="var(--color-text-secondary)" style={{ flexShrink: 0 }} />}
+                  <span className="text-body" style={{ flex: 1 }}>หมวด {c.chapter} {c.title}</span>
+                  {!c.done && chapterRead && (
+                    <Link to={practiceLink(passedScenarioIds, c.chapter)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 13 }}>
+                      ฝึก
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
         {allLessonsDone && !practiceDone && (
-          <Link to="/simulation" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
-            <Activity size={16} /> ไปฝึกสถานการณ์ (เหลืออีก {practiceRemaining} บท)
+          <Link to={practiceLink(passedScenarioIds)} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+            <Activity size={16} /> ไปฝึกสถานการณ์ (เหลืออีก {practiceRemaining} หมวด)
             <ChevronRight size={16} />
           </Link>
         )}

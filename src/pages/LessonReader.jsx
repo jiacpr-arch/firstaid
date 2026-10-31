@@ -1,7 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
-import { ArrowLeft, ChevronRight, CheckCircle2, Lock } from 'lucide-react'
-import { lessonsById, lessons } from '../courses/firstaid/lessons'
+import { ArrowLeft, ChevronRight, CheckCircle2, Lock, Activity } from 'lucide-react'
+import { lessonsById, lessons, chapters } from '../courses/firstaid/lessons'
+import { isChapterPracticeDone, isLastLessonOfChapter, practiceLink } from '../utils/practice'
 import LessonStep from '../components/LessonStep'
 import YouTubeLessonPlayer from '../components/YouTubeLessonPlayer'
 import LessonQuiz from '../components/LessonQuiz'
@@ -49,6 +50,7 @@ export default function LessonReader() {
   const preTestDone = useProgressStore((s) => s.preTestDone)
   const postTestDone = useProgressStore((s) => s.postTestDone)
   const progressLoaded = useProgressStore((s) => s.loaded)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   useEnsureProgress(learner?.id)
   const unlockedChapters = useEntitlementStore((s) => s.chapters)
   const entitlementsLoaded = useEntitlementStore((s) => s.loaded)
@@ -356,6 +358,9 @@ export default function LessonReader() {
   const nextIsQuiz = slides[stepIdx + 1]?.kind === 'quiz'
 
   if (completed) {
+    const chapterPracticeDue = isLastLessonOfChapter(lesson, lessons)
+      && !isChapterPracticeDone(lesson.chapter, passedScenarioIds)
+    const chapterTitle = chapters.find((c) => c.id === lesson.chapter)?.title ?? ''
     return (
       <div className="page-container">
         {seo}
@@ -385,11 +390,37 @@ export default function LessonReader() {
             <div className="text-caption" style={{ marginTop: 4 }}>{earnedBadge.desc}</div>
           </div>
         )}
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        {/* จบบทสุดท้ายของหมวด และหมวดนี้ยังไม่เคยฝึกผ่าน → ชวนฝึกสถานการณ์ของหมวดนี้ก่อนไปหมวดถัดไป */}
+        {chapterPracticeDue && (
+          <div className="card" style={{ marginTop: 12, padding: 20, border: '1.5px solid var(--color-brand)' }}>
+            <div className="text-eyebrow">จบหมวด {lesson.chapter} แล้ว</div>
+            <div className="text-body-strong" style={{ marginTop: 4 }}>
+              ฝึกสถานการณ์ท้ายหมวด: {chapterTitle}
+            </div>
+            <div className="text-caption" style={{ marginTop: 4 }}>
+              เลือกฝึก 1 ฉากในหมวดนี้ให้ผ่าน — ต้องผ่านครบทุกหมวดก่อนทำ Post-test
+            </div>
+            <Link
+              to={practiceLink(passedScenarioIds, lesson.chapter)}
+              className="btn btn-primary btn-block"
+              style={{ marginTop: 12 }}
+              onClick={() => track('chapter_practice_cta', { chapter: lesson.chapter, lessonId: lesson.id })}
+            >
+              <Activity size={16} /> ฝึกสถานการณ์หมวด {lesson.chapter} <ChevronRight size={16} />
+            </Link>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, marginTop: chapterPracticeDue ? 8 : 16 }}>
           <Link to="/learn" className="btn btn-secondary" style={{ flex: 1 }}>
             <ArrowLeft size={16} /> รายการบท
           </Link>
-          {nextLesson ? (
+          {chapterPracticeDue ? (
+            nextLesson && (
+              <Link to={`/learn/${nextLesson.id}`} className="btn btn-secondary" style={{ flex: 1 }}>
+                ข้ามไปบทถัดไป <ChevronRight size={16} />
+              </Link>
+            )
+          ) : nextLesson ? (
             <Link to={`/learn/${nextLesson.id}`} className="btn btn-primary" style={{ flex: 1 }}>
               บทถัดไป <ChevronRight size={16} />
             </Link>
