@@ -1,7 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
-import { ArrowLeft, ChevronRight, CheckCircle2, Lock } from 'lucide-react'
-import { lessonsById, lessons } from '../courses/firstaid/lessons'
+import { ArrowLeft, ChevronRight, CheckCircle2, Lock, Activity } from 'lucide-react'
+import { lessonsById, lessons, chapters } from '../courses/firstaid/lessons'
+import { isChapterPracticeDone, isLastLessonOfChapter, practiceLink, practiceGateChapter } from '../utils/practice'
 import LessonStep from '../components/LessonStep'
 import YouTubeLessonPlayer from '../components/YouTubeLessonPlayer'
 import LessonQuiz from '../components/LessonQuiz'
@@ -49,6 +50,7 @@ export default function LessonReader() {
   const preTestDone = useProgressStore((s) => s.preTestDone)
   const postTestDone = useProgressStore((s) => s.postTestDone)
   const progressLoaded = useProgressStore((s) => s.loaded)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   useEnsureProgress(learner?.id)
   const unlockedChapters = useEntitlementStore((s) => s.chapters)
   const entitlementsLoaded = useEntitlementStore((s) => s.loaded)
@@ -246,6 +248,39 @@ export default function LessonReader() {
     return <>{seo}<ChapterUnlockCard chapter={lesson.chapter} /></>
   }
 
+  // ด่านฝึกท้ายหมวด: ต้องฝึกสถานการณ์หมวดก่อนหน้าให้ผ่านก่อนเปิดบทใหม่ในหมวดถัดไป
+  // (ไม่กันตอนเพิ่งเรียนจบบทนี้ — completed — และรอโหลดความก้าวหน้าก่อนตัดสิน)
+  const gateChapter = progressLoaded && !completed
+    ? practiceGateChapter(lesson, readLessonIds, passedScenarioIds)
+    : null
+  if (gateChapter) {
+    const gateTitle = chapters.find((c) => c.id === gateChapter)?.title ?? ''
+    return (
+      <div className="page-container">
+        {seo}
+        <div style={{ marginTop: 8 }}>
+          <div className="text-caption">หมวด {lesson.chapter} · บทที่ {lesson.order}</div>
+          <h1 className="text-title" style={{ margin: 0 }}>{lesson.title}</h1>
+        </div>
+        <div className="card" style={{ textAlign: 'center', padding: 28, marginTop: 16 }}>
+          <Lock size={44} color="var(--color-text-secondary)" style={{ margin: '0 auto' }} />
+          <div className="text-title" style={{ marginTop: 12 }}>ฝึกหมวด {gateChapter} ให้ผ่านก่อน</div>
+          <div className="text-body" style={{ marginTop: 8 }}>
+            ฝึกสถานการณ์ในหมวด {gateChapter} {gateTitle} ให้ผ่าน 1 ฉาก แล้วบทนี้จะเปิดให้เรียนต่อ
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <Link to="/learn" className="btn btn-secondary" style={{ flex: 1 }}>
+            <ArrowLeft size={16} /> รายการบท
+          </Link>
+          <Link to={practiceLink(passedScenarioIds, gateChapter)} className="btn btn-primary" style={{ flex: 1 }}>
+            <Activity size={16} /> ไปฝึกหมวด {gateChapter}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const slide = slides[stepIdx]
   const isLast = stepIdx === slides.length - 1
   const idx = lesson.order - 1
@@ -356,6 +391,9 @@ export default function LessonReader() {
   const nextIsQuiz = slides[stepIdx + 1]?.kind === 'quiz'
 
   if (completed) {
+    const chapterPracticeDue = isLastLessonOfChapter(lesson, lessons)
+      && !isChapterPracticeDone(lesson.chapter, passedScenarioIds)
+    const chapterTitle = chapters.find((c) => c.id === lesson.chapter)?.title ?? ''
     return (
       <div className="page-container">
         {seo}
@@ -385,11 +423,31 @@ export default function LessonReader() {
             <div className="text-caption" style={{ marginTop: 4 }}>{earnedBadge.desc}</div>
           </div>
         )}
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        {/* จบบทสุดท้ายของหมวด และหมวดนี้ยังไม่เคยฝึกผ่าน → ชวนฝึกสถานการณ์ของหมวดนี้ก่อนไปหมวดถัดไป */}
+        {chapterPracticeDue && (
+          <div className="card" style={{ marginTop: 12, padding: 20, border: '1.5px solid var(--color-brand)' }}>
+            <div className="text-eyebrow">จบหมวด {lesson.chapter} แล้ว</div>
+            <div className="text-body-strong" style={{ marginTop: 4 }}>
+              ฝึกสถานการณ์ท้ายหมวด: {chapterTitle}
+            </div>
+            <div className="text-caption" style={{ marginTop: 4 }}>
+              เลือกฝึก 1 ฉากในหมวดนี้ให้ผ่าน{nextLesson ? ' แล้วหมวดถัดไปจะเปิดให้เรียน' : ' แล้วจึงทำ Post-test ได้'}
+            </div>
+            <Link
+              to={practiceLink(passedScenarioIds, lesson.chapter)}
+              className="btn btn-primary btn-block"
+              style={{ marginTop: 12 }}
+              onClick={() => track('chapter_practice_cta', { chapter: lesson.chapter, lessonId: lesson.id })}
+            >
+              <Activity size={16} /> ฝึกสถานการณ์หมวด {lesson.chapter} <ChevronRight size={16} />
+            </Link>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, marginTop: chapterPracticeDue ? 8 : 16 }}>
           <Link to="/learn" className="btn btn-secondary" style={{ flex: 1 }}>
             <ArrowLeft size={16} /> รายการบท
           </Link>
-          {nextLesson ? (
+          {chapterPracticeDue ? null : nextLesson ? (
             <Link to={`/learn/${nextLesson.id}`} className="btn btn-primary" style={{ flex: 1 }}>
               บทถัดไป <ChevronRight size={16} />
             </Link>

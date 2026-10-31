@@ -13,7 +13,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
-import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
+import { isPracticeDone, practiceChaptersRemaining, practiceLink } from '../utils/practice'
 import { lessons } from '../courses/firstaid/lessons'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import Seo from '../components/Seo'
@@ -109,6 +109,7 @@ export default function Home() {
         allLessonsDone={allLessonsDone}
         practiceDone={practiceDone}
         practiceRemaining={practiceRemaining}
+        practiceTo={practiceLink(passedScenarioIds)}
         postTestDone={postTestDone}
       />
 

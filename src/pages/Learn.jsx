@@ -10,7 +10,7 @@ import { useEnsureProgress } from '../hooks/useProgress'
 import { useEntitlementStore } from '../stores/entitlementStore'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { isChapterUnlocked, CHAPTER_PRICES } from '../config/pricing'
-import { isPracticeDone, practiceChaptersRemaining } from '../utils/practice'
+import { isPracticeDone, practiceChaptersRemaining, practiceChapterStatus, practiceLink, practiceGateChapter } from '../utils/practice'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import { computeBadges } from '../utils/badges'
@@ -50,13 +50,16 @@ export default function Learn() {
     ? lessons.find((l) => !readSet.has(l.id))
     : null
 
+  // บทถัดไปติดด่านฝึกท้ายหมวดหรือไม่ (null = เรียนต่อได้)
+  const nextGate = nextUnread ? practiceGateChapter(nextUnread, readSet, passedScenarioIds) : null
+
   // ข้อความบอกขั้นตอนถัดไป — บังคับลำดับ Pre-test → เรียน → ฝึก → Post-test
   const flowHint = lessonsLocked
     ? 'ขั้นที่ 1: ทำ Pre-test ก่อน เพื่อปลดล็อกบทเรียน'
     : !allLessonsDone
       ? `ขั้นที่ 2: เรียนให้ครบทุกบท (เหลืออีก ${total - done} บท)`
       : !practiceDone
-        ? `ขั้นที่ 3: ฝึกสถานการณ์ให้ผ่านอย่างน้อย 1 ฉากทุกบท (เหลืออีก ${practiceRemaining} บท) เพื่อปลดล็อก Post-test`
+        ? `ขั้นที่ 3: ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด) เพื่อปลดล็อก Post-test`
         : 'ขั้นที่ 4: พร้อมทำ Post-test เพื่อรับใบประกาศ'
 
   return (
@@ -91,16 +94,45 @@ export default function Learn() {
             {encourage(done, total)}
           </div>
         )}
-        {nextUnread && (
+        {nextUnread && nextGate && (
+          <Link to={practiceLink(passedScenarioIds, nextGate)} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+            <Activity size={16} /> ฝึกสถานการณ์หมวด {nextGate} ให้ผ่าน เพื่อเรียนหมวดถัดไป
+            <ChevronRight size={16} />
+          </Link>
+        )}
+        {nextUnread && !nextGate && (
           <Link to={`/learn/${nextUnread.id}`} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
             <BookOpen size={16} /> {done > 0 ? 'เรียนต่อ' : 'เริ่มเรียน'}: บทที่ {nextUnread.order} {nextUnread.title}
             <ChevronRight size={16} />
           </Link>
         )}
         {/* เรียนครบแล้วแต่ยังฝึกไม่ครบ → ดันให้ไปฝึกก่อน (ขั้นก่อน Post-test) */}
+        {/* สถานะฝึกรายหมวด — หมวดที่เรียนจบแล้วแต่ยังไม่ผ่านฉากฝึก มีปุ่มพาไปหมวดนั้นตรง ๆ
+            (รองรับคนที่เรียนจบไปก่อนมีด่านฝึกท้ายหมวดด้วย) */}
+        {!lessonsLocked && done > 0 && !practiceDone && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="text-caption">ฝึกสถานการณ์ท้ายหมวด (ผ่านหมวดละ 1 ฉาก)</div>
+            {practiceChapterStatus(passedScenarioIds).map((c) => {
+              const chapterRead = lessons.filter((l) => l.chapter === c.chapter).every((l) => readSet.has(l.id))
+              return (
+                <div key={c.chapter} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {c.done
+                    ? <CheckCircle2 size={16} color="#347053" style={{ flexShrink: 0 }} />
+                    : <Activity size={16} color="var(--color-text-secondary)" style={{ flexShrink: 0 }} />}
+                  <span className="text-body" style={{ flex: 1 }}>หมวด {c.chapter} {c.title}</span>
+                  {!c.done && chapterRead && (
+                    <Link to={practiceLink(passedScenarioIds, c.chapter)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 13 }}>
+                      ฝึก
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
         {allLessonsDone && !practiceDone && (
-          <Link to="/simulation" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
-            <Activity size={16} /> ไปฝึกสถานการณ์ (เหลืออีก {practiceRemaining} บท)
+          <Link to={practiceLink(passedScenarioIds)} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+            <Activity size={16} /> ไปฝึกสถานการณ์ (เหลืออีก {practiceRemaining} หมวด)
             <ChevronRight size={16} />
           </Link>
         )}
@@ -172,7 +204,9 @@ export default function Learn() {
                 const isRead = readSet.has(l.id)
                 // ปลดล็อกด้วยการซื้อ (แยกจาก lessonsLocked ที่ล็อกด้วยลำดับ Pre-test) — หมวด 1 ฟรีเสมอ
                 const paidLocked = !lessonsLocked && !isChapterUnlocked(l.chapter, unlockedChapters)
-                const locked = lessonsLocked || paidLocked
+                // ด่านฝึกท้ายหมวด: บทใหม่ในหมวดถัดไปล็อกจนกว่าจะฝึกหมวดก่อนหน้าผ่าน
+                const gate = !lessonsLocked && !paidLocked ? practiceGateChapter(l, readSet, passedScenarioIds) : null
+                const locked = lessonsLocked || paidLocked || !!gate
                 const rowStyle = {
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 18px',
@@ -193,7 +227,9 @@ export default function Learn() {
                     </span>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.45 }}>{l.title}</span>
-                      <span className="text-caption" style={{ fontSize: 14 }}>{l.summary} · {l.minutes} นาที</span>
+                      <span className="text-caption" style={{ fontSize: 14 }}>
+                        {gate ? `ฝึกสถานการณ์หมวด ${gate} ให้ผ่านก่อน` : `${l.summary} · ${l.minutes} นาที`}
+                      </span>
                     </span>
                     {!locked && <ChevronRight size={18} strokeWidth={1.6} color="var(--color-brand)" style={{ flexShrink: 0 }} />}
                   </>
@@ -207,7 +243,7 @@ export default function Learn() {
                 }
                 return (
                   <li key={l.id}>
-                    <Link to={`/learn/${l.id}`} style={{ ...rowStyle, opacity: paidLocked ? 0.8 : 1 }}>
+                    <Link to={gate ? practiceLink(passedScenarioIds, gate) : `/learn/${l.id}`} style={{ ...rowStyle, opacity: paidLocked || gate ? 0.8 : 1 }}>
                       {inner}
                     </Link>
                   </li>
