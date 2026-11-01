@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, KeyRound, QrCode, Users, ShieldCheck, Copy, Check } from 'lucide-react'
+import { ArrowLeft, KeyRound, QrCode, Users, ShieldCheck, Copy, Check, HeartPulse } from 'lucide-react'
 import { READINESS } from '../../api/_lib/readiness.js'
 import { DEFAULT_STATIONS } from '../data/checkinStations'
 import { FIRST_AID_CHECKLISTS } from '../data/checklists/firstAidChecklists'
@@ -71,11 +71,32 @@ const STUDENT_LINE_MESSAGE = [
   'ถ้าเปิดลิงก์ใน LINE แล้วข้อมูลหาย ให้กด "…" มุมขวาบน → เปิดในเบราว์เซอร์',
 ].join('\n')
 
-function CopyStudentMessage() {
+// คลาสรวม CPR + ปฐมพยาบาล: นักเรียนเรียนออนไลน์ 2 เว็บ และต้องเรียน CPR จบก่อน Post-test ปฐมพยาบาล
+const STUDENT_LINE_MESSAGE_CPR = [
+  'ขั้นตอนสำหรับนักเรียน — คลาสรวม CPR + ปฐมพยาบาล',
+  '',
+  'ก่อนวันอบรม (เรียนออนไลน์ 2 เว็บ)',
+  '1. เปิด firstaid.morroo.com ในมือถือของตัวเอง แล้วกด "เข้าสู่ระบบด้วย LINE"',
+  '2. ใส่รหัสคลาส ______ พร้อมชื่อ-นามสกุลและเบอร์โทร (เบอร์จำเป็น)',
+  '3. เรียน CPR & AED ที่ cpr.morroo.com ให้จบคอร์ส — กดปุ่ม "ไปเรียน CPR" ในหน้าคลาส',
+  '   ใช้ชื่อและเบอร์เดียวกับข้อ 2 (ครูจับคู่ความคืบหน้าด้วยเบอร์โทร)',
+  '4. เรียนปฐมพยาบาลที่ firstaid.morroo.com ให้ครบ (คนในคลาสเรียนฟรีทุกบท)',
+  '5. สอบหลังเรียน (Post-test) ปฐมพยาบาลให้ผ่าน — จะสอบได้เมื่อเรียน CPR จบแล้ว',
+  '',
+  'วันอบรม',
+  '6. เปิดเมนู "QR ของฉัน" (firstaid.morroo.com/my-qr) ยื่นให้ครูสแกนเช็คชื่อและทุกฐาน',
+  '',
+  'หลังอบรม',
+  '7. ดูใบประกาศปฐมพยาบาลที่ firstaid.morroo.com/certificate และใบ CPR ที่ cpr.morroo.com',
+  '',
+  'ถ้าเปิดลิงก์ใน LINE แล้วข้อมูลหาย ให้กด "…" มุมขวาบน → เปิดในเบราว์เซอร์',
+].join('\n')
+
+function CopyStudentMessage({ text = STUDENT_LINE_MESSAGE, title = 'ข้อความส่งนักเรียน (วางในกลุ่ม LINE)' }) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(STUDENT_LINE_MESSAGE)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch { /* clipboard blocked — the text is shown below to select by hand */ }
@@ -83,7 +104,7 @@ function CopyStudentMessage() {
   return (
     <div className="card" style={{ marginTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div className="text-body-strong" style={{ flex: 1 }}>ข้อความส่งนักเรียน (วางในกลุ่ม LINE)</div>
+        <div className="text-body-strong" style={{ flex: 1 }}>{title}</div>
         <button type="button" className="btn btn-ghost" style={{ fontSize: 13 }} onClick={copy}>
           {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
         </button>
@@ -92,7 +113,7 @@ function CopyStudentMessage() {
       <pre style={{
         whiteSpace: 'pre-wrap', margin: '8px 0 0', padding: 10, borderRadius: 8, fontSize: 13,
         fontFamily: 'inherit', background: 'var(--color-bg-tertiary)', userSelect: 'all',
-      }}>{STUDENT_LINE_MESSAGE}</pre>
+      }}>{text}</pre>
     </div>
   )
 }
@@ -173,7 +194,7 @@ export default function AdminTeachGuide() {
       <ol style={{ ...list, listStyle: 'decimal' }}>
         <li>เข้า <b>หน้าควบคุม → คลาสของฉัน</b> แล้วกด <b>สร้างคลาสใหม่</b></li>
         <li>ตั้งชื่อคลาส เช่น “รุ่นที่ 7 / ต.ค. 69” (สถานที่ใส่หรือไม่ใส่ก็ได้)
-          <div className="text-caption">ถ้าเป็นคลาสที่สอน CPR ด้วย ให้ติ๊ก “คลาสรวม CPR + ปฐมพยาบาล” ระบบจะสร้างโค้ดเรียน CPR ออนไลน์ให้นักเรียนเอง</div>
+          <div className="text-caption">ถ้าเป็นคลาสที่สอน CPR ด้วย ให้ติ๊ก “คลาสรวม CPR + ปฐมพยาบาล” ระบบจะสร้างโค้ดเรียน CPR ออนไลน์ให้นักเรียนเอง — ดู <a href="#cpr-class">คลาสรวม CPR</a> ด้านล่าง</div>
         </li>
         <li>ระบบจะโชว์ <b>รหัสคลาส</b> และ <b>รหัสผู้ช่วย</b> — ไม่ต้องรีบจด ดูซ้ำได้ที่แท็บ คลาส/QR</li>
         <li>ที่แท็บ <b>คลาส/QR</b> ใส่ <b>ชื่อผู้สอนบนใบประกาศ</b> (ถ้าเว้นว่าง ใบจะขึ้นว่า Jia Training Center)</li>
@@ -277,6 +298,58 @@ export default function AdminTeachGuide() {
         </li>
       </ol>
 
+      <h2 id="cpr-class" style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <HeartPulse size={20} color="#B91C1C" /> คลาสรวม CPR + ปฐมพยาบาล
+      </h2>
+      <p className="text-body">
+        คลาส 1 วันที่สอนทั้ง CPR และปฐมพยาบาล — นักเรียนเรียนทฤษฎีออนไลน์ <b>2 เว็บ</b> ก่อนวันอบรม
+        (ปฐมพยาบาลที่ firstaid.morroo.com และ CPR & AED ที่ cpr.morroo.com) ส่วนครูดูทุกอย่างจากคลาสของฉันที่เดียว
+      </p>
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '16px 0 6px' }}>ตอนสร้างคลาส</h3>
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li>สร้างคลาสใหม่ตามปกติ แล้วติ๊ก <b>คลาสรวม CPR + ปฐมพยาบาล</b></li>
+        <li>ใส่ <b>วันเรียนจริง</b> และ <b>จำนวนคน</b> — โค้ด CPR ใช้ได้ถึง 60 วันหลังวันเรียน และรับได้จำนวนคน + 5 (เผื่อคนมาเพิ่ม)
+          <div className="text-caption">ไม่ใส่วันเรียน โค้ดใช้ได้ 90 วันนับจากวันสร้าง · ไม่ใส่จำนวนคน = ไม่จำกัด</div>
+        </li>
+        <li>ระบบสร้าง <b>โค้ด CPR</b> รูปแบบ <code>JIA-FA-รหัสคลาส</code> ให้เอง และเปิดทุกบทปฐมพยาบาลให้คนในคลาสเรียนฟรี</li>
+        <li>แจก <b>รหัสคลาสอย่างเดียว</b> — ไม่ต้องแจกโค้ด CPR แยก นักเรียนจะเห็นปุ่มไปเรียน CPR พร้อมโค้ดหลังเข้าคลาส</li>
+      </ol>
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '16px 0 6px' }}>สิ่งที่นักเรียนต้องทำ</h3>
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li>เข้าคลาสด้วยรหัสคลาส — คลาสรวม CPR <b>บังคับใส่เบอร์โทร</b></li>
+        <li>กดปุ่ม <b>ไปเรียน CPR</b> แล้วเรียนที่ cpr.morroo.com ให้จบ โดยใช้ <b>ชื่อและเบอร์เดียวกัน</b> กับที่เข้าคลาส</li>
+        <li>เรียนปฐมพยาบาลให้ครบ แล้วสอบ Post-test — <b>Post-test เปิดให้สอบเมื่อเรียน CPR จบแล้วเท่านั้น</b></li>
+      </ol>
+      <div className="callout callout-info" style={{ marginTop: 10 }}>
+        ระบบจับคู่นักเรียนข้าม 2 เว็บด้วย <b>เบอร์โทร 9 หลักท้าย</b> ถ้านักเรียนกรอกเบอร์คนละเบอร์ ครูจะไม่เห็นความคืบหน้า CPR
+        และนักเรียนจะติดล็อก Post-test — ให้นักเรียนแก้ที่หน้าเข้าคลาสด้วยเบอร์ที่ใช้เรียน CPR
+      </div>
+      <CopyStudentMessage text={STUDENT_LINE_MESSAGE_CPR} title="ข้อความส่งนักเรียน — คลาสรวม CPR" />
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '20px 0 6px' }}>ดูความคืบหน้า CPR</h3>
+      <p className="text-body">
+        ตารางผู้เรียนของคลาสรวมมีคอลัมน์ <b>CPR ออนไลน์</b>: <b>“จบ 92% ✅”</b> = เรียน CPR จบแล้วพร้อมคะแนนสอบ ·
+        <b> “4 บท”</b> = กำลังเรียน ผ่านไปกี่บท · <b>“—”</b> = ยังไม่ได้เริ่มเรียน CPR หรือเบอร์ไม่ตรงกัน
+      </p>
+      <p className="text-caption" style={{ marginTop: 4 }}>
+        ข้อมูลนี้มาจากเว็บ CPR ใช้ติดตามความคืบหน้า ไม่ใช่หลักฐานว่าสอบผ่าน (ใบประกาศ CPR ดูที่ระบบกลาง JIA)
+      </p>
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '20px 0 6px' }}>แบ่งกลุ่ม A–D วันอบรม</h3>
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li>ในหน้าสแกน หลังสแกน QR นักเรียนแต่ละคน กดปุ่ม <b>A / B / C / D</b> ใต้ชื่อเพื่อจัดกลุ่ม — ผู้ช่วยที่ใช้รหัสผู้ช่วยก็จัดกลุ่มได้</li>
+        <li>กระดานสถานีมีคอลัมน์ <b>กลุ่ม</b> และปุ่มกรองดูทีละกลุ่ม — ใช้คุมการหมุนฐานว่ากลุ่มไหนผ่านฐานไหนแล้ว</li>
+        <li>CSV ของกระดานสถานีมีคอลัมน์กลุ่มด้วย</li>
+      </ol>
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '20px 0 6px' }}>สอบที่ฐานสอบ: ข้อ ★ ต้องครบ</h3>
+      <p className="text-body">
+        ปุ่ม <b>ผ่าน</b> ในใบประเมินจะกดได้เมื่อติ๊กข้อ ★ ครบทุกข้อ (ระบบเช็คซ้ำฝั่งเซิร์ฟเวอร์ด้วย)
+        ข้ออื่นที่ไม่มี ★ ครูตัดสินเองได้ตามเกณฑ์แนะนำ 80% — กด <b>ไม่ผ่าน</b> ได้เสมอ แล้วให้นักเรียนสอบซ้ำ
+      </p>
+
       <h2 style={h2}>เมนูอื่นในหน้าควบคุมต้องใช้ไหม?</h2>
       <ul style={list}>
         <li><b>ใบประกาศ</b> — ใช้เมื่อต้องค้นหา แก้ชื่อ หรือเพิกถอนใบรายคน (ทำที่ระบบกลาง JIA)</li>
@@ -302,6 +375,21 @@ export default function AdminTeachGuide() {
         <Faq q="นักเรียนสอบสถานีผ่านแล้วแต่ไม่ได้ใบเซอร์ภาคปฏิบัติ">
           เปิดแท็บ <b>ใบประกาศ</b> ดูเหตุผลข้างชื่อ ส่วนใหญ่เป็นเพราะนักเรียนยังไม่ผ่านสอบหลังเรียน หรือยังไม่ได้เข้าสู่ระบบด้วย LINE
           ไม่ต้องสแกนซ้ำ — ให้นักเรียนทำข้อที่ขาดให้ครบ แล้วใบจะออกตามมาเอง (หรือกด ส่งผลที่ค้าง ในแท็บนั้น)
+        </Faq>
+        <Faq q="คลาสรวม CPR: คอลัมน์ CPR ออนไลน์ขึ้น “—” ทั้งที่นักเรียนบอกว่าเรียนแล้ว">
+          เกือบทุกครั้งเป็นเพราะเบอร์ไม่ตรงกัน ให้เทียบเบอร์ในตารางผู้เรียนกับเบอร์ที่นักเรียนใช้ที่ cpr.morroo.com
+          แล้วให้นักเรียนกรอกโค้ด CPR ของคลาสอีกครั้งด้วยชื่อและเบอร์เดียวกับที่เข้าคลาส ข้อมูลจะขึ้นภายในการรีเฟรชครั้งถัดไป
+        </Faq>
+        <Faq q="คลาสรวม CPR: นักเรียนกด Post-test ไม่ได้">
+          Post-test ปฐมพยาบาลล็อกไว้จนกว่าจะเรียน CPR จบ ให้นักเรียนเรียนที่ cpr.morroo.com ให้จบคอร์ส
+          แล้วกด <b>เช็คอีกครั้ง</b> ในแบนเนอร์คลาส ถ้ายังล็อก ให้ดูเรื่องเบอร์ไม่ตรงกันในข้อด้านบน
+        </Faq>
+        <Faq q="คลาสรวม CPR: โค้ด CPR ใช้ไม่ได้ / คนเต็ม">
+          โค้ดรับได้จำนวนคนที่ตั้งไว้ + 5 และหมดอายุ 60 วันหลังวันเรียน คนเดิมกรอกซ้ำไม่นับเพิ่ม
+          ถ้าคนเกินหรือโค้ดหมดอายุ แจ้งแอดมินให้แก้จำนวนคนหรือวันหมดอายุของโค้ดที่หน้าแอดมินของ cpr.morroo.com
+        </Faq>
+        <Faq q="กดผ่านในใบประเมินไม่ได้">
+          ยังติ๊กข้อ ★ ไม่ครบ ข้อ ★ คือข้อวิกฤตที่ต้องทำได้ทุกข้อ ถ้านักเรียนทำข้อ ★ ไม่ได้ ให้กด ไม่ผ่าน แล้วให้สอบซ้ำ
         </Faq>
         <Faq q="ชื่อบนใบประกาศผิด">
           แจ้งแอดมินให้แก้ชื่อที่ระบบกลาง JIA (class.jiacpr.com → ใบประกาศ) ค้นหา แก้ชื่อ เพิกถอน และพิมพ์ใบแทนนักเรียนได้ที่นั่น
