@@ -11,7 +11,7 @@ import { authHeader } from './authHeader'
 // device: the bridge returns the canonical learnerId from the first device, which we
 // must adopt BEFORE any new progress is written so rows aren't orphaned under the
 // throwaway local id.
-export async function linkLearnerToAuth({ session, lineUserId, displayName, pictureUrl, lineEmail, canonicalLearnerId }) {
+export async function linkLearnerToAuth({ session, lineUserId, displayName, lineDisplayName, pictureUrl, lineEmail, canonicalLearnerId }) {
   const { learner, setLearner } = useLearnerStore.getState()
   const adoptId = canonicalLearnerId && canonicalLearnerId !== learner?.id
 
@@ -20,6 +20,8 @@ export async function linkLearnerToAuth({ session, lineUserId, displayName, pict
     id: adoptId ? canonicalLearnerId : (learner?.id || canonicalLearnerId),
     // ชื่อที่ผู้เรียนพิมพ์เอง (ตอนเข้าคลาส/เช็คชื่อ) ชนะชื่อ LINE เสมอ — ชื่อ LINE ใช้แค่ตอนยังไม่มีชื่อ
     name: learner?.name || displayName || '',
+    // จำชื่อ LINE/ชื่อบัญชีไว้ เพื่อให้ฟอร์มรู้ว่าชื่อไหนไม่ใช่ชื่อจริง (api/_lib/realName.js)
+    lineName: lineDisplayName || learner?.lineName || '',
     email: lineEmail || learner?.email || '',
     pictureUrl: pictureUrl || learner?.pictureUrl || '',
     // Omitted (Hub SSO login, no LINE involved) keeps whatever LINE identity this learner already

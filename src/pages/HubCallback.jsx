@@ -85,6 +85,7 @@ export default function HubCallback() {
           // the same LINE identity api/auth/line.js used to record, so nurture/certificate rules see it.
           lineUserId: data.lineUserId || undefined,
           displayName: data.displayName,
+          lineDisplayName: data.lineDisplayName || undefined,
           pictureUrl: data.pictureUrl || undefined,
           lineEmail: data.email,
           canonicalLearnerId: data.learnerId,

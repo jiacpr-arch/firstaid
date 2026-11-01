@@ -91,6 +91,7 @@ export default function LineCallback() {
           session: verified.session,
           lineUserId: data.lineUserId,
           displayName: data.displayName,
+          lineDisplayName: data.displayName,
           pictureUrl: data.pictureUrl,
           lineEmail: data.lineEmail,
           canonicalLearnerId: data.learnerId,

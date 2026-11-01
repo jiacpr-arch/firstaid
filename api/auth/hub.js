@@ -80,6 +80,8 @@ export default async function handler(req, res) {
       displayName: profile.nameTh || profile.nameEn || lineRow?.display_name || '',
       email,
       lineUserId: lineRow?.line_user_id || null,
+      // ชื่อ LINE ล้วน ๆ (displayName ข้างบนอาจเป็นชื่อจริงจากบัตร) — ให้ฟอร์มรู้ว่าชื่อไหนไม่ใช่ชื่อจริง
+      lineDisplayName: lineRow?.display_name || null,
       pictureUrl: lineRow?.picture_url || null,
     })
   } catch (err) {
