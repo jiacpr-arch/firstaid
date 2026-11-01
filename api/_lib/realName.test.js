@@ -30,3 +30,13 @@ test('prefill เว้นว่างเมื่อเป็นชื่อ LI
   assert.equal(prefillRealName('ศศิธร แพงไทย', { lineName: 'Jaa2023' }), 'ศศิธร แพงไทย')
   assert.equal(prefillRealName(null), '')
 })
+
+test('needsRealName: ถามเฉพาะคนที่ยังไม่ยืนยันและชื่อยังไม่ใช่ชื่อจริง', async () => {
+  const { needsRealName } = await import('./realName.js')
+  assert.equal(needsRealName({ name: 'Kulawat💰' }), true)
+  assert.equal(needsRealName({ name: '' }), true)
+  assert.equal(needsRealName({ name: 'Somchai Jaidee', lineName: 'Somchai Jaidee' }), true)
+  assert.equal(needsRealName({ name: 'Somchai Jaidee', lineName: 'Somchai Jaidee', realNameAt: '2026-11-01' }), false)
+  assert.equal(needsRealName({ name: 'กุลวัฒน์ นุ่มน้อย' }), false)
+  assert.equal(needsRealName(null), false)
+})

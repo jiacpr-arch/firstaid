@@ -17,6 +17,9 @@ import { computeBadges } from '../utils/badges'
 import { encourage } from '../utils/encouragement'
 import Seo from '../components/Seo'
 import AccountCard from '../components/AccountCard'
+import RealNameCard from '../components/RealNameCard'
+import { needsRealName } from '../../api/_lib/realName.js'
+import { useAuthSession } from '../hooks/useAuthSession'
 import { itemListJsonLd, breadcrumbJsonLd } from '../lib/seo'
 
 export default function Learn() {
@@ -26,6 +29,7 @@ export default function Learn() {
   }, [hash])
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
+  const { session } = useAuthSession()
   const readSet = useProgressStore((s) => s.readLessonIds)
   const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
@@ -82,6 +86,7 @@ export default function Learn() {
       </header>
 
       <AccountCard style={{ marginTop: 12 }} />
+      {session && needsRealName(learner) && <RealNameCard source="learn_page" style={{ marginTop: 12 }} />}
 
       <div className="card" style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>

@@ -28,3 +28,10 @@ export function prefillRealName(candidate, { lineName = '' } = {}) {
   const v = String(candidate ?? '').trim()
   return v && !realNameProblem(v, { lineName }) ? v : ''
 }
+
+// ผู้เรียนที่ยังไม่เคยยืนยันชื่อจริง (ชื่อในระบบเป็นชื่อ LINE/ชื่อเล่น หรือว่าง) ต้องกรอกชื่อจริงก่อนเรียนต่อ
+// learner.realNameAt = ผู้เรียนพิมพ์ยืนยันเองแล้ว (แม้ชื่อจะตรงกับชื่อ LINE ก็ไม่ถามซ้ำ)
+export function needsRealName(learner) {
+  if (!learner || learner.realNameAt) return false
+  return !!realNameProblem(learner.name, { lineName: learner.lineName || '' })
+}

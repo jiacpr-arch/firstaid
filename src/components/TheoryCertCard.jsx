@@ -80,7 +80,8 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
   if (learner?.id && loaded && seededFor !== learner.id) {
     setSeededFor(learner.id)
     // ชื่อ LINE/ชื่อเล่น (บัตรนักเรียนที่ระบบกลางตั้งจากชื่อ LINE) ไม่เติมให้ — ให้พิมพ์ชื่อจริงเอง
-    const lineName = hub?.profile?.suggestedName || learner.lineName || ''
+    // ผู้เรียนยืนยันชื่อจริงเองแล้ว (RealNameCard) → ไม่เทียบกับชื่อ LINE อีก
+    const lineName = learner.realNameAt ? '' : (hub?.profile?.suggestedName || learner.lineName || '')
     setName(hub?.cert?.name
       || (hub?.profile?.nameLocked ? hub.profile.nameTh : '')
       || prefillRealName(hub?.profile?.nameTh, { lineName })
@@ -104,7 +105,7 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     await upsertLearner({ ...learner, lineAdded: true })
   }
 
-  const nameProblem = nameFixed ? '' : realNameProblem(name, { lineName: hub?.profile?.suggestedName || learner?.lineName || '' })
+  const nameProblem = nameFixed ? '' : realNameProblem(name, { lineName: learner?.realNameAt ? '' : (hub?.profile?.suggestedName || learner?.lineName || '') })
   const nameOk = name.trim().length >= 2 && !nameProblem
   const phoneOk = phoneDigits(phone).length >= 9
   const emailOk = isEmail(email)

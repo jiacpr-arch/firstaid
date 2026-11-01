@@ -21,6 +21,8 @@ import { fetchLessonVideo } from '../utils/lessonVideo'
 import ProgressBar from '../components/ProgressBar'
 import LinePopup from '../components/LinePopup'
 import LineLoginGate from '../components/LineLoginGate'
+import RealNameCard from '../components/RealNameCard'
+import { needsRealName } from '../../api/_lib/realName.js'
 import { useAuthSession } from '../hooks/useAuthSession'
 import { isLineLoginConfigured } from '../utils/lineAuth'
 import { isSupabaseConfigured } from '../config/supabaseClient'
@@ -207,6 +209,21 @@ export default function LessonReader() {
         <Link to="/learn" className="btn btn-secondary btn-block" style={{ marginTop: 12, maxWidth: 400, marginInline: 'auto' }}>
           <ArrowLeft size={16} /> รายการบท
         </Link>
+      </div>
+    )
+  }
+
+  // ล็อกอินแล้วแต่ชื่อในระบบยังเป็นชื่อ LINE/ชื่อเล่น → ขอชื่อ-นามสกุลจริงก่อนเรียนบทที่ 2 ขึ้นไป
+  // (ชื่อนี้ไปที่ใบประกาศและรายชื่อคลาส) — บันทึกแล้ว learner.realNameAt ถูกตั้ง ด่านนี้หายเอง
+  if (REAL_LOGIN_GATE && !isAutomated && session && lesson.order > 1 && needsRealName(learner)) {
+    return (
+      <div className="page-container">
+        {seo}
+        <div style={{ marginTop: 8 }}>
+          <div className="text-caption">บทเรียนปฐมพยาบาล</div>
+          <h1 className="text-title" style={{ margin: 0 }}>{lesson.title}</h1>
+        </div>
+        <RealNameCard source="lesson_gate" style={{ marginTop: 16, maxWidth: 480, marginInline: 'auto' }} />
       </div>
     )
   }
