@@ -13,6 +13,7 @@ import { isSupabaseConfigured } from '../config/supabaseClient'
 import { HUB_URL } from '../utils/hubCertificate'
 import { lineInterestUrl } from '../utils/lineLinks'
 import { track } from '../utils/analytics'
+import { prefillRealName, realNameProblem } from '../../api/_lib/realName.js'
 
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 const phoneDigits = (v) => v.replace(/\D/g, '')
@@ -78,7 +79,14 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
   const [seededFor, setSeededFor] = useState(null)
   if (learner?.id && loaded && seededFor !== learner.id) {
     setSeededFor(learner.id)
-    setName(hub?.cert?.name || hub?.profile?.nameTh || learner.name || '')
+    // ชื่อ LINE/ชื่อเล่น (บัตรนักเรียนที่ระบบกลางตั้งจากชื่อ LINE) ไม่เติมให้ — ให้พิมพ์ชื่อจริงเอง
+    // ผู้เรียนยืนยันชื่อจริงเองแล้ว (RealNameCard) → ไม่เทียบกับชื่อ LINE อีก
+    const lineName = learner.realNameAt ? '' : (hub?.profile?.suggestedName || learner.lineName || '')
+    setName(hub?.cert?.name
+      || (hub?.profile?.nameLocked ? hub.profile.nameTh : '')
+      || prefillRealName(hub?.profile?.nameTh, { lineName })
+      || prefillRealName(learner.name, { lineName })
+      || '')
     setPhone(learner.phone || hub?.profile?.phone || '')
     setEmail(learner.email || hub?.profile?.email || '')
   }
@@ -97,7 +105,8 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     await upsertLearner({ ...learner, lineAdded: true })
   }
 
-  const nameOk = name.trim().length >= 2
+  const nameProblem = nameFixed ? '' : realNameProblem(name, { lineName: learner?.realNameAt ? '' : (hub?.profile?.suggestedName || learner?.lineName || '') })
+  const nameOk = name.trim().length >= 2 && !nameProblem
   const phoneOk = phoneDigits(phone).length >= 9
   const emailOk = isEmail(email)
   const canIssue = nameOk && phoneOk && emailOk && consent && theoryEval.eligible && !busy
@@ -139,7 +148,8 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
     try {
       const state = await fetchHubState()
       const certName = (cert?.learnerName || '').trim()
-      if (state?.signedIn && !state.cert && state.profile && !(state.profile.nameTh || '').trim() && certName.length >= 2) {
+      if (state?.signedIn && !state.cert && state.profile && !(state.profile.nameTh || '').trim()
+        && !realNameProblem(certName, { lineName: state.profile.suggestedName || '' })) {
         await saveCardName(state.profile, { name: certName, phone: state.profile.phone || cert.learnerPhone || '' })
           .catch((err) => setHubError(err.message))
       }
@@ -261,11 +271,14 @@ export default function TheoryCertCard({ postAttempt, onIssued }) {
         <div style={{ marginTop: 12 }}>
           <label className="label">ชื่อ-นามสกุล (ภาษาไทย)</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)}
-            placeholder="ชื่อที่จะแสดงบนใบประกาศ" readOnly={nameFixed} />
+            placeholder="เช่น สมชาย ใจดี (ชื่อจริงตามบัตรประชาชน)" readOnly={nameFixed} />
+          {name.trim() && nameProblem && (
+            <div className="text-caption" data-testid="cert-name-problem" style={{ marginTop: 4, color: 'var(--color-danger, #c0392b)' }}>{nameProblem}</div>
+          )}
           <div className="text-caption" style={{ marginTop: 4 }}>
             {nameFixed
               ? 'ชื่อนี้มาจากบัตรนักเรียน JIA ของคุณ — หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่'
-              : 'ชื่อนี้จะพิมพ์บนใบประกาศและบันทึกในบัตรนักเรียน JIA ของคุณ'}
+              : 'ใช้ชื่อ-นามสกุลจริง (ไม่ใช่ชื่อ LINE) — ชื่อนี้จะพิมพ์บนใบประกาศและบันทึกในบัตรนักเรียน JIA ของคุณ'}
           </div>
 
           <label className="label" style={{ marginTop: 10 }}>เบอร์โทร</label>

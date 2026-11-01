@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Users, CheckCircle2, HeartPulse, BookOpen } from 'lucide-react'
 import { useEnsureLearner } from '../hooks/useLearner'
+import { prefillRealName } from '../../api/_lib/realName.js'
 import { useLearnerStore } from '../stores/learnerStore'
 import { upsertLearner } from '../db/database'
 import { flushSync } from '../db/sync'
@@ -20,7 +21,7 @@ export default function JoinClass() {
   const updateLearner = useLearnerStore((s) => s.updateLearner)
 
   const [code, setCode] = useState(paramCode || '')
-  const [nameVal, setNameVal] = useState(learner?.name || '')
+  const [nameVal, setNameVal] = useState(() => prefillRealName(learner?.name, { lineName: learner?.lineName || '' }))
   const [phoneVal, setPhoneVal] = useState(learner?.phone || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
