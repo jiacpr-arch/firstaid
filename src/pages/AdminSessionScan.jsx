@@ -45,10 +45,11 @@ export default function AdminSessionScan() {
       .then((b) => {
         const list = b.stations || []
         setStations(list)
-        let saved = ''
-        try { saved = localStorage.getItem(modeKey(id)) || '' } catch { /* ignore */ }
-        if (saved === PICK_AFTER && list.length) setStationId(PICK_AFTER)
-        else if (list.length) setStationId(list[0].id)
+        // ค่าเริ่มต้น = สแกนนักเรียนก่อน แล้วค่อยเลือกฐาน; ถ้าเคยเลือกโหมดอื่นในคลาสนี้ไว้ ใช้ค่านั้น
+        let saved = null
+        try { saved = localStorage.getItem(modeKey(id)) } catch { /* ignore */ }
+        const valid = saved === '' || saved === PICK_AFTER || list.some((x) => x.id === saved)
+        if (list.length) setStationId(valid ? saved : PICK_AFTER)
       })
       .catch(() => {})
   }, [id])
@@ -59,10 +60,7 @@ export default function AdminSessionScan() {
 
   const changeStation = (value) => {
     setStationId(value)
-    try {
-      if (value === PICK_AFTER) localStorage.setItem(modeKey(id), PICK_AFTER)
-      else localStorage.removeItem(modeKey(id))
-    } catch { /* ignore */ }
+    try { localStorage.setItem(modeKey(id), value) } catch { /* ignore */ }
   }
 
   // หลังได้ผลเช็คชื่อเข้าฐาน: แสดงผล และเปิดใบประเมินถ้าเป็นฐานสอบที่ยังไม่มีผล
