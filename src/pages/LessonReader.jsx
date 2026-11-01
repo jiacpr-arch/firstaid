@@ -399,7 +399,18 @@ export default function LessonReader() {
         {seo}
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
           <CheckCircle2 size={48} color="#347053" style={{ margin: '0 auto' }} />
-          <div className="text-title" style={{ marginTop: 12 }}>เรียนจบบทแล้ว!</div>
+          <div className="text-eyebrow" style={{ marginTop: 12 }}>ภาคทฤษฎี (ออนไลน์) · บทที่ {lesson.order}</div>
+          <div
+            role="status"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
+              padding: '4px 14px', borderRadius: 999, background: '#E2F0E3', color: '#2F6044',
+              fontSize: 14, fontWeight: 800, letterSpacing: 0.5,
+            }}
+          >
+            COMPLETE · เสร็จสิ้น
+          </div>
+          <div className="text-title" style={{ marginTop: 10 }}>เรียนจบบทนี้แล้ว!</div>
           <div className="text-caption" style={{ marginTop: 4 }}>{lesson.title}</div>
           {quizResult?.total > 0 && (
             <div className="text-body" style={{ marginTop: 12 }}>

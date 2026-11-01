@@ -231,6 +231,9 @@ export default function Learn() {
                         {gate ? `ฝึกสถานการณ์หมวด ${gate} ให้ผ่านก่อน` : `${l.summary} · ${l.minutes} นาที`}
                       </span>
                     </span>
+                    {isRead && !locked && (
+                      <span className="badge badge-success" style={{ flexShrink: 0 }}>เสร็จสิ้น</span>
+                    )}
                     {!locked && <ChevronRight size={18} strokeWidth={1.6} color="var(--color-brand)" style={{ flexShrink: 0 }} />}
                   </>
                 )
