@@ -48,6 +48,17 @@ export default function LessonQuiz({ questions, passRatio = 0.7, onComplete, onC
   ) : result ? (
     <>
       <div className={`callout ${passed ? 'callout-info' : 'callout-danger'}`} style={{ marginTop: 14 }}>
+        {!passed && (
+          <div
+            role="status"
+            style={{
+              display: 'inline-block', marginBottom: 8, padding: '3px 12px', borderRadius: 999,
+              background: '#A0392F', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
+            }}
+          >
+            NOT COMPLETE · ยังไม่ผ่าน
+          </div>
+        )}
         <div className="text-body-strong">ได้ {result.correct} / {result.total} ข้อ</div>
         <div className="text-body">
           {passed
