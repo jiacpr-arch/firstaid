@@ -44,6 +44,33 @@ export default async function handler(req, res) {
     return
   }
 
+  // keepName: การ join ซ้ำอัตโนมัติหลังล็อกอิน (src/utils/linkLearner.js) — ถ้ามีแถวอยู่แล้วห้ามทับ
+  // ชื่อ/เบอร์ที่นักเรียนพิมพ์เอง (เดิมทับด้วยชื่อ LINE ทำให้ครูเห็นชื่อเล่นแทนชื่อจริง)
+  if (body.keepName === true) {
+    const { data: existing, error: exErr } = await admin
+      .from('enrollments')
+      .select('name, phone')
+      .eq('cohort_id', cohort.id)
+      .eq('learner_id', learnerId)
+      .maybeSingle()
+    if (exErr) { res.status(500).json({ error: exErr.message }); return }
+    if (existing) {
+      if (!existing.name || !existing.phone) {
+        const patch = {}
+        if (!existing.name && name) patch.name = name
+        if (!existing.phone && phone) patch.phone = phone
+        if (Object.keys(patch).length) {
+          await admin.from('enrollments').update(patch).eq('cohort_id', cohort.id).eq('learner_id', learnerId)
+        }
+      }
+      res.status(200).json({
+        ok: true, cohortId: cohort.id, cohortName: cohort.name, code: cohort.code,
+        cprPromoCode: cohort.includes_cpr ? cohort.cpr_promo_code || null : null,
+      })
+      return
+    }
+  }
+
   const { error } = await admin
     .from('enrollments')
     .upsert(
