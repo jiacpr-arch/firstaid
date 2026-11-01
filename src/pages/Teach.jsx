@@ -177,7 +177,7 @@ export default function Teach() {
 
       {tab === 'class' && <ClassHome onNewClass={() => setGate('create')} onPick={() => setGate('pick')} />}
       {tab === 'overview' && <ClassOverview learners={learners} classCode={classCode} />}
-      {tab === 'theory' && <ClassTheory learners={learners} classCode={classCode} />}
+      {tab === 'theory' && <ClassTheory learners={learners} classCode={classCode} classId={classId} onChanged={reload} />}
       {tab === 'practice' && <ClassPractice sessionId={sessionId} classCode={classCode} />}
       {tab === 'certs' && <ClassCertificates classId={classId} />}
 

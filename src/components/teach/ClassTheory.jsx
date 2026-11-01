@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Download } from 'lucide-react'
+import { Download, Pencil } from 'lucide-react'
+import { adminFetch } from '../../utils/adminFetch'
 import { lessons } from '../../courses/firstaid/lessons'
 import { scenarios } from '../../courses/firstaid/scenarios'
 
@@ -24,8 +25,22 @@ function exportCsv(learners, filename) {
   URL.revokeObjectURL(url)
 }
 
+// ครูแก้ชื่อนักเรียนในคลาส (เช่นเข้ามาด้วยชื่อ LINE) — api/cohorts/rename-learner.js
+async function renameLearner(classId, l, onChanged) {
+  const next = window.prompt(`แก้ชื่อนักเรียน (ชื่อ-นามสกุลจริง)\nเดิม: ${l.name || '(ไม่ระบุชื่อ)'}`, l.name || '')
+  if (next == null) return
+  const name = next.trim()
+  if (name.length < 2 || name === l.name) return
+  const resp = await adminFetch('/api/cohorts/rename-learner', {
+    method: 'POST',
+    body: JSON.stringify({ cohortId: classId, learnerId: l.learnerId, name }),
+  }).catch(() => null)
+  if (!resp?.ok) { window.alert('แก้ชื่อไม่สำเร็จ — ลองใหม่อีกครั้ง'); return }
+  onChanged?.()
+}
+
 // แท็บ "ทฤษฎี": ความคืบหน้าเรียนออนไลน์รายคน (บทเรียน ควิซ Pre/Post สถานการณ์ เกม)
-export default function ClassTheory({ learners, classCode }) {
+export default function ClassTheory({ learners, classCode, classId, onChanged }) {
   if (learners.length === 0) {
     return <div className="card" style={{ marginTop: 12 }}><div className="text-caption">ยังไม่มีนักเรียนเข้าร่วมคลาส</div></div>
   }
@@ -55,6 +70,13 @@ export default function ClassTheory({ learners, classCode }) {
               <tr key={l.learnerId} style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <td style={{ padding: '10px 12px' }}>
                   <Link to={`/admin/teach/learners/${l.learnerId}`} className="text-body-strong">{l.name || '(ไม่ระบุชื่อ)'}</Link>
+                  {classId && (
+                    <button type="button" className="btn btn-ghost" title="แก้ชื่อ" aria-label={`แก้ชื่อ ${l.name || ''}`}
+                      style={{ padding: '2px 6px', marginLeft: 4, verticalAlign: 'middle' }}
+                      onClick={() => renameLearner(classId, l, onChanged)}>
+                      <Pencil size={13} />
+                    </button>
+                  )}
                 </td>
                 <td style={{ padding: '10px 8px' }}>{l.lessonsRead}/{lessons.length}</td>
                 <td style={{ padding: '10px 8px' }}>{l.quizzesPassed}</td>

@@ -18,7 +18,8 @@ export async function linkLearnerToAuth({ session, lineUserId, displayName, pict
   const merged = {
     ...(learner || {}),
     id: adoptId ? canonicalLearnerId : (learner?.id || canonicalLearnerId),
-    name: displayName || learner?.name || '',
+    // ชื่อที่ผู้เรียนพิมพ์เอง (ตอนเข้าคลาส/เช็คชื่อ) ชนะชื่อ LINE เสมอ — ชื่อ LINE ใช้แค่ตอนยังไม่มีชื่อ
+    name: learner?.name || displayName || '',
     email: lineEmail || learner?.email || '',
     pictureUrl: pictureUrl || learner?.pictureUrl || '',
     // Omitted (Hub SSO login, no LINE involved) keeps whatever LINE identity this learner already
@@ -65,6 +66,8 @@ export async function linkLearnerToAuth({ session, lineUserId, displayName, pict
             learnerId: merged.id,
             name: merged.name || null,
             phone: merged.phone || null,
+            // ห้ามทับชื่อ/เบอร์ที่มีอยู่แล้วในคลาส (บัญชีนี้อาจ join ไว้จากอีกเครื่องด้วยชื่อจริง)
+            keepName: true,
           }),
         }))
         .catch(() => {})
