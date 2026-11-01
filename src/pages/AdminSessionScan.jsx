@@ -7,6 +7,19 @@ import ChecklistGrader from '../components/checkin/ChecklistGrader'
 
 const REGION_ID = 'admin-qr-scan-region'
 const SAME_QR_COOLDOWN_MS = 3000
+// โหมด "สแกนนักเรียนก่อน แล้วค่อยเลือกฐาน" — ใช้ค่าใน dropdown เดียวกับรายชื่อฐาน
+const PICK_AFTER = '__pick__'
+const modeKey = (sid) => `scan-station-mode:${sid}`
+
+// เช็คชื่อเข้าฐาน — ใช้ทั้งตอนสแกนตรงเข้าฐาน (payload) และตอนเลือกฐานหลังสแกน (learnerId)
+async function checkinStation(sessionId, station, who) {
+  const resp = await instructorFetch(sessionId, '/api/attendance/station-checkin', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, stationId: station.id, ...who }),
+  })
+  const body = await resp.json().catch(() => ({}))
+  return { resp, body }
+}
 
 // ครูสแกน QR ประจำตัวนักเรียน (/my-qr) → เช็คชื่อ + อนุมัติทันที แล้วออกใบเซอร์ภาคปฏิบัติ
 export default function AdminSessionScan() {
@@ -19,6 +32,7 @@ export default function AdminSessionScan() {
   const [stations, setStations] = useState([])
   const [stationId, setStationId] = useState('')
   const [grading, setGrading] = useState(null) // { station, student }
+  const [picking, setPicking] = useState(null) // student ที่สแกนแล้ว รอเลือกฐาน
   const [saving, setSaving] = useState(false)
   const [groupSaved, setGroupSaved] = useState('')
   const stationRef = useRef({ id: '', list: [] })
@@ -31,7 +45,10 @@ export default function AdminSessionScan() {
       .then((b) => {
         const list = b.stations || []
         setStations(list)
-        if (list.length) setStationId(list[0].id)
+        let saved = ''
+        try { saved = localStorage.getItem(modeKey(id)) || '' } catch { /* ignore */ }
+        if (saved === PICK_AFTER && list.length) setStationId(PICK_AFTER)
+        else if (list.length) setStationId(list[0].id)
       })
       .catch(() => {})
   }, [id])
@@ -39,6 +56,53 @@ export default function AdminSessionScan() {
   useEffect(() => {
     stationRef.current = { id: stationId, list: stations }
   }, [stationId, stations])
+
+  const changeStation = (value) => {
+    setStationId(value)
+    try {
+      if (value === PICK_AFTER) localStorage.setItem(modeKey(id), PICK_AFTER)
+      else localStorage.removeItem(modeKey(id))
+    } catch { /* ignore */ }
+  }
+
+  // หลังได้ผลเช็คชื่อเข้าฐาน: แสดงผล และเปิดใบประเมินถ้าเป็นฐานสอบที่ยังไม่มีผล
+  // คืนค่า true ถ้าต้องหยุดรับสแกนไว้ (กำลังประเมิน)
+  const applyStationResult = useCallback((station, body) => {
+    const at = Date.now()
+    const name = body.student?.name || ''
+    setGroupSaved('')
+    setLast({
+      ok: true, name, learnerId: body.student?.id,
+      message: `${body.duplicate ? 'เช็คชื่อไปแล้ว' : 'เช็คชื่อสำเร็จ'} · ${station.name}`,
+    })
+    if (!body.duplicate) setRecent((r) => [{ name: `${name} → ${station.name}`, at }, ...r].slice(0, 8))
+    if (station.kind === 'exam' && body.passed == null) {
+      setGrading({ station, student: body.student })
+      return true
+    }
+    return false
+  }, [])
+
+  const pickStation = async (station) => {
+    if (!picking || saving) return
+    setSaving(true)
+    try {
+      const { resp, body } = await checkinStation(id, station, { learnerId: picking.id })
+      if (!resp.ok) {
+        navigator.vibrate?.([200, 100, 200])
+        // ยังค้างหน้าเลือกฐานไว้ ให้ครูเลือกฐานอื่นหรือยกเลิกได้
+        setLast({ ok: false, name: picking.name, message: body.error || 'เช็คชื่อเข้าฐานไม่สำเร็จ' })
+        return
+      }
+      navigator.vibrate?.(80)
+      setPicking(null)
+      if (!applyStationResult(station, body)) busyRef.current = false
+    } catch {
+      setLast({ ok: false, name: picking.name, message: 'เครือข่ายขัดข้อง ลองเลือกฐานใหม่' })
+    } finally { setSaving(false) }
+  }
+
+  const cancelPick = () => { setPicking(null); busyRef.current = false }
 
   const saveResult = async (result) => {
     setSaving(true)
@@ -77,17 +141,14 @@ export default function AdminSessionScan() {
     let keepBusy = false
     try {
       const { id: stId, list } = stationRef.current
-      const station = list.find((x) => x.id === stId)
-      const resp = station
-        ? await instructorFetch(id, '/api/attendance/station-checkin', {
-          method: 'POST',
-          body: JSON.stringify({ sessionId: id, stationId: station.id, payload: text }),
-        })
+      const pickAfter = stId === PICK_AFTER
+      const station = pickAfter ? null : list.find((x) => x.id === stId)
+      const { resp, body } = station
+        ? await checkinStation(id, station, { payload: text })
         : await instructorFetch(id, '/api/attendance/instructor-checkin', {
           method: 'POST',
           body: JSON.stringify({ sessionId: id, payload: text }),
-        })
-      const body = await resp.json().catch(() => ({}))
+        }).then(async (r) => ({ resp: r, body: await r.json().catch(() => ({})) }))
       if (!resp.ok) {
         navigator.vibrate?.([200, 100, 200])
         if (resp.status === 403 && getInstructorCode(id)) {
@@ -100,13 +161,18 @@ export default function AdminSessionScan() {
         return
       }
       navigator.vibrate?.(80)
+      if (station) {
+        // ฐานสอบที่ยังไม่มีผล → เปิดใบประเมิน และหยุดรับสแกนใหม่จนกว่าจะบันทึกผล
+        keepBusy = applyStationResult(station, body)
+        return
+      }
       const name = body.student?.name || ''
       setGroupSaved('')
       setLast({ ok: true, name, learnerId: body.student?.id, message: body.duplicate ? 'เช็คชื่อไปแล้ว' : 'เช็คชื่อสำเร็จ' })
       if (!body.duplicate) setRecent((r) => [{ name, at: now }, ...r].slice(0, 8))
-      if (station?.kind === 'exam' && body.passed == null) {
-        // เปิดใบประเมิน และหยุดรับสแกนใหม่จนกว่าจะบันทึกผล
-        setGrading({ station, student: body.student })
+      if (pickAfter && body.student?.id) {
+        // ได้ตัวนักเรียนแล้ว → ให้ครูเลือกฐาน และหยุดรับสแกนใหม่จนกว่าจะเลือก/ยกเลิก
+        setPicking(body.student)
         keepBusy = true
         return
       }
@@ -115,7 +181,7 @@ export default function AdminSessionScan() {
     } finally {
       if (!keepBusy) busyRef.current = false
     }
-  }, [id])
+  }, [id, applyStationResult])
 
   useEffect(() => {
     let active = true
@@ -155,12 +221,30 @@ export default function AdminSessionScan() {
       {stations.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <label className="label">สแกนเข้าฐาน</label>
-          <select className="input" value={stationId} onChange={(e) => setStationId(e.target.value)} disabled={!!grading}>
+          <select className="input" value={stationId} onChange={(e) => changeStation(e.target.value)} disabled={!!grading || !!picking}>
+            <option value={PICK_AFTER}>สแกนนักเรียนก่อน แล้วค่อยเลือกฐาน</option>
             <option value="">เช็คชื่อรวม (ไม่เลือกฐาน)</option>
             {stations.map((st) => (
               <option key={st.id} value={st.id}>{st.name}{st.kind === 'exam' ? ' (สอบ)' : ''}</option>
             ))}
           </select>
+        </div>
+      )}
+
+      {picking && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <div className="text-body-strong">{picking.name} — เลือกฐาน</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            {stations.map((st) => (
+              <button key={st.id} type="button" className="btn btn-secondary" disabled={saving}
+                onClick={() => pickStation(st)}>
+                {st.name}{st.kind === 'exam' ? ' (สอบ)' : ''}
+              </button>
+            ))}
+            <button type="button" className="btn btn-ghost" disabled={saving} onClick={cancelPick}>
+              ไม่เข้าฐาน (เช็คชื่ออย่างเดียว)
+            </button>
+          </div>
         </div>
       )}
 
