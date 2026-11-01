@@ -58,6 +58,10 @@ export default function JoinClass() {
         phone: phoneVal.trim(),
         cohortCode: body.code,
         cohortName: body.cohortName,
+        // คลาสรวม CPR: จำโค้ดไว้ให้แบนเนอร์คลาส/หน้า Post-test พาไปเรียน CPR ต่อ (useClassCpr)
+        cprPromoCode: body.cprPromoCode || null,
+        cprStatus: body.cprPromoCode ? 'todo' : 'none',
+        cprStatusCode: body.code,
       }
       updateLearner(patch)
       await upsertLearner({ ...learner, ...patch }).catch(() => {})
@@ -82,7 +86,7 @@ export default function JoinClass() {
           <CheckCircle2 size={44} color="#347053" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 10 }}>เข้าร่วมคลาสแล้ว!</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
-            {joined.cohortName} — ก่อนวันเรียนจริง เรียนออนไลน์ให้ครบ 2 ขั้น
+            {joined.cohortName} — ก่อนวันเรียนจริง ต้องเรียนออนไลน์ให้ครบทั้ง 2 เว็บ
           </div>
         </div>
 
@@ -98,7 +102,10 @@ export default function JoinClass() {
 
         <div className="card" style={{ marginTop: 12 }}>
           <div className="text-body-strong"><HeartPulse size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 2: CPR & AED (cpr.morroo.com)</div>
-          <div className="text-caption" style={{ marginTop: 4 }}>
+          <div className="callout" style={{ margin: '6px 0 0', padding: '8px 12px' }}>
+            <b>บังคับ</b> — ต้องเรียน CPR & AED จบคอร์สก่อน จึงจะทำ Post-test ปฐมพยาบาลได้
+          </div>
+          <div className="text-caption" style={{ marginTop: 6 }}>
             ใช้โค้ดคลาส <b>{joined.cprPromoCode}</b> เรียนฟรีทุกบท — กรอก<b>ชื่อและเบอร์เดียวกัน</b>กับที่ใช้เข้าคลาสนี้ ครูจึงจะเห็นความคืบหน้า
           </div>
           <a href={cprUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-block" style={{ marginTop: 10 }}>

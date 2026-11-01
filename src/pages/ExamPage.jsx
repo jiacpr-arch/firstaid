@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, CheckCircle2, XCircle, Lock } from 'lucide-react'
+import { ArrowLeft, ChevronRight, CheckCircle2, XCircle, Lock, ExternalLink, RefreshCw } from 'lucide-react'
 import { preTest, postTest } from '../courses/firstaid/exams'
 import { lessons } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
+import { useClassCpr, cprCourseUrl } from '../hooks/useClassCpr'
 import { isPracticeDone, practiceChaptersRemaining, practiceChapterStatus, practiceLink } from '../utils/practice'
 import { saveExamAttempt } from '../db/database'
 import { flushSync } from '../db/sync'
@@ -39,10 +40,16 @@ export default function ExamPage({ kind }) {
 
   const allLessonsDone = lessons.length > 0 && lessons.every((l) => readSet.has(l.id))
   const practiceDone = isPracticeDone(passedScenarioIds)
-  const postReady = allLessonsDone && practiceDone
-
+  // คลาสรวม CPR + ปฐมพยาบาล: ต้องเรียน CPR & AED ออนไลน์ (cpr.morroo.com) จบก่อน Post-test
+  // ('unknown' = เช็คไม่ได้ → ไม่ล็อก กันนักเรียนติดเพราะระบบล่ม)
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState({})
+  const cpr = useClassCpr()
+  // เช็คเฉพาะก่อนเริ่มทำข้อสอบ — สลับแท็บกลางคันแล้วเช็คใหม่ต้องไม่เด้งออกจากข้อสอบ
+  const examStarted = Object.keys(answers).length > 0
+  const cprBlocking = kind === 'post' && !examStarted && cpr.status === 'todo'
+  const cprPending = kind === 'post' && !examStarted && cpr.status === 'loading'
+  const postReady = allLessonsDone && practiceDone && !cprBlocking
   const [done, setDone] = useState(null)
   const [busy, setBusy] = useState(false)
   const startTracked = useRef(false)
@@ -95,7 +102,7 @@ export default function ExamPage({ kind }) {
   }
 
   // Post-test: รอโหลดสถานะความก้าวหน้าก่อน เพื่อไม่ให้โผล่ข้อสอบแวบ ๆ ตอนเปิด URL ตรง
-  if (kind === 'post' && !progressLoaded && !done) {
+  if (kind === 'post' && (!progressLoaded || cprPending) && !done) {
     return <div className="page-container py-12 text-center text-caption">กำลังโหลด…</div>
   }
 
@@ -103,8 +110,10 @@ export default function ExamPage({ kind }) {
   if (kind === 'post' && progressLoaded && !postReady && !done) {
     const lessonsRemaining = lessons.length - lessons.filter((l) => readSet.has(l.id)).length
     const chaptersRemaining = practiceChaptersRemaining(passedScenarioIds)
-    // เรียนยังไม่ครบ → ให้ไปเรียนก่อน, เรียนครบแล้วแต่ยังฝึกไม่ครบ → ให้ไปฝึก
+    // เรียนยังไม่ครบ → ให้ไปเรียนก่อน, เรียนครบแล้วแต่ยังฝึกไม่ครบ → ให้ไปฝึก, เหลือแต่ CPR → ไป cpr.morroo.com
     const needLessons = !allLessonsDone
+    const onlyCprLeft = allLessonsDone && practiceDone && cprBlocking
+    const cprUrl = cprCourseUrl(cpr.promoCode || learner?.cprPromoCode)
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
@@ -139,11 +148,35 @@ export default function ExamPage({ kind }) {
                 <span className="text-caption">หมวด {c.chapter} {c.title}</span>
               </div>
             ))}
+            {cprBlocking && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <Lock size={16} color="var(--color-text-secondary)" style={{ marginTop: 3, flexShrink: 0 }} />
+                <span className="text-body">
+                  เรียน CPR & AED ออนไลน์ที่ cpr.morroo.com ให้จบคอร์ส (บังคับสำหรับคลาสนี้)
+                  {cpr.cpr?.modulesDone > 0 ? ` — เรียนไปแล้ว ${cpr.cpr.modulesDone} บท` : ''}
+                  <span className="text-caption" style={{ display: 'block', marginTop: 2 }}>
+                    {(cpr.promoCode || learner?.cprPromoCode) && <>ใช้โค้ดคลาส <b>{cpr.promoCode || learner?.cprPromoCode}</b> · </>}
+                    กรอกเบอร์เดียวกับที่เข้าคลาส{learner?.phone ? ` (${learner.phone})` : ''} — เรียนจบแล้วกลับมากด "เช็คอีกครั้ง"
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
-        <Link to={needLessons ? '/learn' : practiceLink(passedScenarioIds)} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
-          <ArrowLeft size={16} /> {needLessons ? 'ไปเรียนต่อ' : 'ไปฝึกสถานการณ์'}
-        </Link>
+        {onlyCprLeft ? (
+          <a href={cprUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
+            <ExternalLink size={16} /> ไปเรียน CPR & AED
+          </a>
+        ) : (
+          <Link to={needLessons ? '/learn' : practiceLink(passedScenarioIds)} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
+            <ArrowLeft size={16} /> {needLessons ? 'ไปเรียนต่อ' : 'ไปฝึกสถานการณ์'}
+          </Link>
+        )}
+        {cprBlocking && (
+          <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={cpr.refresh} disabled={cpr.checking}>
+            <RefreshCw size={16} /> {cpr.checking ? 'กำลังเช็ค…' : 'เรียน CPR จบแล้ว — เช็คอีกครั้ง'}
+          </button>
+        )}
       </div>
     )
   }

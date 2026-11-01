@@ -1,18 +1,21 @@
 import { Link } from 'react-router-dom'
-import { QrCode, ArrowRight, CheckCircle2, Circle } from 'lucide-react'
+import { QrCode, ArrowRight, CheckCircle2, Circle, HeartPulse, ExternalLink, RefreshCw } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { lessons } from '../courses/firstaid/lessons'
 import { isPracticeDone, practiceChaptersRemaining, practiceLink } from '../utils/practice'
+import { useClassCpr, cprCourseUrl } from '../hooks/useClassCpr'
 
 // แบนเนอร์คลาสบนหน้าหลักของนักเรียน (แบบ ACLS class banner + progress card): เห็นชื่อคลาส,
-// ขั้นตอนถัดไป (Pre-test → บทเรียน → ฝึกสถานการณ์ → Post-test → วันอบรมภาคปฏิบัติ) และปุ่ม QR ของฉัน
+// ขั้นตอนถัดไป (Pre-test → บทเรียน → ฝึกสถานการณ์ → [CPR & AED ออนไลน์] → Post-test → วันอบรมภาคปฏิบัติ)
+// และปุ่ม QR ของฉัน — คลาสรวม CPR บังคับเรียน CPR ที่ cpr.morroo.com ให้จบก่อน Post-test (ExamPage)
 export default function ClassBanner() {
   const learner = useLearnerStore((s) => s.learner)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
   const preTestDone = useProgressStore((s) => s.preTestDone)
   const postTestDone = useProgressStore((s) => s.postTestDone)
   const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
+  const cpr = useClassCpr()
 
   if (!learner?.cohortCode) return null
 
@@ -23,10 +26,16 @@ export default function ClassBanner() {
   const practiceDone = isPracticeDone(passedScenarioIds)
   const practiceRemaining = practiceChaptersRemaining(passedScenarioIds)
 
+  // คลาสรวม CPR: ต้องเรียน CPR & AED ออนไลน์ให้จบด้วย (เช็คไม่ได้ = ไม่ล็อก แต่ยังเตือน)
+  const cprClass = cpr.status !== 'none'
+  const cprDone = cpr.status === 'done'
+  const cprUrl = cprCourseUrl(cpr.promoCode || learner.cprPromoCode)
+
   let next
   if (!preTestDone) next = { to: '/pre-test', label: 'ทำ Pre-test' }
   else if (!allLessons && nextLesson) next = { to: `/learn/${nextLesson.id}`, label: `เรียนต่อ: ${nextLesson.title}` }
   else if (!practiceDone && !postTestDone) next = { to: practiceLink(passedScenarioIds), label: `ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด)` }
+  else if (cpr.status === 'todo' && !postTestDone) next = { href: cprUrl, label: 'ไปเรียน CPR & AED ออนไลน์ให้จบก่อน' }
   else if (!postTestDone) next = { to: '/post-test', label: 'ทำ Post-test' }
   else next = { to: '/my-qr', label: 'พร้อมแล้ว — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติ' }
 
@@ -34,6 +43,7 @@ export default function ClassBanner() {
     ['Pre-test', preTestDone],
     [`บทเรียน ${lessonsDone}/${lessons.length}`, allLessons],
     ['ฝึกสถานการณ์', practiceDone],
+    ...(cprClass ? [['CPR & AED ออนไลน์', cprDone]] : []),
     ['Post-test', postTestDone],
   ]
 
@@ -55,9 +65,38 @@ export default function ClassBanner() {
           </span>
         ))}
       </div>
-      <Link to={next.to} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
-        {next.label} <ArrowRight size={16} />
-      </Link>
+      {cprClass && !cprDone && (
+        <div className="callout" style={{ marginTop: 12 }}>
+          <div className="text-body-strong">
+            <HeartPulse size={15} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+            คลาสนี้ต้องเรียน CPR & AED ออนไลน์ด้วย (บังคับ)
+          </div>
+          <div className="text-caption" style={{ marginTop: 4 }}>
+            เรียนที่ cpr.morroo.com ให้จบคอร์ส
+            {(cpr.promoCode || learner.cprPromoCode) && <> ด้วยโค้ดคลาส <b>{cpr.promoCode || learner.cprPromoCode}</b></>}
+            {' '}— กรอก<b>เบอร์เดียวกับที่เข้าคลาสนี้</b>{learner.phone ? ` (${learner.phone})` : ''} ระบบจึงจะเห็นว่าเรียนแล้ว
+            ต้องเรียน CPR จบก่อนจึงจะทำ Post-test ปฐมพยาบาลได้
+            {cpr.cpr?.modulesDone > 0 && <> · ตอนนี้เรียนไปแล้ว {cpr.cpr.modulesDone} บท</>}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <a href={cprUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: 1, fontSize: 13 }}>
+              <ExternalLink size={14} /> ไปเรียน CPR
+            </a>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={cpr.refresh} disabled={cpr.checking}>
+              <RefreshCw size={14} /> {cpr.checking ? 'กำลังเช็ค…' : 'เช็คอีกครั้ง'}
+            </button>
+          </div>
+        </div>
+      )}
+      {next.href ? (
+        <a href={next.href} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+          {next.label} <ExternalLink size={16} />
+        </a>
+      ) : (
+        <Link to={next.to} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+          {next.label} <ArrowRight size={16} />
+        </Link>
+      )}
     </section>
   )
 }
