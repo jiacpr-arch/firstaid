@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { RefreshCw, Send } from 'lucide-react'
+import { RefreshCw, Send, Award } from 'lucide-react'
 import { adminFetch } from '../../utils/adminFetch'
 import { HUB_URL } from '../../utils/hubCertificate'
 
@@ -32,6 +32,9 @@ export default function ClassCertificates({ classId }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [picked, setPicked] = useState(() => new Set())
+  const [attest, setAttest] = useState(false)
+  const [grantNote, setGrantNote] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -75,11 +78,45 @@ export default function ClassCertificates({ classId }) {
     }
   }
 
+  // ให้ผ่านภาคปฏิบัติย้อนหลัง — เฉพาะคนที่มาอบรมแล้ว (เซิร์ฟเวอร์เช็คซ้ำ: คนที่ไม่มาไม่มีทางได้ใบ)
+  const grant = async () => {
+    const ids = [...picked]
+    if (!ids.length || !attest) return
+    if (!window.confirm(`ให้ผ่านภาคปฏิบัติและออกใบประกาศให้ ${ids.length} คน?`)) return
+    setBusy(true)
+    setGrantNote('')
+    try {
+      const resp = await adminFetch('/api/classes/certificates', {
+        method: 'POST', body: JSON.stringify({ cohortId: classId, action: 'grant', learnerIds: ids, confirm: true }),
+      })
+      const body = await resp.json().catch(() => ({}))
+      if (!resp.ok) { setGrantNote(body.error || 'ไม่สำเร็จ'); return }
+      const parts = [`ออกใบแล้ว ${body.issued.length} คน`]
+      if (body.waitingTheory.length) parts.push(`รอใบทฤษฎีก่อน ${body.waitingTheory.length} คน (${body.waitingTheory.join(', ')}) — ออกให้เองเมื่อผ่าน Post-test`)
+      if (body.skipped.length) parts.push(`ข้าม ${body.skipped.length} คน: ${body.skipped.map((x) => `${x.name} (${x.reason})`).join(', ')}`)
+      setGrantNote(parts.join(' · '))
+      setPicked(new Set())
+      setAttest(false)
+      await load()
+    } catch {
+      setGrantNote('เครือข่ายขัดข้อง ลองใหม่')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (error) return <div className="callout callout-danger" style={{ marginTop: 12 }}>{error}</div>
   if (!data) return <div className="text-caption" style={{ marginTop: 12 }}>กำลังโหลด…</div>
   const { rows, totals, hubError } = data
   if (!rows.length) return <div className="card" style={{ marginTop: 12 }}><div className="text-caption">ยังไม่มีนักเรียนเข้าร่วมคลาส</div></div>
   const sorted = [...rows].sort((a, b) => rank(a) - rank(b))
+  const grantable = rows.filter((r) => r.canGrant)
+  const toggle = (id) => setPicked((p) => {
+    const n = new Set(p)
+    if (n.has(id)) n.delete(id)
+    else n.add(id)
+    return n
+  })
 
   return (
     <>
@@ -109,6 +146,41 @@ export default function ClassCertificates({ classId }) {
         </div>
         {note && <div className="text-caption" style={{ marginTop: 6 }}>{note}</div>}
       </div>
+
+      {grantable.length > 0 && (
+        <div className="card" style={{ marginTop: 10 }}>
+          <div className="text-body-strong">
+            <Award size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+            มาอบรมแล้วแต่ยังไม่มีใบภาคปฏิบัติ: {grantable.length} คน
+          </div>
+          <div className="text-caption" style={{ marginTop: 2 }}>
+            สำหรับวันที่ไม่ได้บันทึกผลฐานสอบในแอป — ติ๊กเฉพาะคนที่ครูประเมินแล้วว่าผ่านจริง
+            (ระบบบันทึกว่าคุณเป็นคนให้ผ่าน) · คนที่ไม่ได้มาอบรมจะไม่อยู่ในรายชื่อนี้
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+            {grantable.map((r) => (
+              <label key={r.learnerId} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={picked.has(r.learnerId)} onChange={() => toggle(r.learnerId)} />
+                <span className="text-body">{r.name || '(ไม่ระบุชื่อ)'}</span>
+                {r.theory.state === 'none' && <span className="text-caption">— ยังไม่ผ่าน Post-test (ใบจะออกเมื่อผ่าน)</span>}
+              </label>
+            ))}
+          </div>
+          <button type="button" className="btn btn-ghost" style={{ fontSize: 13, paddingLeft: 0 }}
+            onClick={() => setPicked(picked.size === grantable.length ? new Set() : new Set(grantable.map((r) => r.learnerId)))}>
+            {picked.size === grantable.length ? 'ยกเลิกเลือกทั้งหมด' : 'เลือกทุกคน'}
+          </button>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 4, cursor: 'pointer' }}>
+            <input type="checkbox" checked={attest} onChange={(e) => setAttest(e.target.checked)} style={{ marginTop: 4 }} />
+            <span className="text-caption">ข้าพเจ้ายืนยันว่าผู้เรียนที่เลือก มาอบรมและผ่านการประเมินภาคปฏิบัติแล้ว</span>
+          </label>
+          <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 8 }}
+            disabled={busy || !picked.size || !attest} onClick={grant}>
+            <Award size={16} /> {busy ? 'กำลังออกใบ…' : `ให้ผ่านภาคปฏิบัติ (${picked.size} คน)`}
+          </button>
+          {grantNote && <div className="text-caption" style={{ marginTop: 6 }}>{grantNote}</div>}
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
         {sorted.map((r) => (

@@ -40,7 +40,7 @@ test('each learner: Hub certificate, waiting with the reason, or not passed yet'
   assert.equal(by.c._resend, null)
   assert.equal(by.d.theory.state, CERT_STATE.none)
   assert.equal(by.d.practical.state, CERT_STATE.none)
-  assert.deepEqual(totals, { learners: 4, theoryHub: 2, theoryWaiting: 1, practicalHub: 1, practicalWaiting: 2, resendable: 1 })
+  assert.deepEqual(totals, { learners: 4, theoryHub: 2, theoryWaiting: 1, practicalHub: 1, practicalWaiting: 2, resendable: 1, grantable: 0 })
 })
 
 test('practical waits on the Hub theory certificate before anything else', () => {
