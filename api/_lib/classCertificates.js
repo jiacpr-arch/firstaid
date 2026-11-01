@@ -17,7 +17,11 @@ const issuedOf = (list, kind) =>
 const pick = (c) => c && { number: c.number, verifyPath: c.verifyPath, issuedAt: c.issuedAt }
 
 // rows ของ enrollments + certificates ของแอปนี้ + line_identities + ใบจากระบบกลางต่อบัญชี → แถวของแท็บ
-export function buildClassCertificates({ enrollments = [], certificates = [], identities = [], hubByUser = {} }) {
+// attendance: แถว attendance ที่อนุมัติแล้วของรอบอบรมในคลาสนี้ [{ id, learner_id, session_id }] — ใช้บอกว่า
+// ใครมาอบรมจริง และเปิดให้ "ให้ผ่านภาคปฏิบัติ" ได้เฉพาะคนที่มาแล้วแต่ยังไม่มีใบ (grantPractical.js)
+export function buildClassCertificates({ enrollments = [], certificates = [], identities = [], hubByUser = {}, attendance = [] }) {
+  const attendedBy = new Map()
+  for (const a of attendance) if (a.learner_id && !attendedBy.has(a.learner_id)) attendedBy.set(a.learner_id, a)
   const own = new Map()
   for (const c of certificates) own.set(`${c.learner_id}:${c.kind}`, c)
   const userOf = new Map(identities.map((i) => [i.learner_id, i.auth_user_id]))
@@ -40,7 +44,10 @@ export function buildClassCertificates({ enrollments = [], certificates = [], id
           : !hubTheory ? 'รอใบภาคทฤษฎีจากระบบกลางก่อน'
             : 'ยังไม่ได้ส่งผลเข้าระบบกลาง — กด "ส่งผลที่ค้าง"',
       }
-        : { state: CERT_STATE.none, reason: 'ยังไม่ผ่านภาคปฏิบัติ' }
+        : attendedBy.has(e.learner_id)
+          ? { state: CERT_STATE.none, reason: 'มาอบรมแล้ว แต่ยังไม่ได้บันทึกผลสอบ — ติ๊กให้ผ่านภาคปฏิบัติได้' }
+          : { state: CERT_STATE.none, reason: 'ยังไม่ได้มาอบรมภาคปฏิบัติ' }
+    const att = attendedBy.get(e.learner_id)
 
     return {
       learnerId: e.learner_id,
@@ -48,10 +55,13 @@ export function buildClassCertificates({ enrollments = [], certificates = [], id
       phone: e.phone || '',
       group: e.group_label || null,
       hasAccount: !!userId,
+      attended: !!att,
       theory,
       practical,
       // ใช้ตอนกด "ส่งผลที่ค้าง" เท่านั้น (ไม่ส่งออกไปหน้าเว็บ)
       _resend: practical.state === CERT_STATE.waiting && userId ? { userId, attendanceId: ownPractical.source_ref } : null,
+      // ให้ผ่านภาคปฏิบัติได้: มาอบรม (อนุมัติแล้ว) แต่ยังไม่มีใบภาคปฏิบัติ — คนที่ไม่มาไม่มีทางได้ใบจากปุ่มนี้
+      _grant: att && !ownPractical && !hubPractical ? { attendanceId: att.id, sessionId: att.session_id } : null,
     }
   })
 
@@ -65,11 +75,12 @@ export function buildClassCertificates({ enrollments = [], certificates = [], id
       practicalHub: count('practical', CERT_STATE.hub),
       practicalWaiting: count('practical', CERT_STATE.waiting),
       resendable: rows.filter((r) => r._resend).length,
+      grantable: rows.filter((r) => r._grant).length,
     },
   }
 }
 
-export const publicRows = (rows) => rows.map(({ _resend, ...r }) => ({ ...r, canResend: !!_resend }))
+export const publicRows = (rows) => rows.map(({ _resend, _grant, ...r }) => ({ ...r, canResend: !!_resend, canGrant: !!_grant }))
 
 // โหลดทุกอย่างของคลาสเดียว (สูงสุด 200 คน — เท่ากับเพดานของระบบกลาง) Throws on database errors.
 export async function loadClassCertificates(admin, cohortId) {
@@ -90,6 +101,21 @@ export async function loadClassCertificates(admin, cohortId) {
   if (cErr) throw cErr
   if (iErr) throw iErr
 
+  // ใครมาอบรมจริง: attendance ที่อนุมัติแล้วของรอบอบรมในคลาสนี้ (ล่าสุดก่อน)
+  const { data: sessions, error: sErr } = await admin.from('practical_sessions').select('id').eq('cohort_id', cohortId)
+  if (sErr) throw sErr
+  let attendance = []
+  const sessionIds = (sessions || []).map((x) => x.id)
+  if (sessionIds.length) {
+    const { data, error } = await admin.from('attendance')
+      .select('id, learner_id, session_id, checked_in_at')
+      .in('session_id', sessionIds)
+      .eq('status', 'approved')
+      .order('checked_in_at', { ascending: false })
+    if (error) throw error
+    attendance = data || []
+  }
+
   // ระบบกลางล่มไม่ทำให้ทั้งแท็บพัง: แสดงสถานะฝั่งนี้ พร้อมบอกว่าเช็คระบบกลางไม่ได้
   let hubByUser = {}
   let hubError = null
@@ -106,7 +132,7 @@ export async function loadClassCertificates(admin, cohortId) {
       hubError = 'เช็คใบจากระบบกลางไม่ได้ตอนนี้'
     }
   }
-  return { ...buildClassCertificates({ enrollments, certificates, identities, hubByUser }), hubError }
+  return { ...buildClassCertificates({ enrollments, certificates, identities, hubByUser, attendance }), hubError }
 }
 
 // "ส่งผลที่ค้าง": ส่งผลภาคปฏิบัติของทุกคนที่ผ่านที่นี่แล้วแต่ยังไม่มีใบจากระบบกลาง (ซ้ำได้ ระบบกลางกันซ้ำเอง)
