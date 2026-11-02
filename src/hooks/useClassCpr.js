@@ -28,6 +28,7 @@ async function fetchStatus(learnerId, code) {
   return {
     status: body.cpr?.completed ? 'done' : 'todo',
     promoCode: body.cprPromoCode || null,
+    startsOn: body.startsOn || null, // วันอบรมจริง (cohorts.starts_on) ให้แบนเนอร์เตือนทำ Post-test ก่อนวันนั้น
     cpr: body.cpr || null,
   }
 }
