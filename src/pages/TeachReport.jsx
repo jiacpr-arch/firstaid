@@ -147,7 +147,7 @@ export default function TeachReport() {
           <table>
             <thead>
               <tr>
-                <th className="c">#</th><th>ชื่อ-สกุล</th><th className="c">บทเรียน</th><th className="c">Pre</th><th className="c">Post</th>
+                <th className="c">#</th><th>ชื่อ-สกุล</th><th>ชื่อ LINE</th><th className="c">บทเรียน</th><th className="c">Pre</th><th className="c">Post</th>
                 {report.hasPractical && <th className="c">ฐาน</th>}
                 {report.hasCerts && <th className="c">ใบประกาศ</th>}
                 <th className="c">สถานะ</th>
@@ -158,6 +158,7 @@ export default function TeachReport() {
                 <tr key={s.learnerId}>
                   <td className="c">{i + 1}</td>
                   <td>{s.name || '(ไม่ระบุชื่อ)'}{s.group ? ` · ${s.group}` : ''}</td>
+                  <td>{s.lineName || '—'}</td>
                   <td className="c">{s.lessonsRead}/{report.totalLessons}</td>
                   <td className="c">{exam(s.pre)}</td>
                   <td className="c">{exam(s.post)}</td>

@@ -55,6 +55,7 @@ export function buildCohortReport({ learners = [], totalLessons = 0, board = nul
     return {
       learnerId: l.learnerId,
       name: l.name || '',
+      lineName: l.lineName || '',
       phone: l.phone || '',
       group: l.groupLabel || null,
       readiness: r.status,

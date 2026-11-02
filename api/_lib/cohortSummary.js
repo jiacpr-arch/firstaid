@@ -18,6 +18,7 @@ export function buildCohortSummary({
   attendance = [],
   sessions = [],
   cpr = new Map(),
+  lineNames = new Map(),
 } = {}) {
   const emptyBucket = () => ({
     lessons: new Set(),
@@ -80,6 +81,8 @@ export function buildCohortSummary({
     return {
       learnerId: e.learner_id,
       name: e.name || null,
+      // ชื่อ LINE ของผู้เรียน (null = ยังไม่เคยล็อกอิน LINE)
+      lineName: lineNames.get(e.learner_id) || null,
       phone: e.phone || null,
       joinedAt: e.joined_at || null,
       lessonsRead: b.lessons.size,

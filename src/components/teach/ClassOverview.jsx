@@ -9,11 +9,11 @@ const badgeClass = (tone) => (tone === 'success' ? 'badge badge-success' : tone 
 const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 
 function exportCsv(learners, opts, filename) {
-  const header = ['ชื่อ', 'เบอร์โทร', 'ความพร้อม', 'ยังขาด', `บทเรียน (จาก ${lessons.length})`, 'ควิซผ่าน', 'Pre-test', 'Post-test']
+  const header = ['ชื่อ', 'ชื่อ LINE', 'เบอร์โทร', 'ความพร้อม', 'ยังขาด', `บทเรียน (จาก ${lessons.length})`, 'ควิซผ่าน', 'Pre-test', 'Post-test']
   const rows = learners.map((l) => {
     const r = classifyReadiness(l, opts)
     return [
-      q(l.name), q(l.phone), q(READINESS[r.status].label), q(r.missing.join(' / ')),
+      q(l.name), q(l.lineName || ''), q(l.phone), q(READINESS[r.status].label), q(r.missing.join(' / ')),
       l.lessonsRead, l.quizzesPassed, q(l.preTest ? `${l.preTest.score}%` : ''), q(l.postTest ? `${l.postTest.score}%` : ''),
     ].join(',')
   })
@@ -77,7 +77,7 @@ export default function ClassOverview({ learners, classCode }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <div className="text-body-strong">{l.name || '(ไม่ระบุชื่อ)'}</div>
-                  <div className="text-caption">{l.phone || '—'}</div>
+                  <div className="text-caption">{l.phone || '—'}{l.lineName ? ` · LINE: ${l.lineName}` : ''}</div>
                 </div>
                 <span className={badgeClass(m.tone)}>{m.label}</span>
               </div>

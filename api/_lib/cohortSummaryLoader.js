@@ -73,7 +73,10 @@ export async function loadCohortSummary(admin, cohortId) {
     ? await loadCprProgress(admin, cohort.cpr_promo_code, enrollments || [])
     : new Map()
 
-  const summary = buildCohortSummary({ enrollments: enrollments || [], sessions: sessions || [], ...progress, cpr })
+  // ชื่อ LINE (ชื่อโปรไฟล์ที่ผู้เรียนใช้) แสดงคู่ชื่อจริงในภาพรวม/รายงาน — ไม่ใช่ชื่อบนใบประกาศ
+  const lineNames = ids.length ? await loadLineNames(admin, ids) : new Map()
+
+  const summary = buildCohortSummary({ enrollments: enrollments || [], sessions: sessions || [], ...progress, cpr, lineNames })
   return {
     cohort: {
       id: cohort.id, name: cohort.name, code: cohort.code, createdAt: cohort.created_at,
@@ -100,6 +103,17 @@ async function loadCprProgress(admin, promoCode, enrollments) {
     return matchCprProgress({ enrollments, redemptions: redemptions || [], students: students || [] })
   } catch (err) {
     console.error('cohort summary: CPR progress lookup failed (non-fatal)', err)
+    return new Map()
+  }
+}
+
+// line_identities.display_name ของแต่ละ learner (ผู้ที่ล็อกอินแล้ว) — ล้มเหลวได้โดยไม่ทำให้ทั้งหน้าพัง
+async function loadLineNames(admin, ids) {
+  try {
+    const rows = await selectIn(admin, 'line_identities', 'learner_id, display_name', ids)
+    return new Map(rows.filter((r) => r.display_name).map((r) => [r.learner_id, r.display_name]))
+  } catch (err) {
+    console.error('cohort summary: LINE name lookup failed (non-fatal)', err)
     return new Map()
   }
 }
