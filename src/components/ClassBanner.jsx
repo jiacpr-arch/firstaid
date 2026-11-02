@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import CprOnlineCard from './CprOnlineCard'
 import { QrCode, ArrowRight, CheckCircle2, Circle, HeartPulse, ExternalLink, RefreshCw } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
@@ -78,10 +79,9 @@ export default function ClassBanner() {
             ต้องเรียน CPR จบก่อนจึงจะทำ Post-test ปฐมพยาบาลได้
             {cpr.cpr?.modulesDone > 0 && <> · ตอนนี้เรียนไปแล้ว {cpr.cpr.modulesDone} บท</>}
           </div>
+          <CprOnlineCard promoCode={cpr.promoCode || learner.cprPromoCode} source="class_banner"
+            title="ไปเรียน CPR & AED ออนไลน์" desc="กดปุ่ม หรือสแกน QR ด้วยมือถือ" style={{ marginTop: 8 }} />
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <a href={cprUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: 1, fontSize: 13 }}>
-              <ExternalLink size={14} /> ไปเรียน CPR
-            </a>
             <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={cpr.refresh} disabled={cpr.checking}>
               <RefreshCw size={14} /> {cpr.checking ? 'กำลังเช็ค…' : 'เช็คอีกครั้ง'}
             </button>
