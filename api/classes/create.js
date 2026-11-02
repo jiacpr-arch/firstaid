@@ -21,6 +21,7 @@ export default async function handler(req, res) {
   // คลาสรวม CPR + ปฐมพยาบาล (สร้างโค้ดเรียน CPR ออนไลน์ให้ด้วย — ดู api/_lib/classes.js)
   const includesCpr = req.body?.includesCpr === true
   const startsOn = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.startsOn || '') ? req.body.startsOn : null
+  // จำนวนผู้เรียน (cohorts.max_students) — ใส่ได้ทุกคลาส; คลาส CPR ใช้ตั้งโควตาโค้ดด้วย
   const seatsNum = Number(req.body?.seats)
   const seats = Number.isInteger(seatsNum) && seatsNum > 0 ? Math.min(seatsNum, 500) : null
 

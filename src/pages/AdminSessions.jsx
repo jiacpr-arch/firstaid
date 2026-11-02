@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Plus, ArrowLeft, Store } from 'lucide-react'
+import { Calendar, Plus, ArrowLeft, Store, Trash2 } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 
 function makeSessionCode() {
@@ -60,6 +60,19 @@ export default function AdminSessions() {
     setForm({ title: '', location: '', kind: 'session', cohortId: '' })
   }
 
+  // ลบรอบแบบเดิม (ไม่ผูกคลาส) — เช็คชื่อ/ฐาน/คะแนนของรอบนั้นถูกลบตาม (FK on delete cascade)
+  // รอบของคลาสจาก "คลาสของฉัน" ลบที่นี่ไม่ได้ ให้ปิดคลาสที่หน้าคลาสแทน
+  const remove = async (e, s) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (s.cohort_id) return
+    if (!window.confirm(`ลบรอบ "${s.title}" (รหัส ${s.qr_token})?\nข้อมูลเช็คชื่อของรอบนี้จะถูกลบด้วย และกู้คืนไม่ได้`)) return
+    const { data, error } = await supabase.from('practical_sessions').delete().eq('id', s.id).is('cohort_id', null).select('id')
+    if (error) { alert(error.message); return }
+    if (!data?.length) { alert('ลบไม่สำเร็จ — รอบนี้อาจไม่ได้สร้างจากบัญชีนี้'); return }
+    setSessions((list) => list.filter((x) => x.id !== s.id))
+  }
+
   return (
     <div className="page-container">
       <Link to="/admin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
@@ -71,14 +84,25 @@ export default function AdminSessions() {
           <div className="text-title">วันอบรม & บูธแบบเดิม</div>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
-          <Plus size={16} /> เปิดคลาส
+          <Plus size={16} /> เปิดรอบแยก
         </button>
+      </div>
+
+      <div className="callout callout-info" style={{ marginTop: 12 }}>
+        <div className="text-body-strong">จะเปิดคลาสใหม่ (รวมคลาส CPR + ปฐมพยาบาล) ไม่ต้องใช้หน้านี้</div>
+        <div className="text-caption" style={{ marginTop: 2 }}>
+          รอบที่สร้างจากหน้านี้ไม่มีรหัสคลาสให้นักเรียน ไม่มีโค้ด CPR และจะไม่ขึ้นใน "คลาสของฉัน" —
+          ใช้หน้านี้เฉพาะบูธ/งาน หรือรอบเช็คชื่อแยกเท่านั้น
+        </div>
+        <Link to="/admin/teach" className="btn btn-primary" style={{ marginTop: 8 }}>
+          ไปสร้างคลาสที่ "คลาสของฉัน"
+        </Link>
       </div>
 
       {creating && (
         <div className="card" style={{ marginTop: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-            {[['session', 'คลาสปฏิบัติ'], ['booth', 'บูธ / งาน']].map(([val, label]) => (
+            {[['session', 'รอบเช็คชื่อแยก'], ['booth', 'บูธ / งาน']].map(([val, label]) => (
               <button
                 key={val}
                 type="button"
@@ -124,7 +148,7 @@ export default function AdminSessions() {
         {!loading && sessions.length === 0 && (
           <div className="card">
             <div className="text-body-strong">ยังไม่มีคลาส</div>
-            <div className="text-caption">กดปุ่ม "เปิดคลาส" เพื่อสร้างรอบอบรมใหม่</div>
+            <div className="text-caption">เปิดคลาสใหม่ที่ "คลาสของฉัน" — หน้านี้ใช้เฉพาะบูธ/รอบเช็คชื่อแยก</div>
             {!isSupabaseConfigured && (
               <div className="callout callout-info" style={{ marginTop: 8 }}>
                 ยังไม่ได้เชื่อมต่อ Supabase — กรอก VITE_SUPABASE_URL/ANON_KEY ใน .env แล้ว deploy ใหม่
@@ -146,6 +170,12 @@ export default function AdminSessions() {
               {s.closed_at
                 ? <span className="badge badge-muted">ปิดแล้ว</span>
                 : <span className="badge badge-success">เปิดอยู่</span>}
+              {!s.cohort_id && (
+                <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', fontSize: 12, color: '#B42318' }}
+                  onClick={(e) => remove(e, s)} aria-label={`ลบรอบ ${s.title}`}>
+                  <Trash2 size={13} /> ลบ
+                </button>
+              )}
             </div>
           </Link>
         ))}

@@ -65,6 +65,7 @@ export async function createClass(admin, {
     instructor_id: null,
     instructor_code: instructorCode,
     created_via: 'app',
+    max_students: seats || null,
     ...(includesCpr ? { includes_cpr: true, unlock_lessons: true, starts_on: startsOn } : {}),
   }), 'id, name, code')
 
@@ -142,6 +143,7 @@ export function buildClassList({ cohorts = [], enrollments = [], sessions = [] }
       createdAt: c.created_at,
       closed: !!c.deleted_at,
       students: counts.get(c.id) || 0,
+      maxStudents: c.max_students || null,
       sessionId: firstSession.get(c.id) || null,
     }))
 }

@@ -128,6 +128,15 @@ export default function Teach() {
         </div>
         <button type="button" className="btn btn-ghost" onClick={reload} aria-label="รีเฟรช" disabled={loading}><RefreshCw size={16} /></button>
       </div>
+      {/* สร้าง/สลับคลาสต้องเห็นทันที — เดิมอยู่ล่างสุดของแท็บคลาส/QR ครูหาไม่เจอ */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+        <button type="button" className="btn btn-primary" style={{ flex: 1, fontSize: 13 }} onClick={() => setGate('create')}>
+          <Plus size={14} /> สร้างคลาสใหม่
+        </button>
+        <button type="button" className="btn btn-secondary" style={{ flex: 1, fontSize: 13 }} onClick={() => setGate('pick')}>
+          สลับคลาส
+        </button>
+      </div>
 
       {error && (
         <div className="callout callout-danger" style={{ marginTop: 10 }}>
