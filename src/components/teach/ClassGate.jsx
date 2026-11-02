@@ -14,7 +14,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
   // คลาสรวม CPR + ปฐมพยาบาล: สร้างโค้ดเรียน CPR ออนไลน์ (cpr.morroo.com) + เปิดทุกบทให้คนในคลาส
   const [includesCpr, setIncludesCpr] = useState(false)
   const [startsOn, setStartsOn] = useState('')
-  const [seats, setSeats] = useState('24')
+  const [seats, setSeats] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
@@ -44,7 +44,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
         method: 'POST',
         body: JSON.stringify({
           name: name.trim(), location: location.trim(), instructorName: instructorName.trim(),
-          includesCpr, startsOn: includesCpr ? startsOn || null : null, seats: includesCpr ? Number(seats) || null : null,
+          includesCpr, startsOn: includesCpr ? startsOn || null : null, seats: Number(seats) || null,
         }),
       })
       const data = await resp.json().catch(() => ({}))
@@ -129,6 +129,8 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
             <label className="label" style={{ marginTop: 10 }}>ชื่อผู้สอน (พิมพ์บนใบประกาศภาคปฏิบัติ)</label>
             <input className="input" value={instructorName} onChange={(e) => setInstructorName(e.target.value)} placeholder="เช่น นพ.สมชาย ใจดี" maxLength={100} />
             <div className="text-caption" style={{ marginTop: 4 }}>เว้นว่างได้ — ใบจะพิมพ์ว่า Jia Training Center · แก้ทีหลังได้ที่หน้าคลาส</div>
+            <label className="label" style={{ marginTop: 10 }}>จำนวนผู้เรียน (ไม่บังคับ)</label>
+            <input className="input" inputMode="numeric" value={seats} onChange={(e) => setSeats(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="เช่น 24" style={{ maxWidth: 140 }} />
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, cursor: 'pointer' }}>
               <input type="checkbox" checked={includesCpr} onChange={(e) => setIncludesCpr(e.target.checked)} style={{ marginTop: 3 }} />
               <span>
@@ -139,16 +141,10 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
               </span>
             </label>
             {includesCpr && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label className="label">วันเรียนจริง</label>
-                  <input className="input" type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
-                </div>
-                <div style={{ width: 110 }}>
-                  <label className="label">จำนวนคน</label>
-                  <input className="input" inputMode="numeric" value={seats} onChange={(e) => setSeats(e.target.value.replace(/\D/g, ''))} />
-                </div>
-              </div>
+              <>
+                <label className="label" style={{ marginTop: 8 }}>วันเรียนจริง</label>
+                <input className="input" type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+              </>
             )}
             {error && <div className="callout callout-danger" style={{ marginTop: 10 }}>{error}</div>}
             <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} disabled={busy || name.trim().length < 2} onClick={create}>
@@ -167,7 +163,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
               {(classes || []).map((c) => (
                 <button key={c.id} type="button" className="card card-hover" style={{ textAlign: 'left' }} onClick={() => pick(c)}>
                   <div className="text-body-strong">{c.name}</div>
-                  <div className="text-caption">รหัสคลาส {c.code} · นักเรียน {c.students} คน</div>
+                  <div className="text-caption">รหัสคลาส {c.code} · นักเรียน {c.students}{c.maxStudents ? `/${c.maxStudents}` : ''} คน</div>
                 </button>
               ))}
             </div>

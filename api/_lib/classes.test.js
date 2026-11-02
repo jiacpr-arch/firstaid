@@ -76,7 +76,7 @@ test('buildClassList counts students, picks the first session and orders newest 
   assert.deepEqual(list.map((c) => c.id), ['b', 'a'])
   assert.deepEqual(list[0], {
     id: 'b', name: 'ใหม่', code: 'BBBBBB', instructorCode: 'KLMN4567', createdVia: 'app',
-    createdAt: '2026-10-20T00:00:00Z', closed: true, students: 2, sessionId: 's1',
+    createdAt: '2026-10-20T00:00:00Z', closed: true, students: 2, maxStudents: null, sessionId: 's1',
   })
   assert.deepEqual([list[1].students, list[1].createdVia, list[1].instructorCode, list[1].sessionId], [1, 'admin', null, null])
 })
@@ -94,6 +94,7 @@ test('createClass with includesCpr creates a CPR pre-course code and unlocks les
   assert.equal(cohort.unlock_lessons, true)
   assert.equal(cohort.starts_on, '2026-11-05')
   assert.equal(cohort.cpr_promo_code, c.cprPromoCode)
+  assert.equal(cohort.max_students, 24)
   assert.equal(promo.code, c.cprPromoCode)
   assert.equal(promo.source, 'pre_course')
   assert.equal(promo.multi_use, true)
@@ -108,6 +109,7 @@ test('createClass without includesCpr leaves CPR fields untouched', async () => 
   const c = await createClass(db, { name: 'ปกติ' })
   assert.equal(c.cprPromoCode, null)
   assert.equal(db.tables.cohorts[0].includes_cpr, undefined)
+  assert.equal(db.tables.cohorts[0].max_students, null)
   assert.equal((db.tables.lead_promo_codes || []).length, 0)
 })
 
@@ -143,4 +145,11 @@ test('createClass stores the instructor name on the session', async () => {
   assert.equal(db.tables.practical_sessions[0].instructor_name, 'ครูเจีย')
   await createClass(db, { name: 'รุ่น 14' })
   assert.equal(db.tables.practical_sessions[1].instructor_name, null)
+})
+
+test('createClass stores max_students for a regular class', async () => {
+  const db = fakeDb({}, { uniqueCols: uniq })
+  await createClass(db, { name: 'ปกติ', seats: 30 })
+  assert.equal(db.tables.cohorts[0].max_students, 30)
+  assert.equal(buildClassList({ cohorts: db.tables.cohorts })[0].maxStudents, 30)
 })
