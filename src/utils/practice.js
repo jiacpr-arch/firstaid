@@ -63,3 +63,17 @@ export function practiceGateChapter(lesson, readLessonIds, passedScenarioIds) {
     .find((id) => !isChapterPracticeDone(id, passedScenarioIds))
   return blocking ?? null
 }
+
+// ขั้นถัดไปของการเรียน (ใช้ปุ่ม "เรียนต่อ" ในหน้าแรก/แบนเนอร์คลาส) — เคารพด่านฝึกท้ายหมวด:
+// บทถัดไปอยู่หมวดใหม่แต่หมวดก่อนยังฝึกไม่ผ่าน → พาไปฝึกหมวดนั้นก่อน ไม่ใช่เปิดบทที่ล็อกอยู่
+// คืน null = เรียนครบทุกบทแล้ว
+export function nextLearningStep(allLessons, readLessonIds, passedScenarioIds) {
+  const lesson = allLessons.find((l) => !readLessonIds.has(l.id))
+  if (!lesson) return null
+  const gate = practiceGateChapter(lesson, readLessonIds, passedScenarioIds)
+  if (gate) {
+    const title = chapters.find((c) => c.id === gate)?.title ?? ''
+    return { kind: 'practice', chapter: gate, chapterTitle: title, lesson, to: practiceLink(passedScenarioIds, gate) }
+  }
+  return { kind: 'lesson', lesson, to: `/learn/${lesson.id}` }
+}

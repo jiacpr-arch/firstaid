@@ -4,7 +4,7 @@ import { QrCode, ArrowRight, CheckCircle2, Circle, HeartPulse, ExternalLink, Ref
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { lessons } from '../courses/firstaid/lessons'
-import { isPracticeDone, practiceChaptersRemaining, practiceLink } from '../utils/practice'
+import { isPracticeDone, practiceChaptersRemaining, practiceLink, nextLearningStep } from '../utils/practice'
 import { useClassCpr, cprCourseUrl } from '../hooks/useClassCpr'
 
 // แบนเนอร์คลาสบนหน้าหลักของนักเรียน (แบบ ACLS class banner + progress card): เห็นชื่อคลาส,
@@ -23,6 +23,7 @@ export default function ClassBanner() {
   const lessonsDone = lessons.filter((l) => readLessonIds.has(l.id)).length
   const allLessons = lessons.length > 0 && lessonsDone === lessons.length
   const nextLesson = lessons.find((l) => !readLessonIds.has(l.id))
+  const step = nextLearningStep(lessons, readLessonIds, passedScenarioIds)
   // Post-test ปลดล็อกเมื่อเรียนครบ + ฝึกผ่านหมวดละ 1 ฉาก (ExamPage) — ต้องพาไปฝึกก่อน ไม่งั้นกดแล้วเจอหน้าล็อก
   const practiceDone = isPracticeDone(passedScenarioIds)
   const practiceRemaining = practiceChaptersRemaining(passedScenarioIds)
@@ -34,6 +35,7 @@ export default function ClassBanner() {
 
   let next
   if (!preTestDone) next = { to: '/pre-test', label: 'ทำ Pre-test' }
+  else if (!allLessons && step?.kind === 'practice') next = { to: step.to, label: `ฝึกท้ายหมวด ${step.chapter} ให้ผ่านก่อนเรียนต่อ` }
   else if (!allLessons && nextLesson) next = { to: `/learn/${nextLesson.id}`, label: `เรียนต่อ: ${nextLesson.title}` }
   else if (!practiceDone && !postTestDone) next = { to: practiceLink(passedScenarioIds), label: `ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด)` }
   else if (cpr.status === 'todo' && !postTestDone) next = { href: cprUrl, label: 'ไปเรียน CPR & AED ออนไลน์ให้จบก่อน' }
