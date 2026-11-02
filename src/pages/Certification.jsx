@@ -5,6 +5,8 @@ import { getBestExam, getCertificates } from '../db/database'
 import { evaluatePracticalEligibility } from '../courses/firstaid/cert'
 import PracticalCertCard from '../components/PracticalCertCard'
 import CertUpsellCard from '../components/CertUpsellCard'
+import CprOnlineCard from '../components/CprOnlineCard'
+import { useClassCpr } from '../hooks/useClassCpr'
 import TheoryCertCard from '../components/TheoryCertCard'
 import CertGuideVideo from '../components/CertGuideVideo'
 import AedRentalCard from '../components/AedRentalCard'
@@ -15,6 +17,7 @@ export default function Certification() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
 
+  const cpr = useClassCpr()
   const [postAttempt, setPostAttempt] = useState(null)
   const [certs, setCerts] = useState([])
   const [certsLoaded, setCertsLoaded] = useState(false)
@@ -71,6 +74,9 @@ export default function Certification() {
       <PracticalCertCard ownCert={practicalCert} reason={practicalEval.reason} />
 
       {/* ชวนต่อยอดไปอบรมภาคปฏิบัติ — แสดงเมื่อได้ใบประกาศแล้ว */}
+      {theoryCert && cpr.status !== 'done' && (
+        <CprOnlineCard promoCode={cpr.promoCode} source="cert_page" title="จบ First Aid ออนไลน์แล้ว — ต่อด้วย CPR & AED ออนไลน์" />
+      )}
       {(theoryCert || practicalCert) && <CertUpsellCard source="cert_page" />}
     </div>
   )

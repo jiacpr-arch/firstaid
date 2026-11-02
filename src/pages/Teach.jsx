@@ -185,7 +185,7 @@ export default function Teach() {
       <div className="text-caption" style={{ marginTop: 2 }}>{TAB_HINTS[tab]}</div>
 
       {tab === 'class' && <ClassHome onNewClass={() => setGate('create')} onPick={() => setGate('pick')} />}
-      {tab === 'overview' && <ClassOverview learners={learners} classCode={classCode} />}
+      {tab === 'overview' && <ClassOverview learners={learners} classCode={classCode} includesCpr={!!data?.cohort?.includesCpr} />}
       {tab === 'theory' && <ClassTheory learners={learners} classCode={classCode} classId={classId} onChanged={reload} />}
       {tab === 'practice' && <ClassPractice sessionId={sessionId} classCode={classCode} />}
       {tab === 'certs' && <ClassCertificates classId={classId} />}

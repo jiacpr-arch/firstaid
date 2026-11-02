@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, CheckCircle2, XCircle, Lock, ExternalLink, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ChevronRight, CheckCircle2, XCircle, Lock, RefreshCw } from 'lucide-react'
 import { preTest, postTest } from '../courses/firstaid/exams'
 import { lessons } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
-import { useClassCpr, cprCourseUrl } from '../hooks/useClassCpr'
+import { useClassCpr } from '../hooks/useClassCpr'
 import { isPracticeDone, practiceChaptersRemaining, practiceChapterStatus, practiceLink } from '../utils/practice'
 import { saveExamAttempt } from '../db/database'
 import { flushSync } from '../db/sync'
@@ -15,6 +15,7 @@ import ProgressBar from '../components/ProgressBar'
 import TheoryCertCard from '../components/TheoryCertCard'
 import AedRentalCard from '../components/AedRentalCard'
 import CertUpsellCard from '../components/CertUpsellCard'
+import CprOnlineCard from '../components/CprOnlineCard'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 
@@ -113,7 +114,6 @@ export default function ExamPage({ kind }) {
     // เรียนยังไม่ครบ → ให้ไปเรียนก่อน, เรียนครบแล้วแต่ยังฝึกไม่ครบ → ให้ไปฝึก, เหลือแต่ CPR → ไป cpr.morroo.com
     const needLessons = !allLessonsDone
     const onlyCprLeft = allLessonsDone && practiceDone && cprBlocking
-    const cprUrl = cprCourseUrl(cpr.promoCode || learner?.cprPromoCode)
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
@@ -164,9 +164,9 @@ export default function ExamPage({ kind }) {
           </div>
         </div>
         {onlyCprLeft ? (
-          <a href={cprUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
-            <ExternalLink size={16} /> ไปเรียน CPR & AED
-          </a>
+          <CprOnlineCard promoCode={cpr.promoCode || learner?.cprPromoCode} source="post_test_locked"
+            title="เหลืออีกขั้นเดียว: เรียน CPR & AED ออนไลน์"
+            desc="กดปุ่ม หรือสแกน QR ด้วยมือถือ — กรอกเบอร์เดียวกับที่เข้าคลาส" />
         ) : (
           <Link to={needLessons ? '/learn' : practiceLink(passedScenarioIds)} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
             <ArrowLeft size={16} /> {needLessons ? 'ไปเรียนต่อ' : 'ไปฝึกสถานการณ์'}
@@ -205,6 +205,11 @@ export default function ExamPage({ kind }) {
         </div>
 
         {passedTheory && <TheoryCertCard postAttempt={done} />}
+        {/* จบ First Aid ออนไลน์แล้ว → ต่อ CPR & AED ออนไลน์ (คนที่เรียน CPR จบแล้วไม่ต้องโชว์) */}
+        {passedTheory && cpr.status !== 'done' && (
+          <CprOnlineCard promoCode={cpr.promoCode || learner?.cprPromoCode} source="post_test_pass"
+            title="จบ First Aid ออนไลน์แล้ว — ต่อด้วย CPR & AED ออนไลน์" />
+        )}
         {passedTheory && <CertUpsellCard source="post_test_pass" />}
         {passedTheory && <AedRentalCard source="post_test_pass" />}
 

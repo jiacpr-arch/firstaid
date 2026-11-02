@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createClass, closeClass, buildClassList } from './classes.js'
+import { createClass, closeClass, buildClassList, cleanMaxStudents, classIsFullFor, setClassCapacity } from './classes.js'
 import { fakeDb } from './fakeDb.js'
 
 const uniq = { cohorts: ['code'], practical_sessions: ['qr_token'] }
@@ -152,4 +152,35 @@ test('createClass stores max_students for a regular class', async () => {
   await createClass(db, { name: 'ปกติ', seats: 30 })
   assert.equal(db.tables.cohorts[0].max_students, 30)
   assert.equal(buildClassList({ cohorts: db.tables.cohorts })[0].maxStudents, 30)
+})
+
+test('cleanMaxStudents: empty = unlimited, invalid = undefined, capped at 500', () => {
+  assert.equal(cleanMaxStudents(''), null)
+  assert.equal(cleanMaxStudents(null), null)
+  assert.equal(cleanMaxStudents(24), 24)
+  assert.equal(cleanMaxStudents('30'), 30)
+  assert.equal(cleanMaxStudents(9999), 500)
+  assert.equal(cleanMaxStudents(0), undefined)
+  assert.equal(cleanMaxStudents('abc'), undefined)
+})
+
+test('classIsFullFor blocks new learners once full but lets enrolled learners rejoin', async () => {
+  const db = fakeDb({ enrollments: [{ cohort_id: 'c1', learner_id: 'a' }, { cohort_id: 'c1', learner_id: 'b' }, { cohort_id: 'c2', learner_id: 'x' }] })
+  assert.equal(await classIsFullFor(db, { id: 'c1', max_students: 2 }, 'new'), true)
+  assert.equal(await classIsFullFor(db, { id: 'c1', max_students: 2 }, 'a'), false)
+  assert.equal(await classIsFullFor(db, { id: 'c1', max_students: 3 }, 'new'), false)
+  assert.equal(await classIsFullFor(db, { id: 'c1', max_students: null }, 'new'), false)
+})
+
+test('setClassCapacity updates the cohort and the CPR code quota', async () => {
+  const db = fakeDb({
+    cohorts: [{ id: 'c1', includes_cpr: true, cpr_promo_code: 'JIA-FA-AAA', max_students: 24 }],
+    lead_promo_codes: [{ code: 'JIA-FA-AAA', max_uses: 29 }],
+  })
+  assert.deepEqual(await setClassCapacity(db, 'c1', 30), { maxStudents: 30 })
+  assert.equal(db.tables.cohorts[0].max_students, 30)
+  assert.equal(db.tables.lead_promo_codes[0].max_uses, 35)
+  await setClassCapacity(db, 'c1', null)
+  assert.equal(db.tables.lead_promo_codes[0].max_uses, null)
+  assert.equal(await setClassCapacity(db, 'missing', 10), null)
 })

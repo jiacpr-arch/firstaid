@@ -147,3 +147,39 @@ export function buildClassList({ cohorts = [], enrollments = [], sessions = [] }
       sessionId: firstSession.get(c.id) || null,
     }))
 }
+
+// ===== จำนวนผู้เรียนสูงสุด (cohorts.max_students) =====
+// ล็อกตอนเข้าคลาส (api/cohorts/join.js): คนใหม่เข้าไม่ได้เมื่อครบจำนวน — คนที่อยู่ในคลาสแล้ว
+// join ซ้ำได้เสมอ (ล็อกอินใหม่/เปลี่ยนเครื่อง) ครูเพิ่มจำนวนได้ที่แท็บคลาส/QR (api/classes/capacity.js)
+export const MAX_STUDENTS_LIMIT = 500
+
+export function cleanMaxStudents(value) {
+  if (value === null || value === '' || value === undefined) return null
+  const n = Number(value)
+  return Number.isInteger(n) && n > 0 ? Math.min(n, MAX_STUDENTS_LIMIT) : undefined // undefined = ค่าไม่ถูกต้อง
+}
+
+// true = คลาสเต็ม ห้ามคนนี้เข้า
+export async function classIsFullFor(admin, cohort, learnerId) {
+  if (!cohort.max_students) return false
+  const { data, error } = await admin.from('enrollments').select('learner_id').eq('cohort_id', cohort.id)
+  if (error) throw error
+  const rows = data || []
+  if (rows.some((r) => r.learner_id === learnerId)) return false
+  return rows.length >= cohort.max_students
+}
+
+// แก้จำนวน — คลาสรวม CPR ปรับโควตาโค้ด CPR ตาม (+5 เหมือนตอนสร้าง; ไม่จำกัด = null)
+export async function setClassCapacity(admin, cohortId, maxStudents) {
+  const { data: cohort, error } = await admin.from('cohorts').select('id, includes_cpr, cpr_promo_code').eq('id', cohortId).maybeSingle()
+  if (error) throw error
+  if (!cohort) return null
+  const { error: uErr } = await admin.from('cohorts').update({ max_students: maxStudents }).eq('id', cohortId)
+  if (uErr) throw uErr
+  if (cohort.includes_cpr && cohort.cpr_promo_code) {
+    const { error: pErr } = await admin.from('lead_promo_codes')
+      .update({ max_uses: maxStudents ? maxStudents + 5 : null }).eq('code', cohort.cpr_promo_code)
+    if (pErr) throw pErr
+  }
+  return { maxStudents }
+}
