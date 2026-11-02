@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Plus, ArrowLeft, Store } from 'lucide-react'
+import { Calendar, Plus, ArrowLeft, Store, Trash2 } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 
 function makeSessionCode() {
@@ -58,6 +58,19 @@ export default function AdminSessions() {
     setSessions((s) => [data, ...s])
     setCreating(false)
     setForm({ title: '', location: '', kind: 'session', cohortId: '' })
+  }
+
+  // ลบรอบแบบเดิม (ไม่ผูกคลาส) — เช็คชื่อ/ฐาน/คะแนนของรอบนั้นถูกลบตาม (FK on delete cascade)
+  // รอบของคลาสจาก "คลาสของฉัน" ลบที่นี่ไม่ได้ ให้ปิดคลาสที่หน้าคลาสแทน
+  const remove = async (e, s) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (s.cohort_id) return
+    if (!window.confirm(`ลบรอบ "${s.title}" (รหัส ${s.qr_token})?\nข้อมูลเช็คชื่อของรอบนี้จะถูกลบด้วย และกู้คืนไม่ได้`)) return
+    const { data, error } = await supabase.from('practical_sessions').delete().eq('id', s.id).is('cohort_id', null).select('id')
+    if (error) { alert(error.message); return }
+    if (!data?.length) { alert('ลบไม่สำเร็จ — รอบนี้อาจไม่ได้สร้างจากบัญชีนี้'); return }
+    setSessions((list) => list.filter((x) => x.id !== s.id))
   }
 
   return (
@@ -157,6 +170,12 @@ export default function AdminSessions() {
               {s.closed_at
                 ? <span className="badge badge-muted">ปิดแล้ว</span>
                 : <span className="badge badge-success">เปิดอยู่</span>}
+              {!s.cohort_id && (
+                <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', fontSize: 12, color: '#B42318' }}
+                  onClick={(e) => remove(e, s)} aria-label={`ลบรอบ ${s.title}`}>
+                  <Trash2 size={13} /> ลบ
+                </button>
+              )}
             </div>
           </Link>
         ))}
