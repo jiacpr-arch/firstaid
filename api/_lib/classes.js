@@ -130,7 +130,7 @@ export function buildClassList({ cohorts = [], enrollments = [], sessions = [] }
   for (const e of enrollments) counts.set(e.cohort_id, (counts.get(e.cohort_id) || 0) + 1)
   const firstSession = new Map()
   for (const s of [...sessions].sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))) {
-    if (!firstSession.has(s.cohort_id)) firstSession.set(s.cohort_id, s.id)
+    if (!firstSession.has(s.cohort_id)) firstSession.set(s.cohort_id, s)
   }
   return [...cohorts]
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
@@ -144,7 +144,10 @@ export function buildClassList({ cohorts = [], enrollments = [], sessions = [] }
       closed: !!c.deleted_at,
       students: counts.get(c.id) || 0,
       maxStudents: c.max_students || null,
-      sessionId: firstSession.get(c.id) || null,
+      includesCpr: !!c.includes_cpr,
+      startsOn: c.starts_on || null,
+      location: firstSession.get(c.id)?.location || null,
+      sessionId: firstSession.get(c.id)?.id || null,
     }))
 }
 

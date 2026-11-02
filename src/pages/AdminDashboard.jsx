@@ -32,7 +32,7 @@ const GROUPS = [
 
 const ADVANCED = [
   { to: '/admin/cohorts', label: 'กลุ่มผู้เรียนแบบเดิม', desc: 'กลุ่มที่สร้างก่อนมีระบบคลาส / แก้รายชื่อเป็นจุด ๆ', icon: Users, color: '#16A34A' },
-  { to: '/admin/sessions', label: 'วันอบรม & บูธแบบเดิม', desc: 'เปิดรอบเช็คชื่อแยก (เช่น บูธงาน) / แก้ข้อมูลรอบอบรม', icon: Calendar, color: '#2563EB' },
+  { to: '/admin/sessions', label: 'ประวัติวันอบรม & บูธแบบเดิม', desc: 'ทุกคลาสที่เคยเปิด (เปิดอยู่/ปิดแล้ว) · รอบเช็คชื่อแยก/บูธแบบเดิม', icon: Calendar, color: '#2563EB' },
 ]
 
 const h2 = { margin: '20px 0 8px', fontSize: 15, fontWeight: 700, color: 'var(--color-text-secondary, #64748B)' }

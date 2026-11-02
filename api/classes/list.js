@@ -16,10 +16,10 @@ export default async function handler(req, res) {
   try {
     const [c, e, s] = await Promise.all([
       admin.from('cohorts')
-        .select('id, name, code, instructor_code, created_via, created_at, deleted_at, max_students')
+        .select('id, name, code, instructor_code, created_via, created_at, deleted_at, max_students, includes_cpr, starts_on')
         .order('created_at', { ascending: false }).limit(LIMIT),
       admin.from('enrollments').select('cohort_id').limit(20000),
-      admin.from('practical_sessions').select('id, cohort_id, starts_at').not('cohort_id', 'is', null).limit(5000),
+      admin.from('practical_sessions').select('id, cohort_id, starts_at, location').not('cohort_id', 'is', null).limit(5000),
     ])
     for (const r of [c, e, s]) if (r.error) throw r.error
     res.setHeader('Cache-Control', 'no-store')
