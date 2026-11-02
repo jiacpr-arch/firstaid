@@ -55,7 +55,9 @@ export default function LessonReader() {
   const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   useEnsureProgress(learner?.id)
   const unlockedChapters = useEntitlementStore((s) => s.chapters)
-  const entitlementsLoaded = useEntitlementStore((s) => s.loaded)
+  const entitlementStatus = useEntitlementStore((s) => s.status)
+  const entitlementToken = useEntitlementStore((s) => s.token)
+  const refreshEntitlements = useEntitlementStore((s) => s.refresh)
   useEnsureEntitlements()
   const { session, loading: authLoading } = useAuthSession()
   // ไม่กั้นตอน prerender (navigator.webdriver) — หน้าบทเรียนต้องมีเนื้อหาให้ SEO เก็บ
@@ -295,7 +297,29 @@ export default function LessonReader() {
   // ปลดล็อกด้วยการซื้อ — หมวด 1 ฟรีเสมอ (isChapterUnlocked คืน true ทันที) หมวด 2-4 ต้องมี
   // entitlement ผูกกับ learner_id ถาวร ครอบคลุมทั้ง URL ตรง, list ในหน้า Learn และปุ่ม "บทถัดไป"
   // เพราะทุกทางเข้าวิ่งผ่าน route นี้เหมือนกัน
-  if (entitlementsLoaded && !isChapterUnlocked(lesson.chapter, unlockedChapters)) {
+  // ตัดสินจากผลที่โหลดสำเร็จ "ของ session ปัจจุบัน" เท่านั้น — ระหว่างโหลด/โหลดพลาดห้ามขึ้นหน้าซื้อ
+  // (ผู้เรียนคลาสรวมที่เปิดทุกหมวดเคยเจอหน้าซื้อ ฿99 เป็นบางครั้งจากผลค้าง/โหลดพลาด)
+  const paidChapter = !isChapterUnlocked(lesson.chapter, unlockedChapters)
+  const entitlementFresh = entitlementStatus === 'ok' && (entitlementToken ?? null) === (session?.access_token ?? null)
+  if (paidChapter && !entitlementFresh && entitlementStatus !== 'error' && !isAutomated) {
+    return <>{seo}<div className="page-container py-12 text-center text-caption">กำลังตรวจสิทธิ์การเรียน…</div></>
+  }
+  if (paidChapter && entitlementStatus === 'error' && !isAutomated) {
+    return (
+      <>{seo}
+        <div className="page-container">
+          <div className="card" style={{ textAlign: 'center', padding: 28, marginTop: 16 }}>
+            <div className="text-title">ตรวจสิทธิ์การเรียนไม่สำเร็จ</div>
+            <div className="text-body" style={{ marginTop: 8 }}>ตรวจการเชื่อมต่ออินเทอร์เน็ต แล้วกดลองใหม่</div>
+            <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 16 }} onClick={() => refreshEntitlements(session)}>
+              ลองใหม่
+            </button>
+          </div>
+        </div>
+      </>
+    )
+  }
+  if (paidChapter && entitlementFresh) {
     return <>{seo}<ChapterUnlockCard chapter={lesson.chapter} /></>
   }
 
