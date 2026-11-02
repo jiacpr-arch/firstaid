@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { learnerIdFromToken, reconcileLearner } from '../_lib/authLearner.js'
 import { rateLimited } from '../_lib/rateLimit.js'
+import { classIsFullFor } from '../_lib/classes.js'
 
 // Learner joins a cohort (classroom) by its 6-char code. Upserts an enrollments
 // row keyed (cohort_id, learner_id) so re-joining just refreshes name/phone.
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
 
   const { data: cohort, error: cErr } = await admin
     .from('cohorts')
-    .select('id, name, code, deleted_at, includes_cpr, cpr_promo_code')
+    .select('id, name, code, deleted_at, includes_cpr, cpr_promo_code, max_students')
     .eq('code', code)
     .maybeSingle()
   if (cErr) { res.status(500).json({ error: cErr.message }); return }
@@ -70,6 +71,11 @@ export default async function handler(req, res) {
       return
     }
   }
+
+  // ครบจำนวนผู้เรียนแล้ว (cohorts.max_students) — คนที่อยู่ในคลาสแล้วยังเข้าได้
+  try {
+    if (await classIsFullFor(admin, cohort, learnerId)) { res.status(409).json({ error: 'class_full' }); return }
+  } catch (err) { res.status(500).json({ error: err.message }); return }
 
   const { error } = await admin
     .from('enrollments')

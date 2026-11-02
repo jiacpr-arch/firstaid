@@ -86,6 +86,7 @@ export default function JoinClass() {
         setError(
           resp.status === 404 ? 'ไม่พบคลาสนี้ — ตรวจรหัสอีกครั้ง'
             : resp.status === 410 ? 'คลาสนี้ปิดรับแล้ว'
+              : body.error === 'class_full' ? 'คลาสนี้รับผู้เรียนครบจำนวนแล้ว — ติดต่อผู้สอน'
               : body.error === 'phone_required' ? 'คลาสนี้ต้องกรอกเบอร์โทร (ใช้เบอร์เดียวกันตอนเรียน CPR ออนไลน์)'
                 : body.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่',
         )

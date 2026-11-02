@@ -17,6 +17,10 @@ export default function ClassHome({ onNewClass, onPick }) {
   const [instructorName, setInstructorName] = useState('')
   const [savedName, setSavedName] = useState(null) // null = loading
   const [nameNote, setNameNote] = useState('')
+  // จำนวนผู้เรียนสูงสุด — ครบแล้วนักเรียนใหม่เข้าคลาสไม่ได้ (api/cohorts/join.js)
+  const [cap, setCap] = useState(null) // null = loading | { maxStudents, students }
+  const [capInput, setCapInput] = useState('')
+  const [capNote, setCapNote] = useState('')
 
   const base = import.meta.env.VITE_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
   // openExternalBrowser=1 — สแกนใน LINE แล้วให้เด้งออก browser จริง (in-app browser แชร์ storage ไม่ได้)
@@ -38,6 +42,35 @@ export default function ClassHome({ onNewClass, onPick }) {
       .catch(() => {})
     return () => { cancelled = true }
   }, [cls.sessionId])
+
+  useEffect(() => {
+    if (!cls.classId) return
+    let cancelled = false
+    adminFetch(`/api/classes/capacity?classId=${cls.classId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => { if (!cancelled && b) { setCap(b); setCapInput(b.maxStudents ? String(b.maxStudents) : '') } })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [cls.classId])
+
+  const saveCapacity = async () => {
+    setBusy(true)
+    setCapNote('')
+    try {
+      const resp = await adminFetch('/api/classes/capacity', {
+        method: 'POST', body: JSON.stringify({ classId: cls.classId, maxStudents: capInput ? Number(capInput) : null }),
+      })
+      const body = await resp.json().catch(() => ({}))
+      if (!resp.ok) { setCapNote(body.error || 'บันทึกไม่สำเร็จ'); return }
+      setCap(body)
+      setCapInput(body.maxStudents ? String(body.maxStudents) : '')
+      setCapNote('บันทึกแล้ว')
+    } catch {
+      setCapNote('เครือข่ายขัดข้อง ลองใหม่')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const saveInstructorName = async () => {
     setBusy(true)
@@ -140,6 +173,28 @@ export default function ClassHome({ onNewClass, onPick }) {
           </button>
         </div>
       </div>
+
+      {cls.classId && (
+        <div className="card" style={{ marginTop: 10 }}>
+          <div className="text-body-strong">
+            จำนวนผู้เรียนสูงสุด
+            {cap && <span className="text-caption" style={{ marginLeft: 6 }}>
+              (เข้าแล้ว {cap.students}{cap.maxStudents ? `/${cap.maxStudents}` : ''} คน{cap.maxStudents && cap.students >= cap.maxStudents ? ' · เต็มแล้ว' : ''})
+            </span>}
+          </div>
+          <div className="text-caption" style={{ marginTop: 2 }}>
+            ครบจำนวนแล้วนักเรียนใหม่เข้าคลาสไม่ได้ (คนที่เข้าแล้วยังเข้าได้) · ว่าง = ไม่จำกัด · มีคนมาเพิ่มหน้างานให้เพิ่มตัวเลขตรงนี้
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <input className="input" style={{ flex: 1 }} inputMode="numeric" value={capInput} disabled={cap === null}
+              placeholder="ไม่จำกัด" onChange={(e) => { setCapInput(e.target.value.replace(/\D/g, '').slice(0, 3)); setCapNote('') }} />
+            <button type="button" className="btn btn-primary"
+              disabled={busy || cap === null || capInput === (cap.maxStudents ? String(cap.maxStudents) : '')}
+              onClick={saveCapacity}>บันทึก</button>
+          </div>
+          {capNote && <div className="text-caption" style={{ marginTop: 6 }}>{capNote}</div>}
+        </div>
+      )}
 
       {cls.sessionId && (
         <div className="card" style={{ marginTop: 10 }}>

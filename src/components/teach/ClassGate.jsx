@@ -129,8 +129,9 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
             <label className="label" style={{ marginTop: 10 }}>ชื่อผู้สอน (พิมพ์บนใบประกาศภาคปฏิบัติ)</label>
             <input className="input" value={instructorName} onChange={(e) => setInstructorName(e.target.value)} placeholder="เช่น นพ.สมชาย ใจดี" maxLength={100} />
             <div className="text-caption" style={{ marginTop: 4 }}>เว้นว่างได้ — ใบจะพิมพ์ว่า Jia Training Center · แก้ทีหลังได้ที่หน้าคลาส</div>
-            <label className="label" style={{ marginTop: 10 }}>จำนวนผู้เรียน (ไม่บังคับ)</label>
+            <label className="label" style={{ marginTop: 10 }}>จำนวนผู้เรียนสูงสุด (ไม่บังคับ)</label>
             <input className="input" inputMode="numeric" value={seats} onChange={(e) => setSeats(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="เช่น 24" style={{ maxWidth: 140 }} />
+            <div className="text-caption" style={{ marginTop: 4 }}>ครบแล้วนักเรียนใหม่เข้าคลาสไม่ได้ · ว่าง = ไม่จำกัด · แก้ทีหลังได้ที่แท็บคลาส/QR</div>
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, cursor: 'pointer' }}>
               <input type="checkbox" checked={includesCpr} onChange={(e) => setIncludesCpr(e.target.checked)} style={{ marginTop: 3 }} />
               <span>
