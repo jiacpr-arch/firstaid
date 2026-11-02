@@ -120,3 +120,12 @@ test('group label and CPR progress pass through per learner', () => {
   assert.equal(out.learners[1].groupLabel, null)
   assert.equal(out.learners[1].cpr, null)
 })
+
+test('carries each learner\'s LINE name next to the real name (null when never logged in)', () => {
+  const { learners } = buildCohortSummary({
+    enrollments: [{ learner_id: 'a', name: 'สมชาย ใจดี' }, { learner_id: 'b', name: 'สมหญิง ใจงาม' }],
+    lineNames: new Map([['a', 'Somchai🔥']]),
+  })
+  assert.equal(learners.find((l) => l.learnerId === 'a').lineName, 'Somchai🔥')
+  assert.equal(learners.find((l) => l.learnerId === 'b').lineName, null)
+})

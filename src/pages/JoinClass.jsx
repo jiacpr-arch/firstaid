@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Users, CheckCircle2, HeartPulse, BookOpen } from 'lucide-react'
+import { Users, CheckCircle2, HeartPulse, BookOpen, MessageCircle } from 'lucide-react'
 import { useEnsureLearner } from '../hooks/useLearner'
-import { prefillRealName } from '../../api/_lib/realName.js'
+import { prefillRealName, realNameProblem } from '../../api/_lib/realName.js'
 import { useLearnerStore } from '../stores/learnerStore'
 import { upsertLearner } from '../db/database'
 import { flushSync } from '../db/sync'
 import { authHeader } from '../utils/authHeader'
-import { isSupabaseConfigured } from '../config/supabaseClient'
+import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { startHubLogin } from '../utils/hubAuth'
+import { fetchHubState, saveCardName } from '../utils/hubCertificate'
 import Seo from '../components/Seo'
 
 // เข้าร่วมคลาสด้วยรหัส 6 หลักจากครูผู้สอน (/join หรือ /join/:code จาก QR)
@@ -26,9 +28,45 @@ export default function JoinClass() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [joined, setJoined] = useState(null)
+  // เข้าคลาสต้องล็อกอินก่อน (LINE) — ทุกคนในคลาสจึงมีบัญชีระบบกลาง + เลขบัตรนักเรียนตั้งแต่วันแรก
+  // ใบประกาศออกได้ และครูเห็นชื่อ LINE คู่ชื่อจริง (เคยมีคนเข้าคลาสโดยไม่ล็อกอินจนจบคลาส แล้วออกใบในระบบกลางไม่ได้)
+  const [auth, setAuth] = useState(() => (isSupabaseConfigured ? 'checking' : 'off'))
+  const [autoRedirect, setAutoRedirect] = useState(false)
+
+  useEffect(() => {
+    if (!supabase) return undefined
+    let cancelled = false
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return
+      if (data?.session) { setAuth('in'); return }
+      setAuth('out')
+      // มาจาก QR (/join/<code>): พาไปล็อกอิน LINE ทันที แล้วกลับมาหน้านี้ — กันวนซ้ำถ้าเพิ่งลองไปไม่เกิน 3 นาที
+      let recent = false
+      try { recent = Date.now() - Number(sessionStorage.getItem('fa.joinLoginAt') || 0) < 180_000 } catch { /* ignore */ }
+      if (paramCode && !recent) setAutoRedirect(true)
+    }).catch(() => { if (!cancelled) setAuth('out') })
+    return () => { cancelled = true }
+  }, [paramCode])
+
+  const loginWithLine = () => {
+    try { sessionStorage.setItem('fa.joinLoginAt', String(Date.now())) } catch { /* ignore */ }
+    startHubLogin(learner?.id, paramCode ? `/join/${paramCode}` : '/join', { line: true })
+  }
+  const loginWithJia = () => {
+    try { sessionStorage.setItem('fa.joinLoginAt', String(Date.now())) } catch { /* ignore */ }
+    startHubLogin(learner?.id, paramCode ? `/join/${paramCode}` : '/join')
+  }
+
+  useEffect(() => {
+    if (!autoRedirect || !learner?.id) return
+    try { sessionStorage.setItem('fa.joinLoginAt', String(Date.now())) } catch { /* ignore */ }
+    startHubLogin(learner.id, `/join/${paramCode}`, { line: true })
+  }, [autoRedirect, learner?.id, paramCode])
+
+  const nameProblem = nameVal.trim() ? realNameProblem(nameVal, { lineName: learner?.lineName || '' }) : ''
 
   const submit = async () => {
-    if (!code.trim() || !nameVal.trim() || !learner?.id) return
+    if (!code.trim() || !nameVal.trim() || !learner?.id || nameProblem) return
     setLoading(true)
     setError('')
     try {
@@ -63,8 +101,12 @@ export default function JoinClass() {
         cprPromoCode: body.cprPromoCode || null,
         cprStatus: body.cprPromoCode ? 'todo' : 'none',
         cprStatusCode: body.code,
+        // พิมพ์ชื่อจริงเองแล้ว — ไม่ต้องถามซ้ำก่อนบทที่ 2 (needsRealName)
+        realNameAt: Date.now(),
       }
       updateLearner(patch)
+      // ชื่อจริงนี้คือชื่อบนใบประกาศ: ใส่บนบัตรนักเรียน JIA ด้วย (ชื่อที่ครูยืนยันแล้วจะไม่ถูกแก้) — ไม่สำเร็จก็ไม่ขวางการเข้าคลาส
+      fetchHubState().then((st) => (st?.profile ? saveCardName(st.profile, { name: nameVal.trim(), phone: phoneVal.trim() }) : null)).catch(() => {})
       await upsertLearner({ ...learner, ...patch }).catch(() => {})
       // ดันความคืบหน้าที่ค้างในเครื่องขึ้น Supabase ทันที ให้ครูเห็นบน dashboard เลย
       flushSync(learner.id)
@@ -134,6 +176,42 @@ export default function JoinClass() {
     )
   }
 
+  if (auth === 'checking' || autoRedirect) {
+    return (
+      <div className="page-container">
+        <Seo title="เข้าร่วมคลาสเรียน | Jia Training Center" noindex path="/join" />
+        <div className="card" style={{ textAlign: 'center', padding: 28, marginTop: 12 }}>
+          <div className="text-body">{autoRedirect ? 'กำลังพาไปเข้าสู่ระบบด้วย LINE…' : 'กำลังตรวจสอบการเข้าสู่ระบบ…'}</div>
+          {autoRedirect && (
+            <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14, background: '#06C755', borderColor: '#06C755' }} onClick={loginWithLine}>
+              <MessageCircle size={18} /> เข้าสู่ระบบด้วย LINE
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (auth === 'out') {
+    return (
+      <div className="page-container">
+        <Seo title="เข้าร่วมคลาสเรียน | Jia Training Center" noindex path="/join" />
+        <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 24 }}>
+          <div className="text-title">เข้าสู่ระบบก่อนเข้าคลาส</div>
+          <div className="text-caption" style={{ marginTop: 6 }}>
+            ใช้ LINE เข้าสู่ระบบครั้งเดียว เพื่อบันทึกการเรียน เช็คชื่อวันอบรม และรับใบประกาศของคลาสนี้
+          </div>
+          <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 16, background: '#06C755', borderColor: '#06C755' }} onClick={loginWithLine}>
+            <MessageCircle size={18} /> เข้าสู่ระบบด้วย LINE
+          </button>
+          <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 8, fontSize: 13 }} onClick={loginWithJia}>
+            ไม่มี LINE? เข้าสู่ระบบด้วยบัญชี JIA (อีเมล)
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="page-container">
       <Seo title="เข้าร่วมคลาสเรียน | Jia Training Center" noindex path="/join" />
@@ -161,8 +239,10 @@ export default function JoinClass() {
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>
-        <label className="label">ชื่อ-นามสกุล (ที่จะแสดงให้ครูเห็น)</label>
-        <input className="input" value={nameVal} onChange={(e) => setNameVal(e.target.value)} placeholder="ชื่อ นามสกุล" />
+        <label className="label">ชื่อ-นามสกุลจริง (ใช้พิมพ์บนใบประกาศ)</label>
+        <input className="input" value={nameVal} onChange={(e) => setNameVal(e.target.value)} placeholder="ชื่อ นามสกุล ตามบัตรประชาชน" />
+        {nameProblem && <div className="text-caption" style={{ color: '#A0392F', marginTop: 4 }}>{nameProblem}</div>}
+        {learner?.lineName && <div className="text-caption" style={{ marginTop: 4 }}>ชื่อ LINE ของคุณ: {learner.lineName} (ครูจะเห็นคู่กับชื่อจริง)</div>}
         <label className="label" style={{ marginTop: 10 }}>เบอร์โทร</label>
         <input className="input" value={phoneVal} onChange={(e) => setPhoneVal(e.target.value)} inputMode="tel" placeholder="0812345678" />
       </div>
@@ -179,7 +259,7 @@ export default function JoinClass() {
         type="button"
         className="btn btn-primary btn-block btn-lg"
         style={{ marginTop: 16 }}
-        disabled={!code.trim() || !nameVal.trim() || loading || !isSupabaseConfigured}
+        disabled={!code.trim() || !nameVal.trim() || !!nameProblem || loading || !isSupabaseConfigured}
         onClick={submit}
       >
         <Users size={18} /> {loading ? 'กำลังเข้าร่วม…' : 'เข้าร่วมคลาส'}
