@@ -76,7 +76,7 @@ test('buildClassList counts students, picks the first session and orders newest 
   assert.deepEqual(list.map((c) => c.id), ['b', 'a'])
   assert.deepEqual(list[0], {
     id: 'b', name: 'ใหม่', code: 'BBBBBB', instructorCode: 'KLMN4567', createdVia: 'app',
-    createdAt: '2026-10-20T00:00:00Z', closed: true, students: 2, maxStudents: null, sessionId: 's1',
+    createdAt: '2026-10-20T00:00:00Z', closed: true, students: 2, maxStudents: null, includesCpr: false, startsOn: null, location: null, sessionId: 's1',
   })
   assert.deepEqual([list[1].students, list[1].createdVia, list[1].instructorCode, list[1].sessionId], [1, 'admin', null, null])
 })

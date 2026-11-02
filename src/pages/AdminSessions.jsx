@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Calendar, Plus, ArrowLeft, Store, Trash2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Calendar, Plus, ArrowLeft, Store, Trash2, GraduationCap, HeartPulse } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
+import { adminFetch } from '../utils/adminFetch'
+import { useClassStore } from '../stores/classStore'
 
 function makeSessionCode() {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -10,12 +12,39 @@ function makeSessionCode() {
   return out
 }
 
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '')
+
 export default function AdminSessions() {
+  const navigate = useNavigate()
+  const setClass = useClassStore((s) => s.setClass)
+  // ทุกคลาสที่เคยเปิดจาก "คลาสของฉัน" (รวมที่ปิดแล้ว) — RLS ซ่อนจาก client จึงอ่านผ่าน API แอดมิน
+  const [classes, setClasses] = useState(null)
+  const [classError, setClassError] = useState('')
   const [sessions, setSessions] = useState([])
   const [cohorts, setCohorts] = useState([])
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({ title: '', location: '', kind: 'session', cohortId: '' })
+
+  useEffect(() => {
+    let cancelled = false
+    adminFetch('/api/classes/list')
+      .then((r) => r.json().then((b) => [r.ok, b]))
+      .then(([ok, b]) => {
+        if (cancelled) return
+        if (!ok) { setClassError(b.error || 'โหลดรายการคลาสไม่สำเร็จ'); setClasses([]); return }
+        setClasses(b.classes || [])
+      })
+      .catch(() => { if (!cancelled) { setClassError('โหลดรายการคลาสไม่สำเร็จ'); setClasses([]) } })
+    return () => { cancelled = true }
+  }, [])
+
+  // แตะคลาส → เปิดคลาสนั้นใน "คลาสของฉัน" (ดูภาพรวม/รายงานได้ แม้คลาสปิดแล้ว)
+  const openClass = (c) => {
+    if (!c.sessionId) return
+    setClass({ classId: c.id, sessionId: c.sessionId, className: c.name, classCode: c.code, instructorCode: c.instructorCode || '' })
+    navigate('/admin/teach')
+  }
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -73,6 +102,9 @@ export default function AdminSessions() {
     setSessions((list) => list.filter((x) => x.id !== s.id))
   }
 
+  // รอบที่ผูกคลาสแสดงในรายการคลาสด้านบนแล้ว — ส่วนนี้เหลือเฉพาะรอบแบบเดิมที่ไม่ผูกคลาส
+  const legacy = sessions.filter((x) => !x.cohort_id)
+
   return (
     <div className="page-container">
       <Link to="/admin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
@@ -81,7 +113,7 @@ export default function AdminSessions() {
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 4 }}>
         <div style={{ flex: 1 }}>
           <div className="text-caption">ขั้นสูง</div>
-          <div className="text-title">วันอบรม & บูธแบบเดิม</div>
+          <div className="text-title">ประวัติวันอบรม & บูธแบบเดิม</div>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
           <Plus size={16} /> เปิดรอบแยก
@@ -143,11 +175,40 @@ export default function AdminSessions() {
         </div>
       )}
 
-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="text-body-strong" style={{ marginTop: 16 }}>คลาสทั้งหมดที่เคยเปิด{classes ? ` (${classes.length})` : ''}</div>
+      <div className="text-caption">สร้างจาก "คลาสของฉัน" · ใหม่สุดก่อน · แตะเพื่อเปิดดูภาพรวม/รายงานของคลาสนั้น</div>
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {classes === null && <div className="card text-caption">กำลังโหลด…</div>}
+        {classError && <div className="callout callout-danger">{classError}</div>}
+        {classes && classes.length === 0 && !classError && <div className="card text-caption">ยังไม่มีคลาส</div>}
+        {(classes || []).map((c) => (
+          <button key={c.id} type="button" className="card card-hover" onClick={() => openClass(c)} disabled={!c.sessionId}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', width: '100%' }}>
+            <GraduationCap size={22} color="#0F766E" style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="text-body-strong">{c.name}</div>
+              <div className="text-caption">
+                {[c.location, c.startsOn ? `เรียน ${fmtDate(c.startsOn)}` : `สร้าง ${fmtDate(c.createdAt)}`, `รหัส ${c.code}`,
+                  `นักเรียน ${c.students}${c.maxStudents ? `/${c.maxStudents}` : ''} คน`].filter(Boolean).join(' • ')}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
+              {c.includesCpr && <span className="badge" style={{ background: '#FDECEC', color: '#B91C1C' }}><HeartPulse size={11} /> รวม CPR</span>}
+              {c.closed
+                ? <span className="badge badge-muted">ปิดแล้ว</span>
+                : <span className="badge badge-success">เปิดอยู่</span>}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="text-body-strong" style={{ marginTop: 20 }}>รอบเช็คชื่อแยก / บูธแบบเดิม</div>
+      <div className="text-caption">สร้างจากหน้านี้ ไม่มีรหัสคลาส — ลบได้</div>
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {loading && <div className="card text-caption">กำลังโหลด…</div>}
-        {!loading && sessions.length === 0 && (
+        {!loading && legacy.length === 0 && (
           <div className="card">
-            <div className="text-body-strong">ยังไม่มีคลาส</div>
+            <div className="text-body-strong">ไม่มีรอบแบบเดิม</div>
             <div className="text-caption">เปิดคลาสใหม่ที่ "คลาสของฉัน" — หน้านี้ใช้เฉพาะบูธ/รอบเช็คชื่อแยก</div>
             {!isSupabaseConfigured && (
               <div className="callout callout-info" style={{ marginTop: 8 }}>
@@ -156,7 +217,7 @@ export default function AdminSessions() {
             )}
           </div>
         )}
-        {sessions.map((s) => (
+        {legacy.map((s) => (
           <Link key={s.id} to={`/admin/sessions/${s.id}`} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {s.kind === 'booth'
               ? <Store size={22} color="#7C3AED" />

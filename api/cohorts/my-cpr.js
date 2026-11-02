@@ -10,7 +10,7 @@ import { matchCprProgress, cprCompanyTag, phoneKey } from '../_lib/cprProgress.j
 // (api/_lib/cprProgress.js) แต่หาแถว online_students ด้วยเบอร์ด้วย ไม่ใช่แค่แถวที่ติดแท็กคลาส
 // เผื่อนักเรียนเรียน CPR จบไปก่อนแล้วโดยไม่ได้กรอกโค้ดคลาส
 //
-// POST { code, learnerId } → { includesCpr, cprPromoCode?, cpr: { redeemed, modulesDone, finalScore, completed } | null }
+// POST { code, learnerId } → { includesCpr, cprPromoCode?, startsOn?, cpr: { redeemed, modulesDone, finalScore, completed } | null }
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
   const { data: cohort, error: cErr } = await admin
     .from('cohorts')
-    .select('id, deleted_at, includes_cpr, cpr_promo_code')
+    .select('id, deleted_at, includes_cpr, cpr_promo_code, starts_on')
     .eq('code', code)
     .maybeSingle()
   if (cErr) { res.status(500).json({ error: cErr.message }); return }
@@ -77,5 +77,5 @@ export default async function handler(req, res) {
     cpr = match.get(learnerId) || null
   }
 
-  res.status(200).json({ includesCpr: true, cprPromoCode: promo, cpr })
+  res.status(200).json({ includesCpr: true, cprPromoCode: promo, startsOn: cohort.starts_on || null, cpr })
 }

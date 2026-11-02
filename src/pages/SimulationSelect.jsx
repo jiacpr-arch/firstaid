@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Activity, CheckCircle2, ChevronRight, Gamepad2 } from 'lucide-react'
+import { Activity, ArrowLeft, CheckCircle2, ChevronRight, Gamepad2, LayoutGrid } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
@@ -64,15 +64,12 @@ export default function SimulationSelect() {
   useEnsureProgress(learner?.id)
   // ?chapter=N — มาจากปุ่ม "ฝึกท้ายหมวด" / "ไปฝึกสถานการณ์" → เลื่อนไปหมวดนั้นเลย ไม่ต้องไล่จากหมวด 1
   const [searchParams] = useSearchParams()
+  // ฝึกท้ายหมวด: แสดงเฉพาะฉากของหมวดนั้น (เดิมโชว์ทุกหมวดแล้วเลื่อนไป — ผู้เรียนกดหมวดอื่นแล้วสับสน)
+  // เข้าจากเมนู "ฝึก" ตรง ๆ (ไม่มี ?chapter) ยังเห็นครบทุกหมวดเหมือนเดิม
   const focusChapter = Number(searchParams.get('chapter')) || null
-  useEffect(() => {
-    if (!focusChapter) return
-    const go = () => document.getElementById(`chapter-${focusChapter}`)?.scrollIntoView({ block: 'start' })
-    go()
-    // เนื้อหาด้านบน (แบนเนอร์/รูป) ยังเปลี่ยนความสูงหลังโหลด → จัดตำแหน่งซ้ำอีกรอบเมื่อหน้านิ่ง
-    const t = setTimeout(go, 600)
-    return () => clearTimeout(t)
-  }, [focusChapter])
+  const focus = focusChapter ? grouped.find((c) => c.id === focusChapter && c.scenarios.length > 0) : null
+  const shownChapters = focus ? [focus] : grouped
+  useEffect(() => { if (focus) window.scrollTo(0, 0) }, [focus])
 
   return (
     <div className="page-container">
@@ -88,31 +85,39 @@ export default function SimulationSelect() {
           ]),
         ]}
       />
-      <header style={{ marginTop: 8 }}>
-        <div className="text-eyebrow">Practice · {scenarios.length} ฉาก</div>
-        <h1 className="text-display" style={{ margin: 0 }}>สถานการณ์จำลอง</h1>
-        <div className="text-body" style={{ color: 'var(--color-text-muted)' }}>
-          ฝึกตัดสินใจก่อนเจอเหตุจริง — ครอบคลุมครบทุกบทเรียน
-        </div>
-      </header>
+      {focus ? (
+        <header style={{ marginTop: 8 }}>
+          <Link to="/learn" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+            <ArrowLeft size={16} /> กลับไปบทเรียน
+          </Link>
+          <div className="text-eyebrow">ฝึกท้ายหมวด {focus.id} · {focus.scenarios.length} ฉาก</div>
+          <h1 className="text-display" style={{ margin: 0 }}>{focus.title}</h1>
+          <div className="text-body" style={{ color: 'var(--color-text-muted)' }}>
+            เลือกฉากไหนก็ได้ในหมวดนี้ 1 ฉาก แล้วทำให้ผ่าน (ตอบถูก 70% ขึ้นไป) เพื่อเรียนหมวดถัดไป
+          </div>
+        </header>
+      ) : (
+        <header style={{ marginTop: 8 }}>
+          <div className="text-eyebrow">Practice · {scenarios.length} ฉาก</div>
+          <h1 className="text-display" style={{ margin: 0 }}>สถานการณ์จำลอง</h1>
+          <div className="text-body" style={{ color: 'var(--color-text-muted)' }}>
+            ฝึกตัดสินใจก่อนเจอเหตุจริง — ครอบคลุมครบทุกบทเรียน
+          </div>
+        </header>
+      )}
 
-      {grouped.map((c) => (
+      {shownChapters.map((c) => (
         c.scenarios.length > 0 && (
           <div key={c.id} id={`chapter-${c.id}`} style={{ marginTop: 20, scrollMarginTop: 16 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
-              <span style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: 'var(--color-brand)' }}>{c.id}</span>
-              <h2 className="text-body-strong" style={{ margin: 0, flex: 1 }}>{c.title}</h2>
+              {!focus && <span style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: 'var(--color-brand)' }}>{c.id}</span>}
+              {focus ? <span style={{ flex: 1 }} /> : <h2 className="text-body-strong" style={{ margin: 0, flex: 1 }}>{c.title}</h2>}
               {c.scenarios.some((s) => passedScenarioIds.has(s.id)) && (
                 <span className="text-caption" style={{ color: '#347053', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <CheckCircle2 size={14} /> หมวดนี้ผ่านแล้ว
                 </span>
               )}
             </div>
-            {focusChapter === c.id && !c.scenarios.some((s) => passedScenarioIds.has(s.id)) && (
-              <div className="text-caption" style={{ marginBottom: 8, color: 'var(--color-brand-dark)' }}>
-                เลือกฉากไหนก็ได้ในหมวดนี้ 1 ฉาก แล้วทำให้ผ่าน
-              </div>
-            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
               {c.scenarios.map((s) => <ScenarioCard key={s.id} s={s} passed={passedScenarioIds.has(s.id)} />)}
             </div>
@@ -120,7 +125,13 @@ export default function SimulationSelect() {
         )
       ))}
 
-      <Link
+      {focus && (
+        <Link to="/simulation" className="btn btn-ghost btn-block" style={{ marginTop: 20 }}>
+          <LayoutGrid size={16} /> ดูสถานการณ์ทุกหมวด
+        </Link>
+      )}
+
+      {!focus && <Link
         to="/game"
         className="card"
         style={{
@@ -141,9 +152,9 @@ export default function SimulationSelect() {
             ฝึกแบบเกม: จับเวลา เก็บคอมโบ ปลดล็อกเหรียญ (ของแถมสนุกๆ ไม่มีผลต่อใบเซอร์)
           </div>
         </div>
-      </Link>
+      </Link>}
 
-      {ungrouped.length > 0 && (
+      {!focus && ungrouped.length > 0 && (
         <div style={{ marginTop: 20 }}>
           <div className="text-body-strong" style={{ marginBottom: 10 }}>อื่นๆ</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

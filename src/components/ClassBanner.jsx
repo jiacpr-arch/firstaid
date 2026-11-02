@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import CprOnlineCard from './CprOnlineCard'
-import { QrCode, ArrowRight, CheckCircle2, Circle, HeartPulse, ExternalLink, RefreshCw } from 'lucide-react'
+import { QrCode, ArrowRight, CheckCircle2, Circle, HeartPulse, ExternalLink, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { lessons } from '../courses/firstaid/lessons'
@@ -39,6 +39,12 @@ export default function ClassBanner() {
   else if (cpr.status === 'todo' && !postTestDone) next = { href: cprUrl, label: 'ไปเรียน CPR & AED ออนไลน์ให้จบก่อน' }
   else if (!postTestDone) next = { to: '/post-test', label: 'ทำ Post-test' }
   else next = { to: '/my-qr', label: 'พร้อมแล้ว — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติ' }
+
+  // เหลือแค่ Post-test (คลาสรวม CPR: CPR จบแล้ว หรือเช็คไม่ได้)
+  const onlyPostTestLeft = preTestDone && allLessons && practiceDone && !postTestDone && cpr.status !== 'todo' && cpr.status !== 'loading'
+  const trainingDay = cpr.startsOn
+    ? new Date(`${cpr.startsOn}T00:00:00+07:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' })
+    : null
 
   const steps = [
     ['Pre-test', preTestDone],
@@ -85,6 +91,19 @@ export default function ClassBanner() {
             <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={cpr.refresh} disabled={cpr.checking}>
               <RefreshCw size={14} /> {cpr.checking ? 'กำลังเช็ค…' : 'เช็คอีกครั้ง'}
             </button>
+          </div>
+        </div>
+      )}
+      {/* เรียน+ฝึก+CPR ครบแล้ว เหลือแค่ Post-test — เตือนให้เด่น กันนักเรียนหยุดก่อนขั้นสุดท้าย */}
+      {onlyPostTestLeft && (
+        <div className="callout" style={{ marginTop: 12, borderColor: '#E3C27A', background: '#FBF3DF' }} data-testid="post-test-reminder">
+          <div className="text-body-strong" style={{ color: '#7A5A1F' }}>
+            <AlertTriangle size={15} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+            เหลืออีกขั้นเดียว — ทำ Post-test ปฐมพยาบาล
+          </div>
+          <div className="text-caption" style={{ marginTop: 4, color: '#7A5A1F' }}>
+            {cprDone ? 'เรียน CPR & AED ออนไลน์จบแล้ว ' : ''}
+            ต้องทำ Post-test ให้ผ่าน{trainingDay ? <>ก่อนวันอบรม <b>{trainingDay}</b></> : 'ก่อนวันอบรม'} จึงจะได้ใบประกาศภาคทฤษฎีและพร้อมเข้าอบรมภาคปฏิบัติ
           </div>
         </div>
       )}
