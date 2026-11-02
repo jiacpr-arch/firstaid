@@ -7,6 +7,7 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { lessons, chapters } from '../courses/firstaid/lessons'
+import { nextLearningStep } from '../utils/practice'
 import { algorithms } from '../courses/firstaid/algorithms'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
@@ -40,13 +41,18 @@ function StartButton({ to, label, position }) {
 export default function Landing() {
   const learner = useLearnerStore((s) => s.learner)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
+  const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   useEnsureProgress(learner?.id)
 
   // เคยเริ่มเรียนไปแล้วแต่ยังไม่พ้น onboarding (ยังไม่แอด/ข้าม LINE) — ชวน "เรียนต่อ" แทน "เริ่มเรียน"
   const hasStarted = readLessonIds.size > 0
-  const nextLesson = hasStarted ? (lessons.find((l) => !readLessonIds.has(l.id)) ?? lessons[0]) : lessons[0]
-  const ctaLabel = hasStarted ? `เรียนต่อ — บทที่ ${nextLesson.order}` : 'เริ่มบทที่ 1 ฟรี'
-  const ctaTo = hasStarted ? `/learn/${nextLesson.id}` : FIRST_LESSON_PATH
+  // ขั้นถัดไปเคารพด่านฝึกท้ายหมวด — จบหมวดแล้วยังไม่ฝึก ให้ปุ่มพาไปฝึกก่อน ไม่ใช่บทที่ล็อกอยู่
+  const step = hasStarted ? nextLearningStep(lessons, readLessonIds, passedScenarioIds) : null
+  const nextLesson = step?.lesson ?? lessons[0]
+  const ctaLabel = !hasStarted ? 'เริ่มบทที่ 1 ฟรี'
+    : step?.kind === 'practice' ? `ฝึกท้ายหมวด ${step.chapter} ก่อนเรียนต่อ`
+      : `เรียนต่อ — บทที่ ${nextLesson.order}`
+  const ctaTo = !hasStarted ? FIRST_LESSON_PATH : (step?.to ?? `/learn/${nextLesson.id}`)
 
   return (
     <div className="course-landing course-landing-compact">

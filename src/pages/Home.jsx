@@ -13,7 +13,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
-import { isPracticeDone, practiceChaptersRemaining, practiceLink } from '../utils/practice'
+import { isPracticeDone, practiceChaptersRemaining, practiceLink, nextLearningStep } from '../utils/practice'
 import { lessons } from '../courses/firstaid/lessons'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import Seo from '../components/Seo'
@@ -46,7 +46,10 @@ export default function Home() {
   const practiceRemaining = practiceChaptersRemaining(passedScenarioIds)
   const progressPct = lessons.length ? Math.round((lessonsDone / lessons.length) * 100) : 0
 
-  const nextLesson = preTestDone ? lessons.find((l) => !readLessonIds.has(l.id)) : null
+  // ขั้นถัดไป: บทถัดไป หรือฝึกท้ายหมวดก่อน ถ้าบทถัดไปอยู่หมวดใหม่ที่ยังติดด่านฝึก
+  const step = preTestDone ? nextLearningStep(lessons, readLessonIds, passedScenarioIds) : null
+  const nextLesson = step?.lesson ?? null
+  const practiceFirst = step?.kind === 'practice'
   const studiedToday = localStorage.getItem('lastStudyDate') === new Date().toISOString().slice(0, 10)
 
   return (
@@ -71,7 +74,7 @@ export default function Home() {
       {/* ═══ เรียนต่อ — การ์ดเด่นที่สุดของหน้า ═══ */}
       {nextLesson && (
         <Link
-          to={`/learn/${nextLesson.id}`}
+          to={step.to}
           className="card-hover"
           style={{
             display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16,
@@ -80,13 +83,20 @@ export default function Home() {
         >
           <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <span className="text-eyebrow" style={{ color: '#BFDDB3' }}>
-              Continue · บทที่ {String(nextLesson.order).padStart(2, '0')}
+              {practiceFirst ? `ฝึกท้ายหมวด ${step.chapter}` : `Continue · บทที่ ${String(nextLesson.order).padStart(2, '0')}`}
             </span>
             <span style={{ fontSize: 12, color: '#C9DCD4' }}>
-              {nextLesson.minutes} นาที{studiedToday ? ' · เรียนวันนี้แล้ว' : ''}
+              {practiceFirst ? '' : `${nextLesson.minutes} นาที`}{studiedToday ? `${practiceFirst ? '' : ' · '}เรียนวันนี้แล้ว` : ''}
             </span>
           </span>
-          <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.35 }}>{nextLesson.title}</span>
+          <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.35 }}>
+            {practiceFirst ? `ฝึกสถานการณ์หมวด ${step.chapter}: ${step.chapterTitle}` : nextLesson.title}
+          </span>
+          {practiceFirst && (
+            <span style={{ fontSize: 13, color: '#C9DCD4' }}>
+              ฝึกให้ผ่าน 1 ฉาก แล้วบทที่ {nextLesson.order} {nextLesson.title} จะเปิดให้เรียนต่อ
+            </span>
+          )}
           <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ height: 6, borderRadius: 999, background: '#30544D', overflow: 'hidden' }}>
               <span style={{ display: 'block', height: '100%', width: `${progressPct}%`, borderRadius: 999, background: '#BFDDB3' }} />
@@ -97,7 +107,7 @@ export default function Home() {
             height: 46, borderRadius: 9, background: '#FAFAF5', color: '#163D3A',
             fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
-            เรียนต่อ <ArrowRight size={18} strokeWidth={1.8} />
+            {practiceFirst ? 'ไปฝึกสถานการณ์' : 'เรียนต่อ'} <ArrowRight size={18} strokeWidth={1.8} />
           </span>
         </Link>
       )}

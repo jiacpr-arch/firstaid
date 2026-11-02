@@ -258,13 +258,6 @@ export default function LessonReader() {
     )
   }
 
-  // ปลดล็อกด้วยการซื้อ — หมวด 1 ฟรีเสมอ (isChapterUnlocked คืน true ทันที) หมวด 2-4 ต้องมี
-  // entitlement ผูกกับ learner_id ถาวร ครอบคลุมทั้ง URL ตรง, list ในหน้า Learn และปุ่ม "บทถัดไป"
-  // เพราะทุกทางเข้าวิ่งผ่าน route นี้เหมือนกัน
-  if (entitlementsLoaded && !isChapterUnlocked(lesson.chapter, unlockedChapters)) {
-    return <>{seo}<ChapterUnlockCard chapter={lesson.chapter} /></>
-  }
-
   // ด่านฝึกท้ายหมวด: ต้องฝึกสถานการณ์หมวดก่อนหน้าให้ผ่านก่อนเปิดบทใหม่ในหมวดถัดไป
   // (ไม่กันตอนเพิ่งเรียนจบบทนี้ — completed — และรอโหลดความก้าวหน้าก่อนตัดสิน)
   const gateChapter = progressLoaded && !completed
@@ -296,6 +289,14 @@ export default function LessonReader() {
         </div>
       </div>
     )
+  }
+
+  // (ด่านฝึกมาก่อนด่านจ่ายเงิน — ผู้เรียนต้องรู้ก่อนว่ายังต้องฝึกหมวดเดิม ไม่ใช่เจอหน้าซื้อทันที)
+  // ปลดล็อกด้วยการซื้อ — หมวด 1 ฟรีเสมอ (isChapterUnlocked คืน true ทันที) หมวด 2-4 ต้องมี
+  // entitlement ผูกกับ learner_id ถาวร ครอบคลุมทั้ง URL ตรง, list ในหน้า Learn และปุ่ม "บทถัดไป"
+  // เพราะทุกทางเข้าวิ่งผ่าน route นี้เหมือนกัน
+  if (entitlementsLoaded && !isChapterUnlocked(lesson.chapter, unlockedChapters)) {
+    return <>{seo}<ChapterUnlockCard chapter={lesson.chapter} /></>
   }
 
   const slide = slides[stepIdx]
