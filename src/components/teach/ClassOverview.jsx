@@ -8,13 +8,24 @@ const examCell = (e) => (e ? `${e.score}% ${e.passed ? '✅' : '✗'}` : '—')
 const badgeClass = (tone) => (tone === 'success' ? 'badge badge-success' : tone === 'warning' ? 'badge badge-warning' : 'badge')
 const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 
-function exportCsv(learners, opts, filename) {
-  const header = ['ชื่อ', 'ชื่อ LINE', 'เบอร์โทร', 'ความพร้อม', 'ยังขาด', `บทเรียน (จาก ${lessons.length})`, 'ควิซผ่าน', 'Pre-test', 'Post-test']
+// CPR & AED ออนไลน์ (cpr.morroo.com) ของคลาสรวม — api/_lib/cprProgress.js จับคู่ด้วยเบอร์โทร
+// ไม่เจอข้อมูล = ยังไม่เริ่ม หรือกรอกเบอร์ไม่ตรงกับที่เข้าคลาส
+const CPR_MODULES = 7
+function cprStatus(cpr) {
+  if (cpr?.completed) return { done: true, label: 'จบแล้ว ✅', short: 'จบแล้ว' }
+  if (cpr?.modulesDone > 0) return { done: false, label: `เรียนแล้ว ${cpr.modulesDone}/${CPR_MODULES} บท`, short: `${cpr.modulesDone}/${CPR_MODULES} บท` }
+  if (cpr?.redeemed) return { done: false, label: 'ใช้โค้ดแล้ว ยังไม่เริ่มเรียน', short: 'ใช้โค้ดแล้ว' }
+  return { done: false, label: 'ยังไม่เริ่ม (หรือกรอกเบอร์ไม่ตรง)', short: 'ยังไม่เริ่ม' }
+}
+
+function exportCsv(learners, opts, filename, includesCpr) {
+  const header = ['ชื่อ', 'ชื่อ LINE', 'เบอร์โทร', 'ความพร้อม', 'ยังขาด', `บทเรียน (จาก ${lessons.length})`, 'ควิซผ่าน', 'Pre-test', 'Post-test', ...(includesCpr ? ['CPR & AED ออนไลน์'] : [])]
   const rows = learners.map((l) => {
     const r = classifyReadiness(l, opts)
     return [
       q(l.name), q(l.lineName || ''), q(l.phone), q(READINESS[r.status].label), q(r.missing.join(' / ')),
       l.lessonsRead, l.quizzesPassed, q(l.preTest ? `${l.preTest.score}%` : ''), q(l.postTest ? `${l.postTest.score}%` : ''),
+      ...(includesCpr ? [q(cprStatus(l.cpr).short)] : []),
     ].join(',')
   })
   const blob = new Blob(['﻿' + [header.map(q).join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' })
@@ -29,12 +40,15 @@ function exportCsv(learners, opts, filename) {
 }
 
 // แท็บ "ภาพรวม": นักเรียนทุกคน + ความพร้อม (พร้อม = Post-test ผ่าน) + สิ่งที่ยังขาด แตะชื่อเพื่อดูรายคน
-export default function ClassOverview({ learners, classCode }) {
+export default function ClassOverview({ learners, classCode, includesCpr = false }) {
   const [filter, setFilter] = useState('all')
   const opts = useMemo(() => ({ totalLessons: lessons.length }), [])
   const summary = useMemo(() => summarizeReadiness(learners, opts), [learners, opts])
+  const cprDone = useMemo(() => learners.filter((l) => cprStatus(l.cpr).done).length, [learners])
   const shown = useMemo(
-    () => (filter === 'all' ? learners : learners.filter((l) => classifyReadiness(l, opts).status === filter)),
+    () => (filter === 'all' ? learners
+      : filter === 'cpr_todo' ? learners.filter((l) => !cprStatus(l.cpr).done)
+        : learners.filter((l) => classifyReadiness(l, opts).status === filter)),
     [learners, filter, opts],
   )
 
@@ -52,9 +66,15 @@ export default function ClassOverview({ learners, classCode }) {
       <div className="card" style={{ marginTop: 12 }}>
         <div className="text-body-strong">พร้อมเข้าอบรมแล้ว {summary.ready}/{summary.total} คน</div>
         <div className="text-caption" style={{ marginTop: 2 }}>พร้อม = สอบ Post-test ผ่าน (เงื่อนไขออกใบเซอร์ทฤษฎี ซึ่งต้องมีก่อนใบภาคปฏิบัติ)</div>
+        {includesCpr && (
+          <div className="text-body-strong" style={{ marginTop: 8, color: '#B91C1C' }}>
+            เรียน CPR & AED ออนไลน์จบแล้ว {cprDone}/{learners.length} คน
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
           {[['all', 'ทั้งหมด', summary.total],
-            ...['ready', 'almost', 'in_progress', 'not_started'].map((k) => [k, READINESS[k].label, summary[k]])]
+            ...['ready', 'almost', 'in_progress', 'not_started'].map((k) => [k, READINESS[k].label, summary[k]]),
+            ...(includesCpr ? [['cpr_todo', 'ยังไม่จบ CPR', learners.length - cprDone]] : [])]
             .map(([k, label, n]) => (
               <button key={k} type="button" className={filter === k ? 'btn btn-primary' : 'btn btn-secondary'}
                 style={{ fontSize: 13, padding: '4px 10px' }} onClick={() => setFilter(k)}>
@@ -62,7 +82,7 @@ export default function ClassOverview({ learners, classCode }) {
               </button>
             ))}
           <button type="button" className="btn btn-ghost" style={{ fontSize: 13, marginLeft: 'auto' }}
-            onClick={() => exportCsv(learners, opts, `class-${classCode || 'export'}.csv`)}>
+            onClick={() => exportCsv(learners, opts, `class-${classCode || 'export'}.csv`, includesCpr)}>
             <Download size={14} /> CSV
           </button>
         </div>
@@ -84,6 +104,10 @@ export default function ClassOverview({ learners, classCode }) {
               <div className="text-caption" style={{ marginTop: 6 }}>
                 บทเรียน {l.lessonsRead}/{lessons.length} · ควิซ {l.quizzesPassed} · Pre {examCell(l.preTest)} · Post {examCell(l.postTest)}
               </div>
+              {includesCpr && (() => {
+                const c = cprStatus(l.cpr)
+                return <div className="text-caption" style={{ marginTop: 2, color: c.done ? '#347053' : '#B91C1C' }}>CPR & AED ออนไลน์: {c.label}</div>
+              })()}
               {r.missing.length > 0 && <div className="text-caption" style={{ marginTop: 2 }}>ขาด: {r.missing.join(' · ')}</div>}
             </Link>
           )
