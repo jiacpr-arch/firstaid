@@ -127,7 +127,7 @@ export default function SimulationRun() {
   return (
     <div className="page-container">
       {seo}
-      <Link to="/simulation" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+      <Link to={scenario?.chapter ? `/simulation?chapter=${scenario.chapter}` : '/simulation'} className="btn btn-ghost" style={{ paddingLeft: 0 }}>
         <ArrowLeft size={16} /> รายการฉาก
       </Link>
       <div style={{ marginTop: 4 }}>
