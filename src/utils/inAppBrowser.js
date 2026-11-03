@@ -16,6 +16,9 @@ export function detectInAppBrowser() {
   // เบราว์เซอร์ในแอป LINE ใส่โทเคน "Line/<version>" ใน UA (เช่น "Line/13.5.0")
   // ระวังไม่ให้ชนคำอื่น จึงบังคับให้ตามด้วย / แล้วเป็นตัวเลขเวอร์ชัน
   if (/\bLine\/[\d.]+/i.test(ua)) return 'line'
+  // แอป Google (สแกน QR ด้วย Google Lens / กดลิงก์จากผลค้นหา) เปิดหน้าในเบราว์เซอร์ของแอปเอง ("GSA/<ver>")
+  // ล็อกอิน LINE ผ่านระบบกลางในนี้วนหน้า "เข้าสู่ระบบ" ↔ "อนุญาต" ไม่จบ (เจอจริงตอนทดลองคลาส พ.ย. 69)
+  if (/\bGSA\/[\d.]+/.test(ua)) return 'google'
   return null
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Users, CheckCircle2, HeartPulse, BookOpen, MessageCircle } from 'lucide-react'
+import { Users, CheckCircle2, HeartPulse, BookOpen, MessageCircle, ExternalLink, Copy, Check } from 'lucide-react'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { prefillRealName, realNameProblem } from '../../api/_lib/realName.js'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -9,6 +9,7 @@ import { flushSync } from '../db/sync'
 import { authHeader } from '../utils/authHeader'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { startHubLogin } from '../utils/hubAuth'
+import { detectInAppBrowser } from '../utils/inAppBrowser'
 import { fetchHubState, saveCardName } from '../utils/hubCertificate'
 import Seo from '../components/Seo'
 
@@ -32,6 +33,18 @@ export default function JoinClass() {
   // ใบประกาศออกได้ และครูเห็นชื่อ LINE คู่ชื่อจริง (เคยมีคนเข้าคลาสโดยไม่ล็อกอินจนจบคลาส แล้วออกใบในระบบกลางไม่ได้)
   const [auth, setAuth] = useState(() => (isSupabaseConfigured ? 'checking' : 'off'))
   const [autoRedirect, setAutoRedirect] = useState(false)
+  const [inApp] = useState(() => detectInAppBrowser())
+  const [copied, setCopied] = useState(false)
+  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '')
+  // Android: เปิดหน้านี้ใน Chrome ตรง ๆ (intent) · iOS: คัดลอกลิงก์ไปเปิดใน Safari
+  const chromeIntent = typeof window !== 'undefined'
+    ? `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.android.chrome')};end`
+    : ''
+  // iOS 17+: x-safari-https:// เปิดลิงก์ใน Safari จากแอปอื่น (เช่นแอป Google ที่ตั้งเป็นเบราว์เซอร์หลัก)
+  const safariLink = typeof window !== 'undefined' ? `x-safari-https://${window.location.host}${window.location.pathname}` : ''
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(window.location.origin + window.location.pathname); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* ignore */ }
+  }
 
   useEffect(() => {
     if (!supabase) return undefined
@@ -42,24 +55,34 @@ export default function JoinClass() {
       setAuth('out')
       // มาจาก QR (/join/<code>): พาไปล็อกอิน LINE ทันที แล้วกลับมาหน้านี้ — กันวนซ้ำถ้าเพิ่งลองไปไม่เกิน 3 นาที
       let recent = false
-      try { recent = Date.now() - Number(sessionStorage.getItem('fa.joinLoginAt') || 0) < 180_000 } catch { /* ignore */ }
-      if (paramCode && !recent) setAutoRedirect(true)
+      try {
+        const last = Math.max(Number(sessionStorage.getItem('fa.joinLoginAt') || 0), Number(localStorage.getItem('fa.joinLoginAt') || 0))
+        recent = Date.now() - last < 180_000
+      } catch { /* ignore */ }
+      // เบราว์เซอร์ในแอป (Google/FB/IG/LINE) ไม่พาไปล็อกอินอัตโนมัติ — ให้เปิดใน Chrome/Safari ก่อน (กันวนลูป)
+      if (paramCode && !recent && !inApp) setAutoRedirect(true)
     }).catch(() => { if (!cancelled) setAuth('out') })
     return () => { cancelled = true }
-  }, [paramCode])
+  }, [paramCode, inApp])
+
+  const markLoginAttempt = () => {
+    const now = String(Date.now())
+    try { sessionStorage.setItem('fa.joinLoginAt', now) } catch { /* ignore */ }
+    try { localStorage.setItem('fa.joinLoginAt', now) } catch { /* ignore */ }
+  }
 
   const loginWithLine = () => {
-    try { sessionStorage.setItem('fa.joinLoginAt', String(Date.now())) } catch { /* ignore */ }
+    markLoginAttempt()
     startHubLogin(learner?.id, paramCode ? `/join/${paramCode}` : '/join', { line: true })
   }
   const loginWithJia = () => {
-    try { sessionStorage.setItem('fa.joinLoginAt', String(Date.now())) } catch { /* ignore */ }
+    markLoginAttempt()
     startHubLogin(learner?.id, paramCode ? `/join/${paramCode}` : '/join')
   }
 
   useEffect(() => {
     if (!autoRedirect || !learner?.id) return
-    try { sessionStorage.setItem('fa.joinLoginAt', String(Date.now())) } catch { /* ignore */ }
+    markLoginAttempt()
     startHubLogin(learner.id, `/join/${paramCode}`, { line: true })
   }, [autoRedirect, learner?.id, paramCode])
 
@@ -198,6 +221,40 @@ export default function JoinClass() {
       <div className="page-container">
         <Seo title="เข้าร่วมคลาสเรียน | Jia Training Center" noindex path="/join" />
         <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 24 }}>
+          {inApp && (
+            <div className="callout" style={{ marginBottom: 14, textAlign: 'left', borderColor: '#E9D9B7', background: '#F7EFDF', color: '#7A5A1F' }} data-testid="join-inapp">
+              <div className="text-body-strong" style={{ color: '#7A5A1F' }}>
+                <ExternalLink size={15} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                เปิดหน้านี้ใน {isAndroid ? 'Chrome' : 'Safari'} ก่อน
+              </div>
+              <div className="text-caption" style={{ marginTop: 4, color: '#7A5A1F' }}>
+                ตอนนี้เปิดอยู่ในแอป {inApp === 'google' ? 'Google' : inApp === 'line' ? 'LINE' : inApp === 'facebook' ? 'Facebook' : 'Instagram'} —
+                การเข้าสู่ระบบด้วย LINE ในนี้อาจวนกลับไปหน้าเข้าสู่ระบบซ้ำ ๆ
+              </div>
+              {isAndroid ? (
+                <a href={chromeIntent} className="btn btn-primary btn-block" style={{ marginTop: 10 }}>
+                  <ExternalLink size={16} /> เปิดใน Chrome
+                </a>
+              ) : (
+                <>
+                  <a href={safariLink} className="btn btn-primary btn-block" style={{ marginTop: 10 }}>
+                    <ExternalLink size={16} /> เปิดใน Safari
+                  </a>
+                  <div className="text-caption" style={{ marginTop: 6, color: '#7A5A1F' }}>
+                    ถ้ากดแล้วไม่เปิด: คัดลอกลิงก์ แล้วเปิดแอป Safari วางลิงก์ในช่องที่อยู่
+                  </div>
+                </>
+              )}
+              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={copyLink}>
+                {copied ? <><Check size={14} /> คัดลอกลิงก์แล้ว</> : <><Copy size={14} /> คัดลอกลิงก์</>}
+              </button>
+              {/* ไม่ใช้ Chrome/Safari: ล็อกอินด้วยอีเมลไม่ต้องสลับไปแอป LINE จึงไม่ติดลูปในเบราว์เซอร์ของแอป */}
+              <div className="text-caption" style={{ marginTop: 10, color: '#7A5A1F' }}>หรือไม่ต้องเปลี่ยนเบราว์เซอร์:</div>
+              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 4 }} onClick={loginWithJia}>
+                เข้าสู่ระบบด้วยอีเมล (บัญชี JIA)
+              </button>
+            </div>
+          )}
           <div className="text-title">เข้าสู่ระบบก่อนเข้าคลาส</div>
           <div className="text-caption" style={{ marginTop: 6 }}>
             ใช้ LINE เข้าสู่ระบบครั้งเดียว เพื่อบันทึกการเรียน เช็คชื่อวันอบรม และรับใบประกาศของคลาสนี้
