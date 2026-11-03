@@ -10,7 +10,7 @@ import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
-import { useEntitlementStore } from '../stores/entitlementStore'
+import { useEntitlementStore, entitlementKey } from '../stores/entitlementStore'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { isChapterUnlocked } from '../config/pricing'
 import ChapterUnlockCard from '../components/ChapterUnlockCard'
@@ -56,7 +56,7 @@ export default function LessonReader() {
   useEnsureProgress(learner?.id)
   const unlockedChapters = useEntitlementStore((s) => s.chapters)
   const entitlementStatus = useEntitlementStore((s) => s.status)
-  const entitlementToken = useEntitlementStore((s) => s.token)
+  const entitlementResultKey = useEntitlementStore((s) => s.key)
   const refreshEntitlements = useEntitlementStore((s) => s.refresh)
   useEnsureEntitlements()
   const { session, loading: authLoading } = useAuthSession()
@@ -300,7 +300,7 @@ export default function LessonReader() {
   // ตัดสินจากผลที่โหลดสำเร็จ "ของ session ปัจจุบัน" เท่านั้น — ระหว่างโหลด/โหลดพลาดห้ามขึ้นหน้าซื้อ
   // (ผู้เรียนคลาสรวมที่เปิดทุกหมวดเคยเจอหน้าซื้อ ฿99 เป็นบางครั้งจากผลค้าง/โหลดพลาด)
   const paidChapter = !isChapterUnlocked(lesson.chapter, unlockedChapters)
-  const entitlementFresh = entitlementStatus === 'ok' && (entitlementToken ?? null) === (session?.access_token ?? null)
+  const entitlementFresh = entitlementStatus === 'ok' && entitlementResultKey === entitlementKey(session, learner?.id)
   if (paidChapter && !entitlementFresh && entitlementStatus !== 'error' && !isAutomated) {
     return <>{seo}<div className="page-container py-12 text-center text-caption">กำลังตรวจสิทธิ์การเรียน…</div></>
   }
