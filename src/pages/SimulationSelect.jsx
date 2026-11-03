@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Activity, ArrowLeft, CheckCircle2, ChevronRight, Gamepad2, LayoutGrid } from 'lucide-react'
+import { Activity, ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Gamepad2, LayoutGrid, Lock } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { scenarios } from '../courses/firstaid/scenarios'
-import { chapters } from '../courses/firstaid/lessons'
+import { chapters, lessons } from '../courses/firstaid/lessons'
+import { chapterPracticeLock, nextLearningStep } from '../utils/practice'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import Seo from '../components/Seo'
 import { itemListJsonLd, breadcrumbJsonLd } from '../lib/seo'
@@ -58,10 +59,34 @@ function ScenarioCard({ s, passed = false }) {
   )
 }
 
+function LockedChapter({ lock }) {
+  return (
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--color-bg-secondary)' }}>
+      <Lock size={20} color="var(--color-text-secondary)" style={{ flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <div className="text-body-strong">เรียนหมวดนี้ให้จบก่อน</div>
+        <div className="text-caption">
+          {lock.reason === 'pretest' ? 'ทำ Pre-test แล้วเริ่มเรียนบทที่ 1 ก่อน' : `เหลือบทที่ ${lock.lesson.order} ${lock.lesson.title}`}
+        </div>
+      </div>
+      <Link to={lock.reason === 'pretest' ? '/pre-test' : `/learn/${lock.lesson.id}`} className="btn btn-primary" style={{ fontSize: 13, flexShrink: 0 }}>
+        {lock.reason === 'pretest' ? 'ทำ Pre-test' : 'ไปเรียน'}
+      </Link>
+    </div>
+  )
+}
+
 export default function SimulationSelect() {
   const learner = useLearnerStore((st) => st.learner)
   const passedScenarioIds = useProgressStore((st) => st.passedScenarioIds)
+  const readLessonIds = useProgressStore((st) => st.readLessonIds)
+  const preTestDone = useProgressStore((st) => st.preTestDone)
+  const progressLoaded = useProgressStore((st) => st.loaded)
   useEnsureProgress(learner?.id)
+  // นักเรียนในคลาส: ล็อกหมวดที่ยังเรียนไม่ครบ + บอกขั้นถัดไป (รอโหลดความก้าวหน้าก่อนตัดสิน)
+  const inClass = !!learner?.cohortCode && progressLoaded
+  const lockOf = (chapterId) => chapterPracticeLock(chapterId, { inClass, preTestDone, readLessonIds, allLessons: lessons })
+  const step = inClass && preTestDone ? nextLearningStep(lessons, readLessonIds, passedScenarioIds) : null
   // ?chapter=N — มาจากปุ่ม "ฝึกท้ายหมวด" / "ไปฝึกสถานการณ์" → เลื่อนไปหมวดนั้นเลย ไม่ต้องไล่จากหมวด 1
   const [searchParams] = useSearchParams()
   // ฝึกท้ายหมวด: แสดงเฉพาะฉากของหมวดนั้น (เดิมโชว์ทุกหมวดแล้วเลื่อนไป — ผู้เรียนกดหมวดอื่นแล้วสับสน)
@@ -106,6 +131,23 @@ export default function SimulationSelect() {
         </header>
       )}
 
+      {inClass && !preTestDone && (
+        <div className="callout" style={{ marginTop: 16 }} data-testid="sim-next-step">
+          <div className="text-body-strong">ตอนนี้ต้องทำ Pre-test ก่อน</div>
+          <div className="text-caption" style={{ marginTop: 2 }}>ลำดับคลาส: Pre-test → เรียนทีละหมวด → ฝึกท้ายหมวด → Post-test</div>
+          <Link to="/pre-test" className="btn btn-primary btn-block" style={{ marginTop: 8 }}>ทำ Pre-test</Link>
+        </div>
+      )}
+      {step?.kind === 'lesson' && (!focus || lockOf(focus.id)) && (
+        <div className="callout" style={{ marginTop: 16 }} data-testid="sim-next-step">
+          <div className="text-body-strong">ตอนนี้ต้องเรียนบทที่ {step.lesson.order}: {step.lesson.title}</div>
+          <div className="text-caption" style={{ marginTop: 2 }}>ฝึกสถานการณ์ได้เมื่อเรียนหมวดนั้นครบทุกบทแล้ว</div>
+          <Link to={step.to} className="btn btn-primary btn-block" style={{ marginTop: 8 }}>
+            <BookOpen size={16} /> ไปเรียนบทที่ {step.lesson.order}
+          </Link>
+        </div>
+      )}
+
       {shownChapters.map((c) => (
         c.scenarios.length > 0 && (
           <div key={c.id} id={`chapter-${c.id}`} style={{ marginTop: 20, scrollMarginTop: 16 }}>
@@ -119,7 +161,9 @@ export default function SimulationSelect() {
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
-              {c.scenarios.map((s) => <ScenarioCard key={s.id} s={s} passed={passedScenarioIds.has(s.id)} />)}
+              {lockOf(c.id)
+                ? <LockedChapter lock={lockOf(c.id)} />
+                : c.scenarios.map((s) => <ScenarioCard key={s.id} s={s} passed={passedScenarioIds.has(s.id)} />)}
             </div>
           </div>
         )

@@ -77,3 +77,16 @@ export function nextLearningStep(allLessons, readLessonIds, passedScenarioIds) {
   }
   return { kind: 'lesson', lesson, to: `/learn/${lesson.id}` }
 }
+
+// นักเรียนในคลาส: ฉากฝึกของหมวด N เปิดได้เมื่อทำ Pre-test แล้วและเรียนครบทุกบทในหมวด N
+// (กันผู้เรียนกดเมนู "ฝึก" ข้ามไปเล่นหมวดที่ยังไม่ได้เรียน — เจอจริงในคลาสทดลอง พ.ย. 69)
+// คนทั่วไปที่ไม่ได้อยู่ในคลาสฝึกได้อิสระเหมือนเดิม
+// คืนบทที่ยังต้องเรียนในหมวดนั้น (null = เปิดได้)
+export function chapterPracticeLock(chapterId, { inClass, preTestDone, readLessonIds, allLessons }) {
+  if (!inClass) return null
+  const inChapter = allLessons.filter((l) => l.chapter === chapterId)
+  if (inChapter.length === 0) return null
+  if (!preTestDone) return { reason: 'pretest', lesson: null }
+  const unread = inChapter.find((l) => !readLessonIds.has(l.id))
+  return unread ? { reason: 'lessons', lesson: unread } : null
+}

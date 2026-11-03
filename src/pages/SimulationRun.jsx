@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { scenariosById } from '../courses/firstaid/scenarios'
 import ScenarioRunner from '../components/ScenarioRunner'
 import { useEnsureLearner } from '../hooks/useLearner'
+import { useEnsureProgress } from '../hooks/useProgress'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { saveSimulationRun } from '../db/database'
@@ -12,7 +13,7 @@ import { fetchContentMedia } from '../utils/lessonMediaSteps'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 import { breadcrumbJsonLd } from '../lib/seo'
-import { firstPendingPracticeChapter, practiceLink, practiceGateChapter } from '../utils/practice'
+import { firstPendingPracticeChapter, practiceLink, practiceGateChapter, chapterPracticeLock } from '../utils/practice'
 import { lessons } from '../courses/firstaid/lessons'
 
 export default function SimulationRun() {
@@ -24,6 +25,9 @@ export default function SimulationRun() {
   const markScenarioPassed = useProgressStore((s) => s.markScenarioPassed)
   const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
+  const preTestDone = useProgressStore((s) => s.preTestDone)
+  const progressLoaded = useProgressStore((s) => s.loaded)
+  useEnsureProgress(learner?.id)
   const [result, setResult] = useState(null)
   const [media, setMedia] = useState([])
 
@@ -53,6 +57,29 @@ export default function SimulationRun() {
         <Seo title="ไม่พบฉากจำลอง — FirstAid by Jia Training Center" noindex path="/simulation" />
         <div className="card">ไม่พบฉาก</div>
         <Link to="/simulation" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>กลับ</Link>
+      </div>
+    )
+  }
+
+  // นักเรียนในคลาสเปิดฉากของหมวดที่ยังเรียนไม่ครบผ่าน URL ตรง ๆ → พากลับไปเรียนก่อน
+  const lock = chapterPracticeLock(scenario.chapter, {
+    inClass: !!learner?.cohortCode && progressLoaded, preTestDone, readLessonIds, allLessons: lessons,
+  })
+  if (lock && !result) {
+    return (
+      <div className="page-container">
+        {seo}
+        <div className="card" style={{ textAlign: 'center', padding: 28, marginTop: 8 }}>
+          <div className="text-title">เรียนหมวดนี้ให้จบก่อน</div>
+          <div className="text-body" style={{ marginTop: 8 }}>
+            {lock.reason === 'pretest'
+              ? 'ทำ Pre-test แล้วเรียนบทเรียนของหมวดนี้ให้ครบ จึงจะฝึกสถานการณ์นี้ได้'
+              : `ฉากนี้อยู่ในหมวดที่ยังเรียนไม่ครบ — เหลือบทที่ ${lock.lesson.order} ${lock.lesson.title}`}
+          </div>
+        </div>
+        <Link to={lock.reason === 'pretest' ? '/pre-test' : `/learn/${lock.lesson.id}`} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
+          {lock.reason === 'pretest' ? 'ทำ Pre-test' : `ไปเรียนบทที่ ${lock.lesson.order}`}
+        </Link>
       </div>
     )
   }
