@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
-import CprOnlineCard from './CprOnlineCard'
-import { QrCode, ArrowRight, CheckCircle2, Circle, HeartPulse, ExternalLink, RefreshCw, AlertTriangle } from 'lucide-react'
+import { QrCode, ArrowRight, CheckCircle2, Circle, ExternalLink, AlertTriangle } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { lessons } from '../courses/firstaid/lessons'
@@ -9,7 +8,7 @@ import { useClassCpr, cprCourseUrl } from '../hooks/useClassCpr'
 
 // แบนเนอร์คลาสบนหน้าหลักของนักเรียน (แบบ ACLS class banner + progress card): เห็นชื่อคลาส,
 // ขั้นตอนถัดไป (Pre-test → บทเรียน → ฝึกสถานการณ์ → [CPR & AED ออนไลน์] → Post-test → วันอบรมภาคปฏิบัติ)
-// และปุ่ม QR ของฉัน — คลาสรวม CPR บังคับเรียน CPR ที่ cpr.morroo.com ให้จบก่อน Post-test (ExamPage)
+// และปุ่ม QR ของฉัน — คลาสรวม CPR: เรียน CPR ที่ cpr.morroo.com หลัง Post-test ได้ (ไม่บล็อกแล้ว) ปุ่มด้านบนอยู่ที่ CprTopBar
 export default function ClassBanner() {
   const learner = useLearnerStore((s) => s.learner)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
@@ -38,12 +37,12 @@ export default function ClassBanner() {
   else if (!allLessons && step?.kind === 'practice') next = { to: step.to, label: `ฝึกท้ายหมวด ${step.chapter} ให้ผ่านก่อนเรียนต่อ` }
   else if (!allLessons && nextLesson) next = { to: `/learn/${nextLesson.id}`, label: `เรียนต่อ: ${nextLesson.title}` }
   else if (!practiceDone && !postTestDone) next = { to: practiceLink(passedScenarioIds), label: `ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด)` }
-  else if (cpr.status === 'todo' && !postTestDone) next = { href: cprUrl, label: 'ไปเรียน CPR & AED ออนไลน์ให้จบก่อน' }
   else if (!postTestDone) next = { to: '/post-test', label: 'ทำ Post-test' }
+  else if (cpr.status === 'todo') next = { href: cprUrl, label: 'ขั้นสุดท้าย: ไปเรียน CPR & AED ออนไลน์' }
   else next = { to: '/my-qr', label: 'พร้อมแล้ว — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติ' }
 
   // เหลือแค่ Post-test (คลาสรวม CPR: CPR จบแล้ว หรือเช็คไม่ได้)
-  const onlyPostTestLeft = preTestDone && allLessons && practiceDone && !postTestDone && cpr.status !== 'todo' && cpr.status !== 'loading'
+  const onlyPostTestLeft = preTestDone && allLessons && practiceDone && !postTestDone
   const trainingDay = cpr.startsOn
     ? new Date(`${cpr.startsOn}T00:00:00+07:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' })
     : null
@@ -52,8 +51,8 @@ export default function ClassBanner() {
     ['Pre-test', preTestDone],
     [`บทเรียน ${lessonsDone}/${lessons.length}`, allLessons],
     ['ฝึกสถานการณ์', practiceDone],
-    ...(cprClass ? [['CPR & AED ออนไลน์', cprDone]] : []),
     ['Post-test', postTestDone],
+    ...(cprClass ? [['CPR & AED ออนไลน์', cprDone]] : []),
   ]
 
   return (
@@ -74,37 +73,15 @@ export default function ClassBanner() {
           </span>
         ))}
       </div>
-      {cprClass && !cprDone && (
-        <div className="callout" style={{ marginTop: 12 }}>
-          <div className="text-body-strong">
-            <HeartPulse size={15} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-            คลาสนี้ต้องเรียน CPR & AED ออนไลน์ด้วย (บังคับ)
-          </div>
-          <div className="text-caption" style={{ marginTop: 4 }}>
-            เรียนที่ cpr.morroo.com ให้จบคอร์ส
-            {(cpr.promoCode || learner.cprPromoCode) && <> ด้วยโค้ดคลาส <b>{cpr.promoCode || learner.cprPromoCode}</b></>}
-            {' '}— กรอก<b>เบอร์เดียวกับที่เข้าคลาสนี้</b>{learner.phone ? ` (${learner.phone})` : ''} ระบบจึงจะเห็นว่าเรียนแล้ว
-            ต้องเรียน CPR จบก่อนจึงจะทำ Post-test ปฐมพยาบาลได้
-            {cpr.cpr?.modulesDone > 0 && <> · ตอนนี้เรียนไปแล้ว {cpr.cpr.modulesDone} บท</>}
-          </div>
-          <CprOnlineCard promoCode={cpr.promoCode || learner.cprPromoCode} source="class_banner"
-            title="ไปเรียน CPR & AED ออนไลน์" desc="กดปุ่ม หรือสแกน QR ด้วยมือถือ" style={{ marginTop: 8 }} />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={cpr.refresh} disabled={cpr.checking}>
-              <RefreshCw size={14} /> {cpr.checking ? 'กำลังเช็ค…' : 'เช็คอีกครั้ง'}
-            </button>
-          </div>
-        </div>
-      )}
       {/* เรียน+ฝึก+CPR ครบแล้ว เหลือแค่ Post-test — เตือนให้เด่น กันนักเรียนหยุดก่อนขั้นสุดท้าย */}
       {onlyPostTestLeft && (
         <div className="callout" style={{ marginTop: 12, borderColor: '#E3C27A', background: '#FBF3DF' }} data-testid="post-test-reminder">
           <div className="text-body-strong" style={{ color: '#7A5A1F' }}>
             <AlertTriangle size={15} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-            เหลืออีกขั้นเดียว — ทำ Post-test ปฐมพยาบาล
+            {cprClass && !cprDone ? 'ขั้นถัดไป — ทำ Post-test ปฐมพยาบาล' : 'เหลืออีกขั้นเดียว — ทำ Post-test ปฐมพยาบาล'}
           </div>
           <div className="text-caption" style={{ marginTop: 4, color: '#7A5A1F' }}>
-            {cprDone ? 'เรียน CPR & AED ออนไลน์จบแล้ว ' : ''}
+            
             ต้องทำ Post-test ให้ผ่าน{trainingDay ? <>ก่อนวันอบรม <b>{trainingDay}</b></> : 'ก่อนวันอบรม'} จึงจะได้ใบประกาศภาคทฤษฎีและพร้อมเข้าอบรมภาคปฏิบัติ
           </div>
         </div>

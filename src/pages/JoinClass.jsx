@@ -170,7 +170,7 @@ export default function JoinClass() {
         <div className="card" style={{ marginTop: 12 }}>
           <div className="text-body-strong"><HeartPulse size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 2: CPR & AED (cpr.morroo.com)</div>
           <div className="callout" style={{ margin: '6px 0 0', padding: '8px 12px' }}>
-            <b>บังคับ</b> — ต้องเรียน CPR & AED จบคอร์สก่อน จึงจะทำ Post-test ปฐมพยาบาลได้
+            <b>บังคับ</b> — เรียนให้จบคอร์สก่อนวันอบรม (ทำเมื่อไหร่ก็ได้ ปุ่มไปเรียนอยู่ด้านบนของหน้าหลักและหน้าเรียน)
           </div>
           <div className="text-caption" style={{ marginTop: 6 }}>
             ใช้โค้ดคลาส <b>{joined.cprPromoCode}</b> เรียนฟรีทุกบท — กรอก<b>ชื่อและเบอร์เดียวกัน</b>กับที่ใช้เข้าคลาสนี้ ครูจึงจะเห็นความคืบหน้า

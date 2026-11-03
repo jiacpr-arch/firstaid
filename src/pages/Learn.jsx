@@ -21,6 +21,7 @@ import RealNameCard from '../components/RealNameCard'
 import { needsRealName } from '../../api/_lib/realName.js'
 import { useAuthSession } from '../hooks/useAuthSession'
 import { itemListJsonLd, breadcrumbJsonLd } from '../lib/seo'
+import CprTopBar from '../components/CprTopBar'
 
 export default function Learn() {
   const { hash } = useLocation()
@@ -85,6 +86,7 @@ export default function Learn() {
         <h1 className="text-display" style={{ margin: 0 }}>บทเรียน</h1>
       </header>
 
+      <CprTopBar source="learn_top" style={{ marginTop: 12 }} />
       <AccountCard style={{ marginTop: 12 }} />
       {session && needsRealName(learner) && <RealNameCard source="learn_page" style={{ marginTop: 12 }} />}
 
