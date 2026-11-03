@@ -38,7 +38,7 @@ export default function JoinClass() {
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '')
   // Android: เปิดหน้านี้ใน Chrome ตรง ๆ (intent) · iOS: คัดลอกลิงก์ไปเปิดใน Safari
   const chromeIntent = typeof window !== 'undefined'
-    ? `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;end`
+    ? `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.android.chrome')};end`
     : ''
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(window.location.origin + window.location.pathname); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* ignore */ }
@@ -240,6 +240,11 @@ export default function JoinClass() {
               )}
               <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={copyLink}>
                 {copied ? <><Check size={14} /> คัดลอกลิงก์แล้ว</> : <><Copy size={14} /> คัดลอกลิงก์</>}
+              </button>
+              {/* ไม่ใช้ Chrome/Safari: ล็อกอินด้วยอีเมลไม่ต้องสลับไปแอป LINE จึงไม่ติดลูปในเบราว์เซอร์ของแอป */}
+              <div className="text-caption" style={{ marginTop: 10, color: '#7A5A1F' }}>หรือไม่ต้องเปลี่ยนเบราว์เซอร์:</div>
+              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 4 }} onClick={loginWithJia}>
+                เข้าสู่ระบบด้วยอีเมล (บัญชี JIA)
               </button>
             </div>
           )}
