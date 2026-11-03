@@ -18,6 +18,7 @@ import { lessons } from '../courses/firstaid/lessons'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import Seo from '../components/Seo'
 import { courseJsonLd } from '../lib/seo'
+import CprTopBar from '../components/CprTopBar'
 
 // กดแล้วเปิดแชตพร้อมข้อความ "สนใจเรียน + มาจากหน้าแรกแอป" พิมพ์ไว้ให้ ลูกค้าแค่กดส่ง
 const LINE_URL = lineInterestUrl('กดจากหน้าแรกแอป')
@@ -67,6 +68,7 @@ export default function Home() {
         </div>
       </header>
 
+      <CprTopBar source="home_top" />
       <ClassBanner />
 
       <figure className="course-home-art"><img src={CLASSROOM_ART} alt="ภาพประกอบห้องเรียนปฐมพยาบาล" width="1536" height="1024" /><figcaption>ค่อย ๆ เรียนรู้ แล้วฝึกให้มั่นใจ</figcaption></figure>
