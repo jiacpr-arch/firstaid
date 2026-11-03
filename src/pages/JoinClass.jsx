@@ -40,6 +40,8 @@ export default function JoinClass() {
   const chromeIntent = typeof window !== 'undefined'
     ? `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.android.chrome')};end`
     : ''
+  // iOS 17+: x-safari-https:// เปิดลิงก์ใน Safari จากแอปอื่น (เช่นแอป Google ที่ตั้งเป็นเบราว์เซอร์หลัก)
+  const safariLink = typeof window !== 'undefined' ? `x-safari-https://${window.location.host}${window.location.pathname}` : ''
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(window.location.origin + window.location.pathname); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* ignore */ }
   }
@@ -234,9 +236,14 @@ export default function JoinClass() {
                   <ExternalLink size={16} /> เปิดใน Chrome
                 </a>
               ) : (
-                <div className="text-caption" style={{ marginTop: 6, color: '#7A5A1F' }}>
-                  กดปุ่มคัดลอกลิงก์ แล้วเปิด Safari วางลิงก์ในช่องที่อยู่
-                </div>
+                <>
+                  <a href={safariLink} className="btn btn-primary btn-block" style={{ marginTop: 10 }}>
+                    <ExternalLink size={16} /> เปิดใน Safari
+                  </a>
+                  <div className="text-caption" style={{ marginTop: 6, color: '#7A5A1F' }}>
+                    ถ้ากดแล้วไม่เปิด: คัดลอกลิงก์ แล้วเปิดแอป Safari วางลิงก์ในช่องที่อยู่
+                  </div>
+                </>
               )}
               <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={copyLink}>
                 {copied ? <><Check size={14} /> คัดลอกลิงก์แล้ว</> : <><Copy size={14} /> คัดลอกลิงก์</>}
