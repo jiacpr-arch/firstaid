@@ -5,7 +5,7 @@ import { track } from '../utils/analytics'
 
 // แถบเตือนเมื่อเปิดผ่าน in-app browser ของ FB/IG/LINE — แนะนำเปิดใน Chrome/Safari
 // เพื่อให้การเข้าสู่ระบบด้วย LINE ทำงานได้ลื่นขึ้น (กดปิดได้, ขึ้นครั้งเดียวต่อ session)
-const APP_LABEL = { facebook: 'Facebook', instagram: 'Instagram', line: 'LINE' }
+const APP_LABEL = { facebook: 'Facebook', instagram: 'Instagram', line: 'LINE', google: 'Google' }
 
 export default function InAppBrowserNotice() {
   const [source] = useState(detectInAppBrowser)
