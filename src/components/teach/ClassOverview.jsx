@@ -73,7 +73,7 @@ export default function ClassOverview({ learners, classCode, includesCpr = false
         )}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
           {[['all', 'ทั้งหมด', summary.total],
-            ...['ready', 'almost', 'in_progress', 'not_started'].map((k) => [k, READINESS[k].label, summary[k]]),
+            ...['ready', ...(includesCpr ? ['cpr_pending'] : []), 'almost', 'in_progress', 'not_started'].map((k) => [k, READINESS[k].label, summary[k]]),
             ...(includesCpr ? [['cpr_todo', 'ยังไม่จบ CPR', learners.length - cprDone]] : [])]
             .map(([k, label, n]) => (
               <button key={k} type="button" className={filter === k ? 'btn btn-primary' : 'btn btn-secondary'}
