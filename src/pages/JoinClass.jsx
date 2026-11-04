@@ -146,7 +146,6 @@ export default function JoinClass() {
     // คลาสรวม CPR + ปฐมพยาบาล: เรียนออนไลน์ 2 เว็บก่อนวันเรียนจริง — CPR ใช้โค้ดคลาส
     // (?promo= เปิดหน้ากรอกโค้ดของ cpr.morroo.com ให้เลย) ด้วยชื่อ+เบอร์เดียวกับที่เข้าคลาสนี้
     // เพราะครูจับคู่ความคืบหน้า CPR กับคลาสด้วยเบอร์โทร
-    const cprUrl = `https://cpr.morroo.com/?promo=${encodeURIComponent(joined.cprPromoCode)}`
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
@@ -170,14 +169,11 @@ export default function JoinClass() {
         <div className="card" style={{ marginTop: 12 }}>
           <div className="text-body-strong"><HeartPulse size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 2: CPR & AED (cpr.morroo.com)</div>
           <div className="callout" style={{ margin: '6px 0 0', padding: '8px 12px' }}>
-            <b>บังคับ</b> — เรียนให้จบคอร์สก่อนวันอบรม (ทำเมื่อไหร่ก็ได้ ปุ่มไปเรียนอยู่ด้านบนของหน้าหลักและหน้าเรียน)
+            <b>บังคับ</b> — เรียน<b>หลังจบปฐมพยาบาล</b> (ทำ Post-test ผ่านแล้ว ปุ่มไปเรียน CPR จะขึ้นด้านบนหน้าหลักและหน้าเรียน) ให้จบก่อนวันอบรม
           </div>
           <div className="text-caption" style={{ marginTop: 6 }}>
-            ใช้โค้ดคลาส <b>{joined.cprPromoCode}</b> เรียนฟรีทุกบท — กรอก<b>ชื่อและเบอร์เดียวกัน</b>กับที่ใช้เข้าคลาสนี้ ครูจึงจะเห็นความคืบหน้า
+            เรียนฟรีทุกบทด้วยโค้ดคลาส — กรอก<b>ชื่อและเบอร์เดียวกัน</b>กับที่ใช้เข้าคลาสนี้ ครูจึงจะเห็นความคืบหน้า
           </div>
-          <a href={cprUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-block" style={{ marginTop: 10 }}>
-            ไปเรียน CPR
-          </a>
         </div>
       </div>
     )
