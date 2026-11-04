@@ -67,6 +67,7 @@ export default function TeachReport() {
     totalLessons: lessons.length,
     board: data.board,
     certs: data.certs,
+    requireCpr: !!data.summary.cohort?.includesCpr,
   }) : null), [data])
 
   const print = () => {

@@ -25,7 +25,7 @@ function examStats(learners, key) {
   }
 }
 
-export function buildCohortReport({ learners = [], totalLessons = 0, board = null, certs = null }) {
+export function buildCohortReport({ learners = [], totalLessons = 0, board = null, certs = null, requireCpr = false }) {
   const stations = board?.stations || []
   const examStations = stations.filter((s) => s.kind === 'exam')
   const boardBy = new Map((board?.rows || []).map((r) => [r.learnerId, r.checkins || {}]))
@@ -33,7 +33,7 @@ export function buildCohortReport({ learners = [], totalLessons = 0, board = nul
   const hasCerts = !!certs
 
   const students = learners.map((l) => {
-    const r = classifyReadiness(l, { totalLessons })
+    const r = classifyReadiness(l, { totalLessons, requireCpr })
     const checkins = boardBy.get(l.learnerId)
     const attended = !!checkins
     const stationsDone = stations.filter((s) => checkins?.[s.id]).length

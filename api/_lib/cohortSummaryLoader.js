@@ -90,7 +90,7 @@ export async function loadCohortSummary(admin, cohortId) {
 // CPR progress lives in jia-online's tables (same Supabase project). The class code's
 // redemptions give the phones that started the CPR course; online_students tagged with the
 // class's company carries their progress. Non-fatal: a CPR-side failure only blanks the column.
-async function loadCprProgress(admin, promoCode, enrollments) {
+export async function loadCprProgress(admin, promoCode, enrollments) {
   try {
     const [{ data: redemptions, error: rErr }, { data: students, error: sErr }] = await Promise.all([
       admin.from('lead_promo_redemptions').select('phone_key, redeemed_at').eq('code', promoCode),

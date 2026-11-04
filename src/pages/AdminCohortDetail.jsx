@@ -116,7 +116,7 @@ export default function AdminCohortDetail() {
 
   const learners = useMemo(() => data?.learners || [], [data])
   const sessions = data?.sessions || []
-  const readinessOpts = useMemo(() => ({ totalLessons: lessons.length }), [])
+  const readinessOpts = useMemo(() => ({ totalLessons: lessons.length, requireCpr: !!data?.cohort?.includesCpr }), [data?.cohort?.includesCpr])
   const readiness = useMemo(() => summarizeReadiness(learners, readinessOpts), [learners, readinessOpts])
   const shown = useMemo(
     () => (filter === 'all' ? learners : learners.filter((l) => classifyReadiness(l, readinessOpts).status === filter)),

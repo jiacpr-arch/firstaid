@@ -41,3 +41,19 @@ test('summary counts each status', () => {
   ], opts)
   assert.deepEqual(s, { total: 5, ready: 1, almost: 1, in_progress: 1, not_started: 2 })
 })
+
+test('CPR class: post-test passed but CPR online not finished is not ready', () => {
+  const o = { totalLessons: 24, requireCpr: true }
+  const none = classifyReadiness({ lessonsRead: 24, postTest: { score: 90, passed: true }, cpr: null }, o)
+  assert.equal(none.status, 'almost')
+  assert.deepEqual(none.missing, ['ยังไม่ได้เรียน CPR & AED ออนไลน์'])
+  const partial = classifyReadiness({ lessonsRead: 24, postTest: { score: 90, passed: true }, cpr: { modulesDone: 3, completed: false } }, o)
+  assert.deepEqual(partial.missing, ['CPR & AED ออนไลน์ยังไม่จบ (3/7 บท)'])
+  const done = classifyReadiness({ lessonsRead: 24, postTest: { score: 90, passed: true }, cpr: { modulesDone: 7, completed: true } }, o)
+  assert.deepEqual(done, { status: 'ready', missing: [] })
+})
+
+test('CPR requirement is off for normal classes', () => {
+  const r = classifyReadiness({ lessonsRead: 24, postTest: { score: 90, passed: true }, cpr: null }, { totalLessons: 24 })
+  assert.equal(r.status, 'ready')
+})

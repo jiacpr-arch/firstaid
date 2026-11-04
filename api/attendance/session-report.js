@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         const summary = await loadCohortSummary(admin, session.cohort_id)
         if (summary) {
           enrolled = summary.learners.length
-          readyCount = summary.learners.filter(isReady).length
+          readyCount = summary.learners.filter((l) => isReady(l, { requireCpr: !!summary.cohort?.includesCpr })).length
         }
       } catch (err) {
         console.error('session-report cohort summary failed', err)
