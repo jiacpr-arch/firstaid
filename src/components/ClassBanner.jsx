@@ -38,7 +38,8 @@ export default function ClassBanner() {
   else if (!allLessons && nextLesson) next = { to: `/learn/${nextLesson.id}`, label: `เรียนต่อ: ${nextLesson.title}` }
   else if (!practiceDone && !postTestDone) next = { to: practiceLink(passedScenarioIds), label: `ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด)` }
   else if (!postTestDone) next = { to: '/post-test', label: 'ทำ Post-test' }
-  else if (cpr.status === 'todo') next = { href: cprUrl, label: 'ขั้นสุดท้าย: ไปเรียน CPR & AED ออนไลน์' }
+  // คลาสรวม CPR: ยังไม่จบ CPR (รวมกรณีเช็คไม่ได้) = ยังไม่พร้อมไปวันอบรม — ครูก็นับแบบเดียวกัน (readiness requireCpr)
+  else if (cprClass && !cprDone) next = { href: cprUrl, label: 'ขั้นสุดท้าย: ไปเรียน CPR & AED ออนไลน์ให้จบ (ก่อนพร้อมเข้าอบรมภาคปฏิบัติ)' }
   else next = { to: '/my-qr', label: 'พร้อมแล้ว — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติ' }
 
   // เหลือแค่ Post-test (คลาสรวม CPR: CPR จบแล้ว หรือเช็คไม่ได้)

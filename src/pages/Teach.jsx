@@ -103,7 +103,7 @@ export default function Teach() {
           <ol className="text-body" style={{ margin: 0, paddingLeft: 22, lineHeight: 1.8, listStyle: 'decimal' }}>
             <li><b>สร้างคลาส</b> — ได้รหัสคลาส (แจกนักเรียน) และรหัสผู้ช่วย (ให้คนที่มาช่วยสแกน ห้ามแจกนักเรียน)</li>
             <li><b>ให้นักเรียนเข้าร่วม</b> — นักเรียนสแกน QR หรือใส่รหัสคลาสในมือถือตัวเอง แล้วเรียนออนไลน์ก่อนวันอบรม</li>
-            <li><b>ติดตามผล</b> — ดูว่าใคร “พร้อม” (สอบหลังเรียนผ่าน) วันอบรมสแกน QR ของนักเรียนเพื่อเช็คชื่อและให้คะแนน</li>
+            <li><b>ติดตามผล</b> — ดูว่าใคร “พร้อม” (สอบหลังเรียนผ่าน + คลาสรวม CPR ต้องเรียน CPR & AED ออนไลน์จบ) วันอบรมสแกน QR ของนักเรียนเพื่อเช็คชื่อและให้คะแนน</li>
           </ol>
           <button type="button" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={() => setGate('create')}>
             <Plus size={16} /> สร้างคลาสใหม่

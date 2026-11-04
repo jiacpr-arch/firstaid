@@ -207,8 +207,8 @@ export default function AdminTeachGuide() {
         <div className="text-body-strong">ป้ายสถานะนักเรียนหมายความว่า</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
           {[
-            ['ready', 'สอบหลังเรียน (Post-test) ผ่านแล้ว พร้อมมาอบรมปฏิบัติ'],
-            ['almost', 'อ่านบทเรียนครบแล้ว เหลือแค่สอบหลังเรียนให้ผ่าน'],
+            ['ready', 'สอบหลังเรียน (Post-test) ผ่านแล้ว — คลาสรวม CPR ต้องเรียน CPR & AED ออนไลน์จบด้วย — พร้อมมาอบรมปฏิบัติ'],
+            ['almost', 'อ่านบทเรียนครบแล้ว เหลือสอบหลังเรียนให้ผ่าน (คลาสรวม CPR: หรือ Post-test ผ่านแล้วแต่ CPR & AED ออนไลน์ยังไม่จบ)'],
             ['in_progress', 'เริ่มเรียนแล้ว แต่ยังอ่านบทเรียนไม่ครบ'],
             ['not_started', 'เข้าคลาสแล้ว แต่ยังไม่ได้เริ่มเรียนเลย — ควรทักไปเตือน'],
           ].map(([k, desc]) => (
