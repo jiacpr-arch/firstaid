@@ -1,5 +1,5 @@
 import { buildCohortSummary } from './cohortSummary.js'
-import { matchCprProgress, cprCompanyTag } from './cprProgress.js'
+import { matchCprProgress, cprCompanyTag, phoneKey } from './cprProgress.js'
 
 // Fetches every row buildCohortSummary needs for one cohort and folds them into the
 // dashboard summary. Shared by api/cohorts/summary.js and the session LINE report.
@@ -92,15 +92,29 @@ export async function loadCohortSummary(admin, cohortId) {
 // class's company carries their progress. Non-fatal: a CPR-side failure only blanks the column.
 export async function loadCprProgress(admin, promoCode, enrollments) {
   try {
-    const [{ data: redemptions, error: rErr }, { data: students, error: sErr }] = await Promise.all([
+    // แถวที่ติดแท็กคลาส + แถวที่หาด้วยเบอร์ของนักเรียนในคลาส — บางคนเรียน CPR โดยไม่ได้กรอกโค้ดคลาสตอนสมัคร
+    // (online_students.company ว่าง) หรือเรียนจบไปก่อนแล้ว ฝั่งนักเรียน (api/cohorts/my-cpr.js) หาด้วยเบอร์อยู่แล้ว
+    // ครูต้องเห็นตรงกัน ไม่งั้นนักเรียนขึ้นว่า CPR จบแต่ครูเห็น "รอเรียน CPR & AED"
+    const keys = [...new Set((enrollments || []).map((e) => phoneKey(e.phone)).filter(Boolean))]
+    const COLS = 'phone, status, final_score, completed_at, chapter_scores'
+    const byPhoneQueries = []
+    for (let i = 0; i < keys.length; i += 40) {
+      const batch = keys.slice(i, i + 40)
+      byPhoneQueries.push(admin.from('online_students').select(COLS).or(batch.map((k) => `phone.ilike.*${k}`).join(',')))
+    }
+    const [{ data: redemptions, error: rErr }, { data: students, error: sErr }, ...byPhone] = await Promise.all([
       admin.from('lead_promo_redemptions').select('phone_key, redeemed_at').eq('code', promoCode),
-      admin.from('online_students')
-        .select('phone, status, final_score, completed_at, chapter_scores')
-        .eq('company', cprCompanyTag(promoCode)),
+      admin.from('online_students').select(COLS).eq('company', cprCompanyTag(promoCode)),
+      ...byPhoneQueries,
     ])
     if (rErr) throw rErr
     if (sErr) throw sErr
-    return matchCprProgress({ enrollments, redemptions: redemptions || [], students: students || [] })
+    const extra = []
+    for (const q of byPhone) {
+      if (q.error) throw q.error
+      extra.push(...(q.data || []))
+    }
+    return matchCprProgress({ enrollments, redemptions: redemptions || [], students: [...(students || []), ...extra] })
   } catch (err) {
     console.error('cohort summary: CPR progress lookup failed (non-fatal)', err)
     return new Map()
