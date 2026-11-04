@@ -9,6 +9,8 @@
 
 export const READINESS = {
   ready: { label: 'พร้อม', tone: 'success' },
+  // คลาสรวม CPR: ปฐมพยาบาล (Post-test) ผ่านแล้ว เหลือเรียน CPR & AED ออนไลน์ให้จบ
+  cpr_pending: { label: 'รอเรียน CPR & AED', tone: 'warning' },
   almost: { label: 'ใกล้พร้อม', tone: 'warning' },
   in_progress: { label: 'กำลังเรียน', tone: 'warning' },
   not_started: { label: 'ยังไม่เริ่ม', tone: 'neutral' },
@@ -35,15 +37,16 @@ export function classifyReadiness(l, { totalLessons, requireCpr = false }) {
   const ready = isReady(l, { requireCpr })
   let status
   if (ready) status = 'ready'
+  else if (requireCpr && l.postTest?.passed) status = 'cpr_pending'
   else if (!active) status = 'not_started'
-  else if (lessonsLeft === 0 || l.postTest?.passed) status = 'almost'
+  else if (lessonsLeft === 0) status = 'almost'
   else status = 'in_progress'
 
   return { status, missing: ready ? [] : missing }
 }
 
 export function summarizeReadiness(learners, opts) {
-  const counts = { ready: 0, almost: 0, in_progress: 0, not_started: 0 }
+  const counts = { ready: 0, cpr_pending: 0, almost: 0, in_progress: 0, not_started: 0 }
   for (const l of learners) counts[classifyReadiness(l, opts).status] += 1
   return { total: learners.length, ...counts }
 }

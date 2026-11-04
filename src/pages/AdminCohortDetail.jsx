@@ -216,7 +216,7 @@ export default function AdminCohortDetail() {
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
             {[['all', 'ทั้งหมด', readiness.total],
-              ...['ready', 'almost', 'in_progress', 'not_started'].map((k) => [k, READINESS[k].label, readiness[k]])]
+              ...['ready', ...(data?.cohort?.includesCpr ? ['cpr_pending'] : []), 'almost', 'in_progress', 'not_started'].map((k) => [k, READINESS[k].label, readiness[k]])]
               .map(([k, label, n]) => (
                 <button
                   key={k}
