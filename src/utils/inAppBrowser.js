@@ -26,3 +26,18 @@ export function detectInAppBrowser() {
 export function shouldWarnInAppBrowser() {
   return detectInAppBrowser() !== null
 }
+
+// เบราว์เซอร์ติดเครื่องของ Android ที่ไม่ใช่ Chrome (Xiaomi/Realme-OPPO/vivo/Huawei/UC) — สแกน QR ด้วยกล้อง
+// แล้วเปิดในนี้ ล็อกอิน LINE ผ่านระบบกลางเด้งไปแอป LINE แล้วไม่กลับมาเบราว์เซอร์นี้ (เจอจริงคลาส ซีเอ็มเอ 2/2569)
+// ใช้เฉพาะหน้าเข้าคลาส (JoinClass) ให้พาไปเปิดใน Chrome ก่อน — ไม่รวมใน detectInAppBrowser เพราะไม่ใช่แอปโซเชียล
+export function detectAndroidOemBrowser() {
+  if (typeof navigator === 'undefined') return null
+  const ua = navigator.userAgent || ''
+  if (!/Android/i.test(ua)) return null
+  if (/MiuiBrowser|XiaoMi\//i.test(ua)) return 'Xiaomi'
+  if (/HeyTapBrowser|OppoBrowser|OPBrowser/i.test(ua)) return 'Realme/OPPO'
+  if (/VivoBrowser|vivobrowser/i.test(ua)) return 'vivo'
+  if (/HuaweiBrowser|HONORBrowser/i.test(ua)) return 'Huawei'
+  if (/UCBrowser/i.test(ua)) return 'UC'
+  return null
+}

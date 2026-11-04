@@ -9,7 +9,7 @@ import { flushSync } from '../db/sync'
 import { authHeader } from '../utils/authHeader'
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient'
 import { startHubLogin } from '../utils/hubAuth'
-import { detectInAppBrowser } from '../utils/inAppBrowser'
+import { detectInAppBrowser, detectAndroidOemBrowser } from '../utils/inAppBrowser'
 import { fetchHubState, saveCardName } from '../utils/hubCertificate'
 import Seo from '../components/Seo'
 
@@ -33,7 +33,9 @@ export default function JoinClass() {
   // ใบประกาศออกได้ และครูเห็นชื่อ LINE คู่ชื่อจริง (เคยมีคนเข้าคลาสโดยไม่ล็อกอินจนจบคลาส แล้วออกใบในระบบกลางไม่ได้)
   const [auth, setAuth] = useState(() => (isSupabaseConfigured ? 'checking' : 'off'))
   const [autoRedirect, setAutoRedirect] = useState(false)
-  const [inApp] = useState(() => detectInAppBrowser())
+  // เบราว์เซอร์ติดเครื่อง Android (Xiaomi/Realme ฯลฯ) ล็อกอิน LINE แล้วไม่กลับมา — ให้เปิดใน Chrome เหมือนเบราว์เซอร์ในแอป
+  const [oemBrowser] = useState(() => detectAndroidOemBrowser())
+  const [inApp] = useState(() => detectInAppBrowser() || (oemBrowser ? 'oem' : null))
   const [copied, setCopied] = useState(false)
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '')
   // Android: เปิดหน้านี้ใน Chrome ตรง ๆ (intent) · iOS: คัดลอกลิงก์ไปเปิดใน Safari
@@ -224,7 +226,7 @@ export default function JoinClass() {
                 เปิดหน้านี้ใน {isAndroid ? 'Chrome' : 'Safari'} ก่อน
               </div>
               <div className="text-caption" style={{ marginTop: 4, color: '#7A5A1F' }}>
-                ตอนนี้เปิดอยู่ในแอป {inApp === 'google' ? 'Google' : inApp === 'line' ? 'LINE' : inApp === 'facebook' ? 'Facebook' : 'Instagram'} —
+                {inApp === 'oem' ? <>ตอนนี้เปิดอยู่ในเบราว์เซอร์ของเครื่อง {oemBrowser} —</> : <>ตอนนี้เปิดอยู่ในแอป {inApp === 'google' ? 'Google' : inApp === 'line' ? 'LINE' : inApp === 'facebook' ? 'Facebook' : 'Instagram'} —</>}
                 การเข้าสู่ระบบด้วย LINE ในนี้อาจวนกลับไปหน้าเข้าสู่ระบบซ้ำ ๆ
               </div>
               {isAndroid ? (
