@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { requireAdmin } from '../_lib/requireAdmin.js'
 import { buildLearnerDetail } from '../_lib/learnerDetail.js'
+import { loadCprProgress } from '../_lib/cohortSummaryLoader.js'
 
 // หน้ารายละเอียดต่อนักเรียน: ความคืบหน้าเรียนออนไลน์ + เช็คชื่อ/ฐานปฏิบัติของคลาสนี้ + ใบเซอร์
 // ตาราง progress เป็น service-role only จึงอ่านผ่าน endpoint นี้ (requireAdmin) เท่านั้น
@@ -27,7 +28,10 @@ export default async function handler(req, res) {
     if (eErr) throw eErr
     if (!enrollment) { res.status(404).json({ error: 'Learner not found in this cohort' }); return }
 
-    const { data: cohort } = await admin.from('cohorts').select('id, name').eq('id', cohortId).maybeSingle()
+    const { data: cohort } = await admin.from('cohorts').select('id, name, includes_cpr, cpr_promo_code').eq('id', cohortId).maybeSingle()
+    // คลาสรวม CPR: ความคืบหน้า CPR ออนไลน์ของคนนี้ (จับคู่ด้วยเบอร์ แบบเดียวกับภาพรวมคลาส) — ใช้ตัดสิน "พร้อม"
+    const includesCpr = !!(cohort?.includes_cpr && cohort?.cpr_promo_code)
+    const cpr = includesCpr ? ((await loadCprProgress(admin, cohort.cpr_promo_code, [enrollment])).get(learnerId) || null) : null
     const { data: sessions, error: sErr } = await admin
       .from('practical_sessions').select('id, title, starts_at')
       .eq('cohort_id', cohortId).order('starts_at')
@@ -76,7 +80,7 @@ export default async function handler(req, res) {
     })
 
     res.setHeader('Cache-Control', 'no-store')
-    res.status(200).json({ ok: true, cohort: cohort ? { id: cohort.id, name: cohort.name } : null, ...detail })
+    res.status(200).json({ ok: true, cohort: cohort ? { id: cohort.id, name: cohort.name, includesCpr } : null, cpr, ...detail })
   } catch (err) {
     res.status(500).json({ error: err.message || 'learner detail failed' })
   }

@@ -71,14 +71,14 @@ export default function Teach() {
   const learners = useMemo(() => data?.learners || [], [data])
   const reportAt = lastReportAt(classId)
   const stats = useMemo(() => {
-    const s = summarizeReadiness(learners, { totalLessons: lessons.length })
+    const s = summarizeReadiness(learners, { totalLessons: lessons.length, requireCpr: !!data?.cohort?.includesCpr })
     return {
       students: learners.length,
       ready: s.ready,
       pre: learners.filter((l) => l.preTest).length,
       post: learners.filter((l) => l.postTest).length,
     }
-  }, [learners])
+  }, [learners, data?.cohort?.includesCpr])
 
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

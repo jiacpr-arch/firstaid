@@ -127,8 +127,9 @@ export default function AdminLearnerDetail({ teach = null }) {
       postTest: bestPost ? { score: bestPost.score, passed: data.exams.post.some((e) => e.passed) } : null,
       scenariosPassed: passedScen.size,
       gameBest: data.game,
+      cpr: data.cpr || null,
     },
-    { totalLessons: lessons.length },
+    { totalLessons: lessons.length, requireCpr: !!data.cohort?.includesCpr },
   )
   const readinessMeta = READINESS[readiness.status]
 
@@ -156,6 +157,11 @@ export default function AdminLearnerDetail({ teach = null }) {
         <span className={certificates.practical ? 'badge badge-success' : 'badge'}>
           ใบเซอร์ภาคปฏิบัติ: {certificates.practical ? `ออกแล้ว (${certificates.practical.code})` : 'ยังไม่ออก'}
         </span>
+        {data.cohort?.includesCpr && (
+          <span className={data.cpr?.completed ? 'badge badge-success' : 'badge badge-warning'}>
+            CPR & AED ออนไลน์: {data.cpr?.completed ? 'จบแล้ว' : data.cpr?.modulesDone > 0 ? `${data.cpr.modulesDone}/7 บท` : 'ยังไม่เรียน'}
+          </span>
+        )}
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>

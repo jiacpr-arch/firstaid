@@ -39,10 +39,10 @@ function exportCsv(learners, opts, filename, includesCpr) {
   URL.revokeObjectURL(url)
 }
 
-// แท็บ "ภาพรวม": นักเรียนทุกคน + ความพร้อม (พร้อม = Post-test ผ่าน) + สิ่งที่ยังขาด แตะชื่อเพื่อดูรายคน
+// แท็บ "ภาพรวม": นักเรียนทุกคน + ความพร้อม (พร้อม = Post-test ผ่าน + คลาสรวม CPR: CPR จบ) + สิ่งที่ยังขาด แตะชื่อเพื่อดูรายคน
 export default function ClassOverview({ learners, classCode, includesCpr = false }) {
   const [filter, setFilter] = useState('all')
-  const opts = useMemo(() => ({ totalLessons: lessons.length }), [])
+  const opts = useMemo(() => ({ totalLessons: lessons.length, requireCpr: includesCpr }), [includesCpr])
   const summary = useMemo(() => summarizeReadiness(learners, opts), [learners, opts])
   const cprDone = useMemo(() => learners.filter((l) => cprStatus(l.cpr).done).length, [learners])
   const shown = useMemo(
@@ -65,7 +65,7 @@ export default function ClassOverview({ learners, classCode, includesCpr = false
     <>
       <div className="card" style={{ marginTop: 12 }}>
         <div className="text-body-strong">พร้อมเข้าอบรมแล้ว {summary.ready}/{summary.total} คน</div>
-        <div className="text-caption" style={{ marginTop: 2 }}>พร้อม = สอบ Post-test ผ่าน (เงื่อนไขออกใบเซอร์ทฤษฎี ซึ่งต้องมีก่อนใบภาคปฏิบัติ)</div>
+        <div className="text-caption" style={{ marginTop: 2 }}>พร้อม = สอบ Post-test ผ่าน{includesCpr ? ' + เรียน CPR & AED ออนไลน์จบ' : ''} (เงื่อนไขออกใบเซอร์ทฤษฎี ซึ่งต้องมีก่อนใบภาคปฏิบัติ)</div>
         {includesCpr && (
           <div className="text-body-strong" style={{ marginTop: 8, color: '#B91C1C' }}>
             เรียน CPR & AED ออนไลน์จบแล้ว {cprDone}/{learners.length} คน
