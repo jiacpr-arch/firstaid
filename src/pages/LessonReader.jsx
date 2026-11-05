@@ -159,7 +159,7 @@ export default function LessonReader() {
   const seo = lesson && (
     <Seo
       title={`${lesson.title} — บทเรียนปฐมพยาบาล | Jia Training Center`}
-      description={`${lesson.summary} — บทเรียนปฐมพยาบาลออนไลน์ฟรี ใช้เวลา ${lesson.minutes} นาที โดย Jia Training Center`}
+      description={`${lesson.summary} — บทเรียนปฐมพยาบาลออนไลน์ ใช้เวลา ${lesson.minutes} นาที โดย Jia Training Center`}
       path={`/learn/${lesson.id}`}
       ogType="article"
       jsonLd={[
