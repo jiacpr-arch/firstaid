@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, useLayoutEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
@@ -11,6 +11,7 @@ import { isAutomated } from './lib/isAutomated'
 import OfflineIndicator from './components/OfflineIndicator'
 import InAppBrowserNotice from './components/InAppBrowserNotice'
 import MetaPixel from './components/MetaPixel'
+import { anonymousLanding, eligibleLanding, revokeTrainingPixel } from './lib/trainingAds'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
 import RequireAdmin from './components/RequireAdmin'
@@ -75,6 +76,7 @@ export default function App() {
   // มี learner ภายในเสมอ (anonymous) เพื่อเก็บโปรไฟล์/ความก้าวหน้า
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
+  const learningProgress = useProgressStore()
 
   useEffect(() => { initPostHog() }, [])
 
@@ -126,6 +128,17 @@ export default function App() {
   // คอร์สคืออะไร ฟรีไหม ได้อะไร แล้วค่อยกดเริ่มเอง) ส่วนคำชวนแอด LINE @jiacpr ยังอยู่ที่
   // ท้ายบทที่ 1 เหมือนเดิม (LineGateCard ใน LessonReader) — จบบท 1 แล้วแอด/ข้าม ถึงพ้นสถานะนี้
   const onboarding = !isAdmin && (!learner || (!learner.lineAdded && !learner.lineSkippedAt))
+  const publicLanding = location.pathname === '/' && anonymousLanding(learner, learningProgress, onboarding)
+  const leaveMarketingDocument = !!window.__firstaidMarketingLoaded
+    && (!publicLanding || !eligibleLanding(window.location, document.referrer))
+  useLayoutEffect(() => {
+    if (!leaveMarketingDocument) return
+    revokeTrainingPixel(window, document)
+    // Tear down the SDK before a learning/admin/identity screen can mount.
+    window.location.replace(window.location.href)
+  }, [leaveMarketingDocument])
+  if (leaveMarketingDocument) return null
+
   // หน้า landing โชว์แท็บบาร์/แถบโฆษณาเหมือนหน้าปกติ — ผู้ใช้ใหม่ต้องเห็นทางเข้าทั้งระบบตั้งแต่แรก
 
   return (
@@ -241,7 +254,7 @@ export default function App() {
         {!isAdmin && !isGame && <BottomTabBar />}
       </div>
       {!isAutomated && <Analytics />}
-      <MetaPixel />
+      <MetaPixel publicLanding={publicLanding} />
     </div>
   )
 }
