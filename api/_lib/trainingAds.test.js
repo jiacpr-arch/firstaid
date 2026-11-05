@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { anonymousLanding, eligibleLanding, loadTrainingPixel, revokeTrainingPixel, readConsent, saveConsent, denialFallbackUrl, TRAINING_PIXEL_ID, CONSENT_KEY, installMarketingLifecycleGuard, canUseMarketingDocument } from '../../src/lib/trainingAds.js'
+import { anonymousLanding, eligibleLanding, loadTrainingPixel, revokeTrainingPixel, readConsent, saveConsent, denialFallbackUrl, TRAINING_PIXEL_ID, CONSENT_KEY, installMarketingLifecycleGuard, canUseMarketingDocument, trackLandingContact } from '../../src/lib/trainingAds.js'
 const landing = { hostname: 'firstaid.morroo.com', pathname: '/', search: '', hash: '' }
 const loggedOut = { loading: false, session: null }
 const progress = { loaded: true, loading: false, readLessonIds: new Set(), passedScenarioIds: new Set(), preTestDone: false, postTestDone: false }
@@ -35,7 +35,7 @@ test('private screens are not rendered until a fresh document is loaded', () => 
   assert.match(source, /window\.location\.replace\(window\.location\.href\)/)
   const landing = readFileSync(new URL('../../src/pages/Landing.jsx', import.meta.url), 'utf8')
   assert.doesNotMatch(landing, /fbqTrack\('track', 'Lead'/)
-  assert.match(landing, /fbqTrack\('track', 'Contact'/)
+  assert.match(landing, /trackLandingContact\(window, document\)/)
 })
 
 test('only verified training ID is accepted and legacy grants cannot be reused', () => {
@@ -115,4 +115,16 @@ test('private documents cannot become marketing documents through SPA return nav
   const authenticated = {}
   assert.equal(canUseMarketingDocument(authenticated, { ...context, auth: { loading: false, session: {} } }), false)
   assert.equal(canUseMarketingDocument(authenticated, context), false)
+})
+
+
+test('only consented public LINE intent reaches the verified training dataset', () => {
+  const calls = [], win = { __firstaidMarketingLoaded: true, location: landing, sessionStorage: { getItem: () => null }, localStorage: { getItem: () => 'granted' }, fbq: (...args) => calls.push(args) }
+  const doc = { referrer: '' }
+  assert.equal(trackLandingContact(win, doc), true)
+  assert.deepEqual(calls, [['trackSingle', TRAINING_PIXEL_ID, 'Contact', { content_name: 'cpr_aed_inperson_course', source: 'firstaid_landing', channel: 'line' }]])
+  for (const patch of [{ __firstaidMarketingRevoked: true }, { __firstaidPrivateDocument: true }, { __firstaidMarketingLoaded: false }, { location: { ...landing, pathname: '/learn' } }, { localStorage: { getItem: () => 'denied' } }]) {
+    assert.equal(trackLandingContact({ ...win, ...patch }, doc), false)
+  }
+  assert.equal(calls.length, 1)
 })

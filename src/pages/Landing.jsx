@@ -14,17 +14,17 @@ import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
 import Seo from '../components/Seo'
 import { courseJsonLd } from '../lib/seo'
+import { trackLandingContact } from '../lib/trainingAds'
 
 import { CLASSROOM_ART, chapterArtwork } from '../config/courseArtwork'
 
 const LINE_URL = lineInterestUrl('กดจากหน้า landing คนใหม่')
 const FIRST_LESSON_PATH = `/learn/${lessons[0].id}`
-function fbqTrack(...args) { try { window.fbq?.(...args) } catch { /* Optional analytics */ } }
 function trackStartClick(position) {
   phCapture('landing_start_click', { position })
 }
 function trackLineLead() {
-  fbqTrack('track', 'Contact', { content_name: 'cpr_aed_inperson_course', source: 'landing_line_button', channel: 'line' })
+  trackLandingContact(window, document)
 }
 const CHAPTER_ICONS = { BookOpen, HeartPulse, Bandage, Skull }
 const OTHER_LINKS = [

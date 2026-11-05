@@ -136,3 +136,15 @@ export function installMarketingLifecycleGuard(win, doc) {
     win.removeEventListener('pageshow', onShow)
   }
 }
+
+
+export function trackLandingContact(win, doc) {
+  if (!win.__firstaidMarketingLoaded || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument
+    || readConsent(win) !== 'granted' || !eligibleLanding(win.location, doc.referrer)) return false
+  try {
+    win.fbq?.('trackSingle', TRAINING_PIXEL_ID, 'Contact', {
+      content_name: 'cpr_aed_inperson_course', source: 'firstaid_landing', channel: 'line',
+    })
+    return typeof win.fbq === 'function'
+  } catch { return false }
+}

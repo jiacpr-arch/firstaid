@@ -131,6 +131,43 @@ try {
     await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500)
     assert.equal(f.sdkRequests.length, 1, 'Reload after withdrawal must not regrant')
   })
+  await test('public LINE contact requires consent; emergency 1669 is never an ad contact', {}, async f => {
+    await f.open()
+    await f.page.getByRole('dialog', { name: 'การวัดผลโฆษณา' }).waitFor()
+    const originalUrl = f.page.url()
+    const documentId = await f.page.evaluate(() => window.__documentId)
+    // Cancel native navigation only. React's own click handler still runs.
+    // Never open LINE, a new tab, or an external telephone application.
+    await f.page.evaluate(() => {
+      document.addEventListener('click', event => {
+        const link = event.target.closest?.('a')
+        if (link && (link.href.startsWith('https://line.me/') || link.href.startsWith('tel:'))) event.preventDefault()
+      }, true)
+    })
+    const line = f.page.locator('.course-practical-note a[href^="https://line.me/"]')
+    const emergency = f.page.locator('a[href="tel:1669"]')
+    assert.equal(await line.count(), 1)
+    assert.equal(await emergency.count(), 1)
+    await line.dispatchEvent('click')
+    await emergency.dispatchEvent('click')
+    await f.page.waitForTimeout(100); f.noAds()
+    await f.grant()
+    await line.dispatchEvent('click')
+    await f.page.waitForTimeout(100)
+    const contacts = () => f.calls.filter(c => c.args.includes('Contact'))
+    assert.deepEqual(contacts().map(c => c.args), [[
+      'trackSingle', PIXEL, 'Contact',
+      { content_name: 'cpr_aed_inperson_course', source: 'firstaid_landing', channel: 'line' },
+    ]], 'Only the verified dataset receives the static public LINE contact event')
+    await emergency.dispatchEvent('click')
+    await f.page.waitForTimeout(100)
+    assert.equal(contacts().length, 1, 'Emergency phone action must not be an advertising conversion')
+    assert.equal(f.sdkRequests.length, 1)
+    assert.equal(f.context.pages().length, 1, 'No external window may open')
+    assert.equal(f.page.url(), originalUrl)
+    assert.equal(await f.page.evaluate(() => window.__documentId), documentId)
+    assert.equal(f.blocked.some(url => /^https:\/\/line\.me\//.test(url)), false, 'LINE navigation must be prevented, not merely blocked')
+  })
   await test('decline before SDK can later explicitly grant durable consent', {}, async f => {
     await f.open()
     const documentId = await f.page.evaluate(() => window.__documentId)

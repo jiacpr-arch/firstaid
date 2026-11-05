@@ -1,13 +1,15 @@
+import { FREE_CHAPTER, CHAPTER_PRICES, COURSE_BUNDLE_PRICE } from '../config/pricing.js'
+
 // ค่ากลางของ SEO ทั้งเว็บ — Seo component และ script ฝั่ง build (sitemap/prerender)
 // อ้างอิงชุดเดียวกัน เพื่อให้ canonical/title/description ไม่หลุดจากกัน
 export const SITE_URL = 'https://firstaid.morroo.com'
 export const SITE_NAME = 'FirstAid by Jia Training Center'
 
 export const DEFAULT_TITLE =
-  'ปฐมพยาบาลเบื้องต้น | เรียนฟรี รับใบประกาศ — Jia Training Center'
+  'ปฐมพยาบาลเบื้องต้น | หมวดแรกฟรี — Jia Training Center'
 export const DEFAULT_DESCRIPTION =
-  'คอร์สปฐมพยาบาลออนไลน์ฟรีสำหรับบุคคลทั่วไป: 24 บทเรียนสั้น ๆ (บทละ 5–10 นาที), ' +
-  '17 ผังช่วยชีวิตฉุกเฉิน, 40 สถานการณ์จำลอง, สอบรับใบประกาศ โดย Jia Training Center'
+  `คอร์สปฐมพยาบาลออนไลน์: หมวดที่ ${FREE_CHAPTER} เรียนฟรี หมวดเพิ่มเติมเริ่ม ${Math.min(...Object.values(CHAPTER_PRICES))} บาท ` +
+  `หรือปลดล็อกครบทุกหมวด ${COURSE_BUNDLE_PRICE} บาท ผู้มีสิทธิ์เรียนเดิมเข้าเรียนได้ตามสิทธิ์ โดย Jia Training Center`
 export const DEFAULT_OG_IMAGE = '/og-image.jpg'
 
 export const ORGANIZATION_JSON_LD = {
@@ -88,13 +90,27 @@ export function courseJsonLd() {
       description: DEFAULT_DESCRIPTION,
       provider: ORGANIZATION_JSON_LD,
       inLanguage: 'th',
-      isAccessibleForFree: true,
+      isAccessibleForFree: false,
       offers: {
         '@type': 'Offer',
-        price: 0,
+        name: 'ปลดล็อกครบทุกหมวด',
+        price: COURSE_BUNDLE_PRICE,
         priceCurrency: 'THB',
-        category: 'Free',
+        category: 'Paid',
       },
+      hasPart: [
+        {
+          '@type': 'CreativeWork',
+          name: `บทเรียนหมวดที่ ${FREE_CHAPTER}`,
+          isAccessibleForFree: true,
+        },
+        ...Object.entries(CHAPTER_PRICES).map(([chapter, price]) => ({
+          '@type': 'CreativeWork',
+          name: `บทเรียนหมวดที่ ${chapter}`,
+          isAccessibleForFree: false,
+          offers: { '@type': 'Offer', price, priceCurrency: 'THB' },
+        })),
+      ],
       hasCourseInstance: {
         '@type': 'CourseInstance',
         courseMode: 'Online',
