@@ -1,3 +1,5 @@
+import { readVendorConsent, saveVendorConsent } from './trainingConsent.js'
+
 // Verified JiaCPR Training dataset, owned by the JIA training business.
 export const TRAINING_PIXEL_ID = '1277103750989853'
 // A new dataset requires fresh consent; never reuse the legacy grant.
@@ -53,7 +55,7 @@ export function canUseMarketingDocument(win, { urlEligible, anonymous, auth, pro
 
 // The caller must check both public-page eligibility and explicit consent.
 export function loadTrainingPixel(win, doc, pixelId) {
-  if (pixelId !== TRAINING_PIXEL_ID || win.__firstaidMarketingLoaded || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument || win.fbq) return
+  if (pixelId !== TRAINING_PIXEL_ID || win.__firstaidMetaLoaded || win.__firstaidMetaRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument || win.fbq) return
   const fbq = win.fbq = function (...args) {
     if (fbq.callMethod) fbq.callMethod(...args)
     else fbq.queue.push(args)
@@ -62,6 +64,7 @@ export function loadTrainingPixel(win, doc, pixelId) {
   fbq.loaded = true
   fbq.version = '2.0'
   win._fbq = fbq
+  win.__firstaidMetaLoaded = true
   win.__firstaidMarketingLoaded = true
   fbq('set', 'autoConfig', false, pixelId)
   fbq('consent', 'grant')
@@ -75,7 +78,7 @@ export function loadTrainingPixel(win, doc, pixelId) {
 }
 
 export function revokeTrainingPixel(win, doc) {
-  win.__firstaidMarketingRevoked = true
+  win.__firstaidMetaRevoked = true
   try { win.fbq?.('consent', 'revoke') } catch { /* non-blocking */ }
   for (const name of ['_fbp', '_fbc']) {
     for (const domain of ['', '; Domain=firstaid.morroo.com', '; Domain=.morroo.com']) {
@@ -85,36 +88,8 @@ export function revokeTrainingPixel(win, doc) {
 }
 
 // A denial takes precedence even if localStorage later becomes read-only.
-const DENIAL_KEY = CONSENT_KEY + '_denied'
-export function readConsent(win) {
-  let sessionReadable = false
-  try {
-    if (win.sessionStorage.getItem(DENIAL_KEY) === '1') return 'denied'
-    sessionReadable = true
-  } catch { /* An unreadable per-tab denial must never become a grant. */ }
-  try {
-    const value = win.localStorage.getItem(CONSENT_KEY)
-    return value === 'granted' && !sessionReadable ? null : value
-  } catch { return null }
-}
-export function saveConsent(win, value) {
-  let localSaved = false
-  try {
-    win.localStorage.setItem(CONSENT_KEY, value)
-    localSaved = win.localStorage.getItem(CONSENT_KEY) === value
-  } catch { /* use session denial */ }
-  if (value === 'denied') {
-    let sessionSaved = false
-    try {
-      win.sessionStorage.setItem(DENIAL_KEY, '1')
-      sessionSaved = win.sessionStorage.getItem(DENIAL_KEY) === '1'
-    } catch { /* caller must use a no-ads URL if neither store works */ }
-    return localSaved || sessionSaved
-  }
-  if (!localSaved) return false
-  try { win.sessionStorage.removeItem(DENIAL_KEY) } catch { return false }
-  return localSaved && readConsent(win) === 'granted'
-}
+export const readConsent = win => readVendorConsent(win, CONSENT_KEY)
+export const saveConsent = (win, value) => saveVendorConsent(win, CONSENT_KEY, value)
 export function denialFallbackUrl(location) {
   const url = new URL(location.href)
   // The unknown query key makes this document ineligible. No user data is added.
@@ -123,8 +98,12 @@ export function denialFallbackUrl(location) {
 }
 
 
-export function installMarketingLifecycleGuard(win, doc) {
-  const onHide = () => { if (win.__firstaidMarketingLoaded) revokeTrainingPixel(win, doc) }
+export function installMarketingLifecycleGuard(win, doc, revokeAll = revokeTrainingPixel) {
+  const onHide = () => {
+    if (!win.__firstaidMarketingLoaded) return
+    win.__firstaidMarketingRevoked = true
+    revokeAll(win, doc)
+  }
   const onShow = event => {
     // A cached anonymous page may have stale auth/profile state after learning.
     if (event.persisted && win.__firstaidMarketingLoaded) win.location.reload()
@@ -139,7 +118,7 @@ export function installMarketingLifecycleGuard(win, doc) {
 
 
 export function trackLandingContact(win, doc) {
-  if (!win.__firstaidMarketingLoaded || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument
+  if (!win.__firstaidMetaLoaded || win.__firstaidMetaRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument
     || readConsent(win) !== 'granted' || !eligibleLanding(win.location, doc.referrer)) return false
   try {
     win.fbq?.('trackSingle', TRAINING_PIXEL_ID, 'Contact', {
