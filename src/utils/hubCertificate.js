@@ -63,3 +63,11 @@ export async function syncPracticalToHub() {
 export function claimHubCertificate() {
   return rpc('jia_person_certificates', 'claim', { courseId: HUB_COURSE_ID })
 }
+
+// Staff tools for the Hub's certificates (public.jia_certificate_admin, jia-learning-hub
+// 20261130120000 / 20261223100000), run with the signed-in admin's own session — the RPC decides who
+// may do what: searchAll/history for Hub admins and instructors, rename/revoke for Hub admins only,
+// each with a reason that the Hub logs. Throws the Hub's own (Thai) message on refusal.
+export function certificateAdmin(action, payload = {}) {
+  return rpc('jia_certificate_admin', action, payload)
+}
