@@ -1,8 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { anonymousLanding, eligibleLanding, loadTrainingPixel, revokeTrainingPixel, readConsent, saveConsent, denialFallbackUrl } from '../../src/lib/trainingAds.js'
+import { anonymousLanding, eligibleLanding, loadTrainingPixel, revokeTrainingPixel, readConsent, saveConsent, denialFallbackUrl, TRAINING_PIXEL_ID, CONSENT_KEY, installMarketingLifecycleGuard, canUseMarketingDocument } from '../../src/lib/trainingAds.js'
 const landing = { hostname: 'firstaid.morroo.com', pathname: '/', search: '', hash: '' }
+const loggedOut = { loading: false, session: null }
 const progress = { loaded: true, loading: false, readLessonIds: new Set(), passedScenarioIds: new Set(), preTestDone: false, postTestDone: false }
 
 test('only a clean production public landing is eligible', () => {
@@ -13,17 +14,17 @@ test('only a clean production public landing is eligible', () => {
 })
 
 test('identity and any learning progress block advertising', () => {
-  assert.equal(anonymousLanding({ id: 'anonymous' }, progress, true), true)
-  for (const key of ['name', 'phone', 'email', 'lineUserId', 'cohortCode', 'lineAdded', 'lineSkippedAt']) assert.equal(anonymousLanding({ [key]: 'private' }, progress, true), false)
-  for (const patch of [{ loaded: false }, { loading: true }, { preTestDone: true }, { postTestDone: true }, { readLessonIds: new Set(['lesson']) }, { passedScenarioIds: new Set(['scenario']) }]) assert.equal(anonymousLanding({}, { ...progress, ...patch }, true), false)
+  assert.equal(anonymousLanding({ id: 'anonymous' }, progress, true, loggedOut), true)
+  for (const key of ['name', 'phone', 'email', 'lineUserId', 'cohortCode', 'lineAdded', 'lineSkippedAt']) assert.equal(anonymousLanding({ [key]: 'private' }, progress, true, loggedOut), false)
+  for (const patch of [{ loaded: false }, { loading: true }, { preTestDone: true }, { postTestDone: true }, { readLessonIds: new Set(['lesson']) }, { passedScenarioIds: new Set(['scenario']) }]) assert.equal(anonymousLanding({}, { ...progress, ...patch }, true, loggedOut), false)
 })
 
 test('one SDK, explicit consent, no automatic collection or user fields', () => {
   const scripts = [], win = {}, doc = { createElement: () => ({}), head: { appendChild: script => scripts.push(script) } }
-  loadTrainingPixel(win, doc, '1524889459310260')
-  loadTrainingPixel(win, doc, '1524889459310260')
+  loadTrainingPixel(win, doc, TRAINING_PIXEL_ID)
+  loadTrainingPixel(win, doc, TRAINING_PIXEL_ID)
   assert.equal(scripts.length, 1)
-  assert.deepEqual(win.fbq.queue, [['set', 'autoConfig', false, '1524889459310260'], ['consent', 'grant'], ['init', '1524889459310260'], ['trackSingle', '1524889459310260', 'PageView']])
+  assert.deepEqual(win.fbq.queue, [['set', 'autoConfig', false, TRAINING_PIXEL_ID], ['consent', 'grant'], ['init', TRAINING_PIXEL_ID], ['trackSingle', TRAINING_PIXEL_ID, 'PageView']])
   revokeTrainingPixel(win, doc)
   assert.deepEqual(win.fbq.queue.at(-1), ['consent', 'revoke'])
 })
@@ -37,10 +38,14 @@ test('private screens are not rendered until a fresh document is loaded', () => 
   assert.match(landing, /fbqTrack\('track', 'Contact'/)
 })
 
-test('unverified legacy dataset stays disabled even when its env variable exists', () => {
+test('only verified training ID is accepted and legacy grants cannot be reused', () => {
+  assert.equal(TRAINING_PIXEL_ID, '1277103750989853')
+  assert.equal(CONSENT_KEY, 'firstaid_jia_training_meta_consent_v2')
   const source = readFileSync(new URL('../../src/components/MetaPixel.jsx', import.meta.url), 'utf8')
-  assert.match(source, /const VERIFIED_META_PIXEL_ID = ''/)
-  assert.match(source, /import\.meta\.env\.VITE_META_PIXEL_ID === VERIFIED_META_PIXEL_ID/)
+  assert.doesNotMatch(source, /import\.meta\.env\.VITE_META_PIXEL_ID/)
+  const win = {}, doc = { createElement: () => ({}), head: { appendChild: () => assert.fail('must not load legacy SDK') } }
+  loadTrainingPixel(win, doc, '1524889459310260')
+  assert.equal(win.fbq, undefined)
 })
 
 
@@ -57,4 +62,57 @@ test('withdrawal persists through local storage write failures and never trusts 
   const url = new URL(denialFallbackUrl({ href: 'https://firstaid.morroo.com/?utm_source=meta' }))
   assert.equal(url.searchParams.get('marketing_consent'), 'denied')
   assert.equal(eligibleLanding(url), false)
+})
+
+
+test('unresolved or authenticated session fails closed before any public landing grant', () => {
+  assert.equal(anonymousLanding({}, progress, true), false)
+  assert.equal(anonymousLanding({}, progress, true, { loading: true, session: null }), false)
+  assert.equal(anonymousLanding({}, progress, true, { loading: false, session: { user: { id: 'synthetic' } } }), false)
+  assert.equal(anonymousLanding({}, {}, true, loggedOut), false)
+  assert.equal(anonymousLanding({}, progress, true, loggedOut), true)
+})
+
+test('cached documents revoke on hide and reload before reusing stale auth state', () => {
+  const handlers = new Map(), calls = []
+  let reloads = 0
+  const win = { __firstaidMarketingLoaded: true, fbq: (...args) => calls.push(args), location: { reload: () => reloads++ }, addEventListener: (k,v) => handlers.set(k,v), removeEventListener: k => handlers.delete(k) }
+  const dispose = installMarketingLifecycleGuard(win, {})
+  handlers.get('pagehide')()
+  assert.equal(win.__firstaidMarketingRevoked, true)
+  assert.deepEqual(calls, [['consent','revoke']])
+  handlers.get('pageshow')({ persisted: false })
+  assert.equal(reloads, 0)
+  handlers.get('pageshow')({ persisted: true })
+  assert.equal(reloads, 1)
+  dispose()
+  assert.equal(handlers.size, 0)
+})
+
+
+test('an unreadable or uncleared session denial cannot be interpreted as consent', () => {
+  const localStorage = { getItem: () => 'granted', setItem: () => {} }
+  const win = { localStorage, sessionStorage: { getItem: () => { throw Error('unreadable') }, removeItem: () => { throw Error('blocked') } } }
+  assert.equal(readConsent(win), null)
+  assert.equal(saveConsent(win, 'granted'), false)
+  win.sessionStorage = { getItem: () => null, removeItem: () => { throw Error('blocked') } }
+  assert.equal(saveConsent(win, 'granted'), false)
+})
+
+
+test('private documents cannot become marketing documents through SPA return navigation', () => {
+  const win = {}
+  const context = { urlEligible: true, anonymous: false, auth: { loading: true, session: null }, progress: { loaded: false } }
+  assert.equal(canUseMarketingDocument(win, context), false)
+  assert.equal(win.__firstaidPrivateDocument, undefined, 'pending startup is not a private visit')
+  Object.assign(context, { anonymous: true, auth: loggedOut, progress })
+  assert.equal(canUseMarketingDocument(win, context), true)
+  assert.equal(canUseMarketingDocument(win, { ...context, urlEligible: false }), false)
+  assert.equal(canUseMarketingDocument(win, context), false, 'returning to landing keeps the document locked')
+  const doc = { createElement: () => assert.fail('private document cannot load SDK') }
+  loadTrainingPixel(win, doc, TRAINING_PIXEL_ID)
+  assert.equal(win.fbq, undefined)
+  const authenticated = {}
+  assert.equal(canUseMarketingDocument(authenticated, { ...context, auth: { loading: false, session: {} } }), false)
+  assert.equal(canUseMarketingDocument(authenticated, context), false)
 })

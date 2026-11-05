@@ -40,4 +40,12 @@ jobs:
         run: npm test
 
       - name: Build
+        # Public, synthetic fixture only. No production Supabase credentials.
+        env:
+          VITE_SUPABASE_URL: https://ad-boundary-test.supabase.co
+          VITE_SUPABASE_ANON_KEY: public-test-placeholder
         run: npm run build
+
+      - name: Test network-blocked advertising privacy boundary
+        run: node scripts/test-ad-boundary.mjs
+

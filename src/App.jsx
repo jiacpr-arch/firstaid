@@ -5,13 +5,13 @@ import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
 import { useProgressStore } from './stores/progressStore'
 import { useEnsureLearner } from './hooks/useLearner'
-import { initAuthListener } from './stores/authStore'
+import { initAuthListener, useAuthStore } from './stores/authStore'
 import { startBackgroundSync } from './db/sync'
 import { isAutomated } from './lib/isAutomated'
 import OfflineIndicator from './components/OfflineIndicator'
 import InAppBrowserNotice from './components/InAppBrowserNotice'
 import MetaPixel from './components/MetaPixel'
-import { anonymousLanding, eligibleLanding, revokeTrainingPixel } from './lib/trainingAds'
+import { anonymousLanding, eligibleLanding, revokeTrainingPixel, canUseMarketingDocument } from './lib/trainingAds'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
 import RequireAdmin from './components/RequireAdmin'
@@ -77,6 +77,8 @@ export default function App() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
   const learningProgress = useProgressStore()
+  const authLoading = useAuthStore((s) => s.loading)
+  const authSession = useAuthStore((s) => s.session)
 
   useEffect(() => { initPostHog() }, [])
 
@@ -128,7 +130,12 @@ export default function App() {
   // คอร์สคืออะไร ฟรีไหม ได้อะไร แล้วค่อยกดเริ่มเอง) ส่วนคำชวนแอด LINE @jiacpr ยังอยู่ที่
   // ท้ายบทที่ 1 เหมือนเดิม (LineGateCard ใน LessonReader) — จบบท 1 แล้วแอด/ข้าม ถึงพ้นสถานะนี้
   const onboarding = !isAdmin && (!learner || (!learner.lineAdded && !learner.lineSkippedAt))
-  const publicLanding = location.pathname === '/' && anonymousLanding(learner, learningProgress, onboarding)
+  const auth = { loading: authLoading, session: authSession }
+  const anonymous = location.pathname === '/' && anonymousLanding(learner, learningProgress, onboarding, auth)
+  const publicLanding = canUseMarketingDocument(window, {
+    urlEligible: eligibleLanding(window.location, document.referrer),
+    anonymous, auth, progress: learningProgress,
+  })
   const leaveMarketingDocument = !!window.__firstaidMarketingLoaded
     && (!publicLanding || !eligibleLanding(window.location, document.referrer))
   useLayoutEffect(() => {

@@ -22,7 +22,6 @@ const FIRST_LESSON_PATH = `/learn/${lessons[0].id}`
 function fbqTrack(...args) { try { window.fbq?.(...args) } catch { /* Optional analytics */ } }
 function trackStartClick(position) {
   phCapture('landing_start_click', { position })
-  fbqTrack('trackCustom', 'LandingStartLearning', { position })
 }
 function trackLineLead() {
   fbqTrack('track', 'Contact', { content_name: 'cpr_aed_inperson_course', source: 'landing_line_button', channel: 'line' })
