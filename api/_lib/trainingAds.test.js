@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { anonymousLanding, eligibleLanding, loadTrainingPixel, revokeTrainingPixel } from '../../src/lib/trainingAds.js'
+import { anonymousLanding, eligibleLanding, loadTrainingPixel, revokeTrainingPixel, readConsent, saveConsent, denialFallbackUrl } from '../../src/lib/trainingAds.js'
 const landing = { hostname: 'firstaid.morroo.com', pathname: '/', search: '', hash: '' }
 const progress = { loaded: true, loading: false, readLessonIds: new Set(), passedScenarioIds: new Set(), preTestDone: false, postTestDone: false }
 
@@ -41,4 +41,20 @@ test('unverified legacy dataset stays disabled even when its env variable exists
   const source = readFileSync(new URL('../../src/components/MetaPixel.jsx', import.meta.url), 'utf8')
   assert.match(source, /const VERIFIED_META_PIXEL_ID = ''/)
   assert.match(source, /import\.meta\.env\.VITE_META_PIXEL_ID === VERIFIED_META_PIXEL_ID/)
+})
+
+
+test('withdrawal persists through local storage write failures and never trusts stale grants', () => {
+  const values = new Map()
+  const sessionStorage = { getItem: k => values.get(k) || null, setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k) }
+  const win = { localStorage: { getItem: () => 'granted', setItem: () => { throw Error('blocked') } }, sessionStorage }
+  assert.equal(saveConsent(win, 'denied'), true)
+  assert.equal(readConsent(win), 'denied')
+  assert.equal(saveConsent(win, 'granted'), false)
+  assert.equal(readConsent(win), 'denied')
+  win.sessionStorage = { getItem: () => { throw Error('blocked') }, setItem: () => { throw Error('blocked') } }
+  assert.equal(saveConsent(win, 'denied'), false)
+  const url = new URL(denialFallbackUrl({ href: 'https://firstaid.morroo.com/?utm_source=meta' }))
+  assert.equal(url.searchParams.get('marketing_consent'), 'denied')
+  assert.equal(eligibleLanding(url), false)
 })

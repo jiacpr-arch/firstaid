@@ -68,3 +68,34 @@ export function revokeTrainingPixel(win, doc) {
     }
   }
 }
+
+// A denial takes precedence even if localStorage later becomes read-only.
+const DENIAL_KEY = CONSENT_KEY + '_denied'
+export function readConsent(win) {
+  try { if (win.sessionStorage.getItem(DENIAL_KEY) === '1') return 'denied' } catch { /* unavailable */ }
+  try { return win.localStorage.getItem(CONSENT_KEY) } catch { return null }
+}
+export function saveConsent(win, value) {
+  let localSaved = false
+  try {
+    win.localStorage.setItem(CONSENT_KEY, value)
+    localSaved = win.localStorage.getItem(CONSENT_KEY) === value
+  } catch { /* use session denial */ }
+  if (value === 'denied') {
+    let sessionSaved = false
+    try {
+      win.sessionStorage.setItem(DENIAL_KEY, '1')
+      sessionSaved = win.sessionStorage.getItem(DENIAL_KEY) === '1'
+    } catch { /* caller must use a no-ads URL if neither store works */ }
+    return localSaved || sessionSaved
+  }
+  if (!localSaved) return false
+  try { win.sessionStorage.removeItem(DENIAL_KEY) } catch { /* fail closed below */ }
+  return localSaved && readConsent(win) === 'granted'
+}
+export function denialFallbackUrl(location) {
+  const url = new URL(location.href)
+  // The unknown query key makes this document ineligible. No user data is added.
+  url.searchParams.set('marketing_consent', 'denied')
+  return url.href
+}
