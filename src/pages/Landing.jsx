@@ -25,7 +25,7 @@ function trackStartClick(position) {
   fbqTrack('trackCustom', 'LandingStartLearning', { position })
 }
 function trackLineLead() {
-  fbqTrack('track', 'Lead', { content_name: 'cpr_aed_inperson_course', source: 'landing_line_button', channel: 'line' })
+  fbqTrack('track', 'Contact', { content_name: 'cpr_aed_inperson_course', source: 'landing_line_button', channel: 'line' })
 }
 const CHAPTER_ICONS = { BookOpen, HeartPulse, Bandage, Skull }
 const OTHER_LINKS = [
