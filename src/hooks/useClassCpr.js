@@ -45,7 +45,10 @@ export function useClassCpr() {
   const key = learnerId && code && isSupabaseConfigured ? `${learnerId}:${code}` : null
   // จำไว้ในเครื่องว่าคลาสนี้เป็นคลาสรวม CPR/เรียนจบแล้ว — เช็คไม่ได้ (ออฟไลน์) ก็ยังใช้ค่านี้
   const known = learner?.cprStatusCode === code ? learner?.cprStatus || null : null
-  const knownPromo = learner?.cprPromoCode || null
+  // โค้ด CPR ของคลาส = JIA-FA-<รหัสคลาส> เสมอ (api/_lib/classes.js cprPromoRow) — ระหว่างเช็คหรือเช็คไม่ได้
+  // (เช่นเพิ่งล็อกอินแล้ว learner ในเครื่องยังไม่มี cprPromoCode) ใช้ค่านี้ ไม่งั้นปุ่มไป cpr.morroo.com ไม่มีโค้ด
+  // แล้วนักเรียนไปกด "ยังไม่มีโค้ด? รับฟรี" แทน (เจอจริง: คลาส ซีเอ็มเอ 2/2569)
+  const knownPromo = learner?.cprPromoCode || (code && known !== 'none' ? `JIA-FA-${code}` : null)
 
   // result: { key, value } ของการเช็คล่าสุด — ผูกกับ key กันค่าค้างจากคลาส/คนก่อน
   const [result, setResult] = useState(() => (cache && cache.key === key ? cache : null))

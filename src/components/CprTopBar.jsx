@@ -23,7 +23,7 @@ export default function CprTopBar({ source = 'top_bar', style }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="text-body-strong" style={{ color: '#B91C1C' }}>ขั้นสุดท้าย: เรียน CPR & AED ออนไลน์ (คลาสนี้ต้องเรียน)</div>
         <div className="text-caption">
-          {cpr.cpr?.modulesDone > 0 ? `เรียนไปแล้ว ${cpr.cpr.modulesDone}/7 บท · ` : ''}เรียนให้จบก่อนวันอบรม · ใช้เบอร์เดียวกับที่เข้าคลาส
+          {cpr.cpr?.modulesDone > 0 ? `เรียนไปแล้ว ${cpr.cpr.modulesDone}/7 บท · ` : ''}เรียนให้จบก่อนวันอบรม · ใช้เบอร์เดียวกับที่เข้าคลาส{promo ? <> · โค้ด <b>{promo}</b></> : ''}
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>

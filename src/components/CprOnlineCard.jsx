@@ -25,6 +25,12 @@ export default function CprOnlineCard({ promoCode = null, title = 'ต่อด�
         {desc || 'เรียนต่อที่ cpr.morroo.com — กดปุ่มด้านล่าง หรือสแกน QR ด้วยมือถือ'}
         {promoCode && <> · ใช้โค้ดคลาส <b>{promoCode}</b></>}
       </div>
+      {promoCode && (
+        <div className="callout" style={{ marginTop: 8, padding: '8px 12px', fontSize: 13 }}>
+          ที่ cpr.morroo.com ให้กรอก<b>ชื่อจริง + เบอร์โทรเดียวกับที่เข้าคลาส</b> และโค้ด <b>{promoCode}</b> —
+          ไม่ต้องกด “ยังไม่มีโค้ด? รับฟรี” (ไม่งั้นครูจะไม่เห็นว่าเรียน CPR แล้ว)
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
         {qr && (
           <img src={qr} alt="QR ไปเรียน CPR & AED ออนไลน์" width={120} height={120}
