@@ -4,6 +4,7 @@ import { ArrowLeft, Download, ExternalLink, Search } from 'lucide-react'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import { adminFetch } from '../utils/adminFetch'
 import { HUB_URL } from '../utils/hubCertificate'
+import HubCertificateAdmin from '../components/HubCertificateAdmin'
 
 const KIND_LABEL = { theory: 'ภาคทฤษฎี', practical: 'ภาคปฏิบัติ' }
 const KIND_FILTERS = [['', 'ทั้งหมด'], ['theory', 'ภาคทฤษฎี'], ['practical', 'ภาคปฏิบัติ']]
@@ -13,9 +14,56 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-// รายการใบประกาศที่แอปนี้บันทึกไว้ (เลข FA- / ใบภาคปฏิบัติ) ค้นด้วยชื่อ เบอร์ อีเมล หรือเลขใบ
-// ใบที่ผู้เรียนเห็นและพิมพ์ออกจากระบบกลาง JIA — แก้ชื่อ/เพิกถอนทำที่หน้าเจ้าหน้าที่ของระบบกลาง
+const TABS = [['hub', 'ใบระบบกลาง (แก้ไขได้)'], ['local', 'ใบ FA- ในแอปนี้']]
+
+// สองแท็บ: ใบระบบกลาง (ใบที่ผู้เรียนเห็นและพิมพ์ — ค้นหา แก้ชื่อ เพิกถอน ผ่านคำสั่งของระบบกลาง)
+// และใบที่แอปนี้บันทึกไว้เอง (เลข FA- / ภาคปฏิบัติ — ค้นหาและดาวน์โหลด CSV อ่านอย่างเดียว)
 export default function AdminCertificates() {
+  const [tab, setTab] = useState('hub')
+  return (
+    <div className="page-container">
+      <Link to="/admin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
+        <ArrowLeft size={16} /> หน้าควบคุม
+      </Link>
+      <div style={{ marginTop: 4 }}>
+        <div className="text-caption">จัดการ</div>
+        <div className="text-title">ใบประกาศ</div>
+      </div>
+      <div role="tablist" style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+        {TABS.map(([k, label]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={tab === k ? 'btn btn-primary' : 'btn btn-ghost'}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'hub' ? <HubCertificateAdmin /> : <LocalCertificates />}
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="text-body">
+          ใบที่ผู้เรียนเห็นและพิมพ์ ออกจาก<b>ระบบกลาง JIA</b> (class.jiacpr.com)
+        </div>
+        <ul className="text-body" style={{ margin: '8px 0 0', paddingLeft: 20, lineHeight: 1.7 }}>
+          <li>ภาคทฤษฎี: ออกอัตโนมัติเมื่อผู้เรียนเข้าสู่ระบบและผ่าน Post-test ≥ 80%</li>
+          <li>
+            ภาคปฏิบัติ: ออกอัตโนมัติเมื่อสอบสถานีผ่านใน{' '}
+            <Link to="/admin/teach" style={{ color: 'var(--color-brand)' }}>คลาสของฉัน</Link> — ดูว่าใครได้ใบแล้วที่แท็บ "ใบประกาศ"
+          </li>
+          <li>แท็บ "ใบระบบกลาง": แก้ชื่อและเพิกถอนได้ เฉพาะบัญชีที่เป็นแอดมินของระบบกลาง ทุกครั้งต้องใส่เหตุผลและระบบเก็บประวัติไว้</li>
+          <li>แท็บ "ใบ FA-": ใบที่แอปนี้บันทึกไว้เอง ดูและดาวน์โหลดได้อย่างเดียว</li>
+        </ul>
+        <a className="btn btn-ghost btn-block" style={{ marginTop: 12, textDecoration: 'none' }}
+          href={`${HUB_URL}/operations/certificates`} target="_blank" rel="noreferrer">
+          <ExternalLink size={16} /> เปิดหน้าใบประกาศของระบบกลาง (ทุกหลักสูตร)
+        </a>
+      </div>
+    </div>
+  )
+}
+
+// ใบที่แอปนี้บันทึกไว้ (public.certificates — เลข FA- / ใบภาคปฏิบัติ) ค้นด้วยชื่อ เบอร์ อีเมล หรือเลขใบ
+function LocalCertificates() {
   const [input, setInput] = useState('')
   const [q, setQ] = useState('')
   const [kind, setKind] = useState('')
@@ -87,15 +135,7 @@ export default function AdminCertificates() {
   const lastPage = Math.max(0, Math.ceil(total / pageSize) - 1)
 
   return (
-    <div className="page-container">
-      <Link to="/admin" className="btn btn-ghost" style={{ paddingLeft: 0 }}>
-        <ArrowLeft size={16} /> หน้าควบคุม
-      </Link>
-      <div style={{ marginTop: 4 }}>
-        <div className="text-caption">จัดการ</div>
-        <div className="text-title">ใบประกาศ</div>
-      </div>
-
+    <>
       <form className="card" style={{ marginTop: 12 }} onSubmit={submit}>
         <label className="label" htmlFor="cert-search">ค้นหาใบประกาศ</label>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -164,26 +204,6 @@ export default function AdminCertificates() {
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="text-body">
-          ใบที่ผู้เรียนเห็นและพิมพ์ ออกจาก<b>ระบบกลาง JIA</b> (class.jiacpr.com)
-        </div>
-        <ul className="text-body" style={{ margin: '8px 0 0', paddingLeft: 20, lineHeight: 1.7 }}>
-          <li>ภาคทฤษฎี: ออกอัตโนมัติเมื่อผู้เรียนเข้าสู่ระบบและผ่าน Post-test ≥ 80%</li>
-          <li>
-            ภาคปฏิบัติ: ออกอัตโนมัติเมื่อสอบสถานีผ่านใน{' '}
-            <Link to="/admin/teach" style={{ color: 'var(--color-brand)' }}>คลาสของฉัน</Link> — ดูว่าใครได้ใบแล้วที่แท็บ "ใบประกาศ"
-          </li>
-          <li>รายการด้านบนคือใบที่แอปนี้บันทึกไว้ (เลข FA-) ดูได้อย่างเดียว</li>
-        </ul>
-        <a className="btn btn-primary btn-block" style={{ marginTop: 12, textDecoration: 'none' }}
-          href={`${HUB_URL}/operations/certificates`} target="_blank" rel="noreferrer">
-          <ExternalLink size={16} /> แก้ชื่อ / เพิกถอน ที่ระบบกลาง
-        </a>
-        <div className="text-caption" style={{ marginTop: 6 }}>
-          เข้าด้วยบัญชีเจ้าหน้าที่ของระบบกลาง · แก้ชื่อและเพิกถอนได้เฉพาะแอดมิน
-        </div>
-      </div>
-    </div>
+    </>
   )
 }
