@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { lessons } from '../../courses/firstaid/lessons'
 import { READINESS, classifyReadiness, summarizeReadiness } from '../../../api/_lib/readiness.js'
+import ClassReminderCard from './ClassReminderCard'
 
 const examCell = (e) => (e ? `${e.score}% ${e.passed ? '✅' : '✗'}` : '—')
 const badgeClass = (tone) => (tone === 'success' ? 'badge badge-success' : tone === 'warning' ? 'badge badge-warning' : 'badge')
@@ -40,7 +41,7 @@ function exportCsv(learners, opts, filename, includesCpr) {
 }
 
 // แท็บ "ภาพรวม": นักเรียนทุกคน + ความพร้อม (พร้อม = Post-test ผ่าน + คลาสรวม CPR: CPR จบ) + สิ่งที่ยังขาด แตะชื่อเพื่อดูรายคน
-export default function ClassOverview({ learners, classCode, includesCpr = false }) {
+export default function ClassOverview({ learners, classId, classCode, includesCpr = false }) {
   const [filter, setFilter] = useState('all')
   const opts = useMemo(() => ({ totalLessons: lessons.length, requireCpr: includesCpr }), [includesCpr])
   const summary = useMemo(() => summarizeReadiness(learners, opts), [learners, opts])
@@ -87,6 +88,8 @@ export default function ClassOverview({ learners, classCode, includesCpr = false
           </button>
         </div>
       </div>
+
+      <ClassReminderCard cohortId={classId} notReady={summary.total - summary.ready} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
         {shown.map((l) => {

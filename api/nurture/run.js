@@ -14,6 +14,7 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { pushLineMessage } from '../_lib/lineMessage.js'
 import { TOTAL_LESSONS } from '../../src/courses/firstaid/lessons.js'
+import { runScheduledClassReminders } from '../_lib/classReminder.js'
 
 // TOTAL_LESSONS is imported from the course content so it can never drift.
 const ALMOST_DONE_AT = TOTAL_LESSONS - 2 // อ่านครบเท่านี้ขึ้นไป = ใกล้จบ
@@ -61,6 +62,16 @@ export default async function handler(req, res) {
   const admin = getSupabaseAdmin()
   if (!admin) return res.status(200).json({ ok: true, skipped: true, reason: 'supabase not configured' })
 
+  // 0) เตือนนักเรียนในคลาสที่ยังเรียนออนไลน์ไม่ครบ ก่อนวันเรียน 3 วัน / 1 วัน (api/_lib/classReminder.js)
+  // แยกจาก nurture ด้านล่าง — พังก็ไม่ทำให้ nurture หยุด
+  let classReminders
+  try {
+    classReminders = await runScheduledClassReminders(admin)
+  } catch (err) {
+    console.error('class reminders failed', err)
+    classReminders = { error: err.message || String(err) }
+  }
+
   // 1) ผู้เรียนที่ล็อกอิน LINE และยังไม่ opt-out — ตารางมาจาก PR #29
   const { data: identities, error: idErr } = await admin
     .from('line_identities')
@@ -68,9 +79,9 @@ export default async function handler(req, res) {
     .or('nurture_opted_out.is.null,nurture_opted_out.eq.false')
   if (idErr) {
     // ตารางยังไม่มี (PR #29 ยังไม่ merge) หรือ query พัง — ข้ามอย่างนิ่ม
-    return res.status(200).json({ ok: true, skipped: true, reason: idErr.message })
+    return res.status(200).json({ ok: true, classReminders, skipped: true, reason: idErr.message })
   }
-  if (!identities?.length) return res.status(200).json({ ok: true, sent: 0, reason: 'no recipients' })
+  if (!identities?.length) return res.status(200).json({ ok: true, classReminders, sent: 0, reason: 'no recipients' })
 
   const learnerIds = [...new Set(identities.map((r) => r.learner_id).filter(Boolean))]
 
@@ -140,5 +151,5 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(200).json({ ok: true, candidates: toSend.length, sent })
+  return res.status(200).json({ ok: true, classReminders, candidates: toSend.length, sent })
 }
