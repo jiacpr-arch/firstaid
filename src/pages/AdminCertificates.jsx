@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ExternalLink, Search } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, Search } from 'lucide-react'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import { adminFetch } from '../utils/adminFetch'
 import { HUB_URL } from '../utils/hubCertificate'
@@ -53,6 +53,34 @@ export default function AdminCertificates() {
   }
   const pickKind = (k) => { setPage(0); setKind(k) }
 
+  // ดาวน์โหลดทุกใบที่ตรงกับคำค้น/ประเภทที่เลือกอยู่ (ไม่ใช่แค่หน้านี้) — ต้องแนบ token จึงโหลดผ่าน fetch แล้วสร้างไฟล์เอง
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState(null)
+  const downloadCsv = async () => {
+    const params = new URLSearchParams({ format: 'csv' })
+    if (q) params.set('q', q)
+    if (kind) params.set('kind', kind)
+    setExporting(true)
+    setExportError(null)
+    try {
+      const r = await adminFetch(`/api/certificates/list?${params}`)
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'ดาวน์โหลดไม่สำเร็จ')
+      const name = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '')?.[1] || 'certificates.csv'
+      const url = URL.createObjectURL(await r.blob())
+      const a = document.createElement('a')
+      a.href = url
+      a.download = name
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (e) {
+      setExportError(e.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const rows = result?.certificates || []
   const total = result?.total || 0
   const pageSize = result?.pageSize || 50
@@ -92,10 +120,17 @@ export default function AdminCertificates() {
       {error && <div className="callout callout-danger" style={{ marginTop: 12 }} role="alert">{error}</div>}
 
       {result && (
-        <div className="text-caption" style={{ marginTop: 12 }}>
-          {loading ? 'กำลังโหลด…' : `พบ ${total.toLocaleString('th-TH')} ใบ${q ? ` สำหรับ “${q}”` : ''}`}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <div className="text-caption">
+            {loading ? 'กำลังโหลด…' : `พบ ${total.toLocaleString('th-TH')} ใบ${q ? ` สำหรับ “${q}”` : ''}`}
+          </div>
+          <button type="button" className="btn btn-ghost" style={{ flexShrink: 0 }}
+            disabled={exporting || loading || !total} onClick={downloadCsv}>
+            <Download size={16} /> {exporting ? 'กำลังเตรียมไฟล์…' : 'ดาวน์โหลด CSV'}
+          </button>
         </div>
       )}
+      {exportError && <div className="callout callout-danger" style={{ marginTop: 8 }} role="alert">{exportError}</div>}
 
       <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {result && !loading && !rows.length && <div className="card text-body">ไม่พบใบประกาศ</div>}

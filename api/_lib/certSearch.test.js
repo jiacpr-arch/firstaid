@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseListQuery, searchFilter, listRow } from './certSearch.js'
+import { parseListQuery, searchFilter, listRow, toCsv } from './certSearch.js'
 
 test('parseListQuery strips PostgREST syntax and wildcards', () => {
   assert.equal(parseListQuery({ q: ' สมชาย,(x)*%_ ' }).q, 'สมชาย x')
@@ -31,4 +31,21 @@ test('listRow maps columns and the joined class name', () => {
   assert.equal(row.cohortName, 'รุ่น 1')
   assert.equal(row.revokedAt, null)
   assert.equal(row.phone, '')
+})
+
+test('toCsv writes a BOM, Thai headers and Thai-time dates', () => {
+  const csv = toCsv([listRow({ id: '1', kind: 'theory', code: 'FA-X', issued_at: '2026-10-31T20:00:00Z', learner_name: 'สมชาย' })])
+  assert.ok(csv.startsWith('﻿เลขใบ,ประเภท,ชื่อ'))
+  assert.match(csv, /FA-X,ภาคทฤษฎี,สมชาย,,,2026-11-01,,,ใช้ได้/)
+})
+
+test('toCsv keeps a phone number\'s leading zero for Excel', () => {
+  assert.match(toCsv([listRow({ kind: 'theory', code: 'C', learner_phone: '0812345678' })]), /,="0812345678",/)
+})
+
+test('toCsv quotes commas/quotes and defuses formulas but keeps phone numbers', () => {
+  const csv = toCsv([listRow({ kind: 'practical', code: 'C', learner_name: '=HYPERLINK("x"), y', learner_phone: '+66 81-234 5678', revoked_at: '2026-01-02T00:00:00Z' })])
+  assert.match(csv, /"'=HYPERLINK\(""x""\), y"/)
+  assert.match(csv, /,\+66 81-234 5678,/)
+  assert.match(csv, /เพิกถอน 2026-01-02/)
 })
