@@ -10,8 +10,9 @@ import { startBackgroundSync } from './db/sync'
 import { isAutomated } from './lib/isAutomated'
 import OfflineIndicator from './components/OfflineIndicator'
 import InAppBrowserNotice from './components/InAppBrowserNotice'
-import MetaPixel from './components/MetaPixel'
-import { anonymousLanding, eligibleLanding, revokeTrainingPixel, canUseMarketingDocument } from './lib/trainingAds'
+import TrainingMarketingConsent from './components/TrainingMarketingConsent'
+import { revokeTrainingMarketing } from './lib/trainingMarketing'
+import { anonymousLanding, eligibleLanding, canUseMarketingDocument } from './lib/trainingAds'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
 import RequireAdmin from './components/RequireAdmin'
@@ -140,9 +141,9 @@ export default function App() {
     && (!publicLanding || !eligibleLanding(window.location, document.referrer))
   useLayoutEffect(() => {
     if (!leaveMarketingDocument) return
-    revokeTrainingPixel(window, document)
+    revokeTrainingMarketing(window, document)
     // Tear down the SDK before a learning/admin/identity screen can mount.
-    window.location.replace(window.location.href)
+    window.location.replace(window.__firstaidMarketingNavigationTarget || window.location.href)
   }, [leaveMarketingDocument])
   if (leaveMarketingDocument) return null
 
@@ -261,7 +262,7 @@ export default function App() {
         {!isAdmin && !isGame && <BottomTabBar />}
       </div>
       {!isAutomated && <Analytics />}
-      <MetaPixel publicLanding={publicLanding} />
+      <TrainingMarketingConsent publicLanding={publicLanding} />
     </div>
   )
 }

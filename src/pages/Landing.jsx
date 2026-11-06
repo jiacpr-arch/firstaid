@@ -15,6 +15,7 @@ import { phCapture } from '../lib/posthog'
 import Seo from '../components/Seo'
 import { courseJsonLd } from '../lib/seo'
 import { trackLandingContact } from '../lib/trainingAds'
+import { trackGoogleLandingContact } from '../lib/trainingGoogleAds'
 
 import { CLASSROOM_ART, chapterArtwork } from '../config/courseArtwork'
 
@@ -25,6 +26,7 @@ function trackStartClick(position) {
 }
 function trackLineLead() {
   trackLandingContact(window, document)
+  trackGoogleLandingContact(window, document)
 }
 const CHAPTER_ICONS = { BookOpen, HeartPulse, Bandage, Skull }
 const OTHER_LINKS = [

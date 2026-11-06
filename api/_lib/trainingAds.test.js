@@ -32,7 +32,7 @@ test('one SDK, explicit consent, no automatic collection or user fields', () => 
 test('private screens are not rendered until a fresh document is loaded', () => {
   const source = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8')
   assert.match(source, /if \(leaveMarketingDocument\) return null/)
-  assert.match(source, /window\.location\.replace\(window\.location\.href\)/)
+  assert.match(source, /window\.location\.replace\(window\.__firstaidMarketingNavigationTarget \|\| window\.location\.href\)/)
   const landing = readFileSync(new URL('../../src/pages/Landing.jsx', import.meta.url), 'utf8')
   assert.doesNotMatch(landing, /fbqTrack\('track', 'Lead'/)
   assert.match(landing, /trackLandingContact\(window, document\)/)
@@ -119,11 +119,11 @@ test('private documents cannot become marketing documents through SPA return nav
 
 
 test('only consented public LINE intent reaches the verified training dataset', () => {
-  const calls = [], win = { __firstaidMarketingLoaded: true, location: landing, sessionStorage: { getItem: () => null }, localStorage: { getItem: () => 'granted' }, fbq: (...args) => calls.push(args) }
+  const calls = [], win = { __firstaidMarketingLoaded: true, __firstaidMetaLoaded: true, location: landing, sessionStorage: { getItem: () => null }, localStorage: { getItem: () => 'granted' }, fbq: (...args) => calls.push(args) }
   const doc = { referrer: '' }
   assert.equal(trackLandingContact(win, doc), true)
   assert.deepEqual(calls, [['trackSingle', TRAINING_PIXEL_ID, 'Contact', { content_name: 'cpr_aed_inperson_course', source: 'firstaid_landing', channel: 'line' }]])
-  for (const patch of [{ __firstaidMarketingRevoked: true }, { __firstaidPrivateDocument: true }, { __firstaidMarketingLoaded: false }, { location: { ...landing, pathname: '/learn' } }, { localStorage: { getItem: () => 'denied' } }]) {
+  for (const patch of [{ __firstaidMarketingRevoked: true }, { __firstaidPrivateDocument: true }, { __firstaidMetaLoaded: false }, { __firstaidMetaRevoked: true }, { location: { ...landing, pathname: '/learn' } }, { localStorage: { getItem: () => 'denied' } }]) {
     assert.equal(trackLandingContact({ ...win, ...patch }, doc), false)
   }
   assert.equal(calls.length, 1)
