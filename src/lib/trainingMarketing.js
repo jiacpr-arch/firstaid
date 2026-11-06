@@ -1,3 +1,4 @@
+import { OPENAI_CONSENT_KEY, readOpenAIConsent, revokeTrainingOpenAI } from './trainingOpenAIAds.js'
 import { CONSENT_KEY, readConsent, revokeTrainingPixel } from './trainingAds.js'
 import { GOOGLE_CONSENT_KEY, readGoogleConsent, revokeTrainingGoogle } from './trainingGoogleAds.js'
 
@@ -7,6 +8,7 @@ export function revokeTrainingMarketing(win, doc) {
   win.__firstaidMarketingRevoked = true
   revokeTrainingPixel(win, doc)
   revokeTrainingGoogle(win, doc)
+  revokeTrainingOpenAI(win)
 }
 
 // A withdrawal or localStorage.clear() in another tab must terminate this tab's
@@ -17,7 +19,9 @@ export function installMarketingConsentStorageGuard(win, doc) {
       && win.__firstaidMetaLoaded && readConsent(win) !== 'granted'
     const googleDenied = (event.key === null || event.key === GOOGLE_CONSENT_KEY)
       && win.__firstaidGoogleLoaded && readGoogleConsent(win) !== 'granted'
-    if (!metaDenied && !googleDenied) return
+    const openaiDenied = (event.key === null || event.key === OPENAI_CONSENT_KEY)
+      && win.__firstaidOpenAILoaded && readOpenAIConsent(win) !== 'granted'
+    if (!metaDenied && !googleDenied && !openaiDenied) return
     revokeTrainingMarketing(win, doc)
     win.location.reload()
   }

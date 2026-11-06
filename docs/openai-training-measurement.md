@@ -1,0 +1,27 @@
+# FirstAid OpenAI image-tag baseline (local preparation)
+
+Base: merged `jiacpr-arch/firstaid` main commit `5dfb852594c68d14fc6232ef3b259c712e651182`, tree `1e88729ba6bdeb2c17357bf2df4eb31b35a67c24`. This is a separate local-only OpenAI Image Tag layer. The approved Google/privacy release does not authorize publishing or deploying these OpenAI additions.
+Mode: standalone image tag; not the JavaScript Measurement Pixel or CAPI.
+Pixel: `QGaBG3DEsN1QQ4mvnw3Jdu` (verified JIA source).
+
+Only the resolved anonymous public root at `https://firstaid.morroo.com/` may send one `page_viewed` with `data[type]=contents`, after fresh independent OpenAI consent. Existing Meta/Google grants do not authorize OpenAI. Default is no image or collector request. An exact HTTPS production origin is mandatory; HTTP, nonstandard ports and a pre-existing OpenAI SDK integration are rejected. The hidden image uses `referrerPolicy=origin`, a fixed URL, and no user, content, customer, session, order, event ID, or dynamic URL fields. No JS SDK or DOM matching is loaded. App auth/progress resolution, sticky private-document exclusion, storage/referrer guards, full-document private navigation and bfcache teardown remain mandatory. The navigation guard combines later vendors’ cleanup callbacks without installing duplicate wrappers; one failing callback cannot prevent other cleanup or navigation. Withdrawal prevents future sends and removes the image, but cannot recall a request already sent.
+
+This is limited landing-page measurement, **not full OpenAI ad-attribution readiness**. The current shared URL allowlist is unchanged: an `oppref` query parameter is rejected. Image tags do not capture/store oppref; no approved value exists here, so it is omitted. No cookies are read for attribution or written by this integration; that does not claim the destination receives no existing cookies or browser metadata. The HTTP request exposes IP/browser information and origin. There is no documented image-tag `opt_out` parameter, and no personalization-disable claim is made.
+
+Only page_viewed is included. contents_viewed, items_added, checkout_started, order_created, lead_created, registration_completed, appointment_scheduled, subscription_created and trial_started are intentionally excluded: this approved anonymous landing scope has no verified completed conversion boundary. LINE clicks, emergency calls, lessons, tests, certificates, registration, payments and learner/admin/auth screens emit no OpenAI events. app_installed/app_opened are irrelevant web-surface events; custom events are unnecessary. CAPI, credentials, deduplication IDs and user matching are absent.
+
+Account AAM/domain controls remain unverified; their absence is not asserted. The reviewed conversion-setup API documentation says API-created web pixels use automatic advanced matching. The reviewed documentation exposes no domain allowlist, which does not establish that no account-level control exists. This implementation therefore still avoids the JavaScript SDK. No account settings, Google linkers, production deployment, GitHub publication or actual collector requests were changed/made. Do not widen the shared allowlist for attribution without a separate privacy review. The merged Meta/Google pending-queue and failed-grant helpers/components are preserved byte-for-byte. The browser harness retains every merged baseline case, including all five privacy cases, delayed-SDK fixtures, same-turn synchronization fixes and navigation pause/release cleanup. Shared navigation also retains all registered vendor teardown callbacks. Publication and deployment of this OpenAI layer remain outside this local preparation and require separate authorization. The merged Google/privacy release is not changed.
+
+## Verification
+
+- 50 targeted Node units passed: 39 merged baseline/fixture units plus 11 OpenAI units. Partial grant persistence followed by failed denial rollback is covered by a no-ads redirect regression. Mixed-vendor tests cover both loader orders and a throwing cleanup callback.
+- Browser harness `node --check` passed. Registration-only discovery found 84 cases, preserving all 77 merged baseline cases and adding seven OpenAI cases; no fixture or test callback was executed. Both required auth cases are included in this discovery using a synthetic registration marker, not a build. Added seven network-blocked OpenAI cases covering independent consent, withdrawal, partial-grant rollback failure, oppref exclusion and private navigation. Existing unsafe/private/auth cases additionally seed OpenAI consent and assert no image request.
+- No Chromium execution: prior local socket denial is respected. The full FirstAid repo/build dependencies are not materialized here; full build and browser CI must run only under separately authorized release workflow. No live receipt or attribution is established. Fixed-image caching behavior is also unverified: a browser or intermediary may reuse a cached image response, so one rendered image does not establish a newly ingested event. No cachebuster or undocumented parameter is added as a workaround.
+
+Official sources reviewed 2026-11-06:
+- https://developers.openai.com/ads/image-tag
+- https://developers.openai.com/ads/supported-events
+- https://developers.openai.com/ads/measurement-pixel
+- https://developers.openai.com/ads/api-reference/conversion-setup
+
+Before deploying, the advertiser should review that this implementation satisfies privacy, security, consent and data-handling requirements.

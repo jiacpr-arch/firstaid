@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import OpenAITrainingConsent from './OpenAITrainingConsent'
 import MetaPixel from './MetaPixel'
 import GoogleTrainingConsent from './GoogleTrainingConsent'
 import { installMarketingLifecycleGuard } from '../lib/trainingAds'
@@ -14,5 +15,6 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
   return <div style={{ position: 'fixed', zIndex: 1000, bottom: 78, left: 12, right: 12, maxWidth: 580, maxHeight: '65vh', overflowY: 'auto', margin: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
     <MetaPixel publicLanding={publicLanding} />
     <GoogleTrainingConsent publicLanding={publicLanding} />
+    <OpenAITrainingConsent publicLanding={publicLanding} />
   </div>
 }

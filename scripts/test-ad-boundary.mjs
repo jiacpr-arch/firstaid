@@ -1,3 +1,4 @@
+import { OPENAI_CONSENT_KEY, OPENAI_IMAGE_URL } from '../src/lib/trainingOpenAIAds.js'
 // CI browser regression. No server, live SDK, credentials, forms, or network passthrough.
 // Run after the full build: node scripts/test-ad-boundary.mjs
 import assert from 'node:assert/strict'
@@ -21,7 +22,7 @@ let passed = 0
 
 async function fixture(options = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block' })
-  const sdkRequests = [], calls = [], mounts = [], blocked = [], googleRequests = [], googleCalls = [], googleObservations = [], googleHistoryArguments = []
+  const openaiRequests = [], sdkRequests = [], calls = [], mounts = [], blocked = [], googleRequests = [], googleCalls = [], googleObservations = [], googleHistoryArguments = []
   let releaseAuth, authRequests = 0
   let holdRetiringNavigation = false, resolveRetiringNavigation
   const retiringNavigationGate = new Promise(resolve => { resolveRetiringNavigation = resolve })
@@ -50,6 +51,13 @@ async function fixture(options = {}) {
       await authGate
       return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'invalid_grant', error_code: 'refresh_token_not_found', message: 'Synthetic session expired' }) })
     }
+    if (url.hostname === 'bzr.openai.com') {
+      assert.equal(request.url(), OPENAI_IMAGE_URL)
+      assert.equal(request.method(), 'GET')
+      assert.equal(request.headers().referer, ORIGIN + '/')
+      openaiRequests.push(request.url())
+      return route.fulfill({ contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64') })
+    }
     if (request.url() === GOOGLE_SDK) {
       assert.equal(request.headers().referer, undefined, 'Google SDK request must suppress referrer')
       googleRequests.push(request.url())
@@ -75,7 +83,7 @@ async function fixture(options = {}) {
       return route.abort('blockedbyclient')
     }
   })
-  await context.addInitScript(({ options, key, googleKey }) => {
+  await context.addInitScript(({ options, key, googleKey, openaiKey }) => {
     Object.defineProperty(navigator, 'webdriver', { get: () => false })
     window.__documentId = Math.random().toString(36)
     // Seed once per context, not on reload (withdrawal must survive reload).
@@ -83,6 +91,7 @@ async function fixture(options = {}) {
       for (const [name, value] of Object.entries(options.storage || {})) localStorage.setItem(name, value)
       if (options.consent) localStorage.setItem(key, options.consent)
       if (options.googleConsent) localStorage.setItem(googleKey, options.googleConsent)
+      if (options.openaiConsent) localStorage.setItem(openaiKey, options.openaiConsent)
       sessionStorage.setItem('__boundarySeeded', '1')
     }
     window.__storageFailures = options.storageFailures || []
@@ -113,7 +122,7 @@ async function fixture(options = {}) {
       if (fails(this, 'remove')) throw new DOMException('Test storage unavailable', 'SecurityError')
       return originalRemove.call(this, name)
     }
-  }, { options, key: CONSENT_KEY, googleKey: GOOGLE_CONSENT_KEY })
+  }, { options, key: CONSENT_KEY, googleKey: GOOGLE_CONSENT_KEY, openaiKey: OPENAI_CONSENT_KEY })
   const page = await context.newPage()
   let pageErrorSeen = false, scriptSyntaxErrorSeen = false
   page.on('pageerror', error => {
@@ -163,6 +172,7 @@ async function fixture(options = {}) {
     await page.waitForTimeout(100)
   }
   function noAds() {
+    assert.equal(openaiRequests.length, 0, 'No OpenAI image may be requested')
     assert.equal(sdkRequests.length, 0, 'No Meta SDK may be requested'); assert.equal(calls.length, 0)
     assert.equal(googleRequests.length, 0, 'No Google SDK may be requested'); assert.equal(googleCalls.length, 0)
   }
@@ -172,7 +182,7 @@ async function fixture(options = {}) {
     assert.ok(googleObservations.every(item => item.forms === 0 && item.privateNodes === 0 && !item.insertedPrivateNodes), 'Google-bearing document never contains even transient lesson, auth or form DOM')
     assert.ok(googleObservations.every(item => item.canonical === null || item.canonical === ORIGIN + '/'), 'Google-bearing document never exposes private SEO metadata')
   }
-  return { context, page, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, noAds, googleStayedPublic, releaseAuth, pauseNavigation, releaseNavigation, authRequests: () => authRequests }
+  return { context, page, openaiRequests, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, noAds, googleStayedPublic, releaseAuth, pauseNavigation, releaseNavigation, authRequests: () => authRequests }
 }
 async function test(name, options, fn) {
   const f = await fixture(options)
@@ -181,6 +191,82 @@ async function test(name, options, fn) {
   finally { f.releaseNavigation(); await f.context.close() }
 }
 try {
+
+  await test('OpenAI own grant renders exactly one fixed image; withdrawal persists', {}, async f => {
+    await f.open(); f.noAds()
+    await f.page.getByRole('button', { name: 'อนุญาต OpenAI', exact: true }).click()
+    await f.page.waitForFunction(() => window.__firstaidOpenAILoaded === true)
+    await f.page.waitForTimeout(200)
+    assert.deepEqual(f.openaiRequests, [OPENAI_IMAGE_URL])
+    assert.equal(f.sdkRequests.length, 0); assert.equal(f.googleRequests.length, 0)
+    assert.equal(await f.page.evaluate(() => typeof window.oaiq), 'undefined')
+    const old = await f.page.evaluate(() => window.__documentId)
+    await Promise.all([
+      f.page.waitForEvent('domcontentloaded'),
+      f.page.getByRole('button', { name: 'ถอนความยินยอม OpenAI', exact: true }).click(),
+    ])
+    assert.notEqual(await f.page.evaluate(() => window.__documentId), old)
+    await f.page.waitForTimeout(300)
+    assert.equal(f.openaiRequests.length, 1)
+    await f.page.reload(); await f.page.waitForTimeout(300)
+    assert.equal(f.openaiRequests.length, 1)
+  })
+  await test('OpenAI partial grant with failed rollback redirects to durable no-ads URL', {}, async f => {
+    await f.open(); f.noAds()
+    const old = await f.page.evaluate(key => {
+      const set = Storage.prototype.setItem
+      const remove = Storage.prototype.removeItem
+      let wroteGrant = false
+      Storage.prototype.setItem = function (name, value) {
+        if (this === localStorage && name === key) {
+          if (wroteGrant) throw new DOMException('Synthetic rollback write failure', 'SecurityError')
+          const result = set.call(this, name, value)
+          if (value === 'granted') wroteGrant = true
+          return result
+        }
+        if (this === sessionStorage && name === key + '_denied') throw new DOMException('Synthetic session denial write failure', 'SecurityError')
+        return set.call(this, name, value)
+      }
+      Storage.prototype.removeItem = function (name) {
+        if (this === sessionStorage && name === key + '_denied') throw new DOMException('Synthetic denial removal failure', 'SecurityError')
+        return remove.call(this, name)
+      }
+      return window.__documentId
+    }, OPENAI_CONSENT_KEY)
+    await Promise.all([
+      f.page.waitForEvent('domcontentloaded'),
+      f.page.getByRole('button', { name: 'อนุญาต OpenAI', exact: true }).click(),
+    ])
+    assert.notEqual(await f.page.evaluate(() => window.__documentId), old)
+    assert.equal(new URL(f.page.url()).searchParams.get('marketing_consent'), 'denied')
+    await f.page.waitForTimeout(300)
+    f.noAds()
+    assert.equal(await f.page.evaluate(key => localStorage.getItem(key), OPENAI_CONSENT_KEY), 'granted', 'Synthetic stale grant must remain to exercise URL fallback')
+    await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(300)
+    assert.equal(new URL(f.page.url()).searchParams.get('marketing_consent'), 'denied')
+    f.noAds()
+  })
+  await test('OpenAI grant never inferred from Meta or Google', { consent: 'granted', googleConsent: 'granted' }, async f => {
+    await f.open(); assert.equal(f.openaiRequests.length, 0)
+    await f.page.getByRole('dialog', { name: 'การวัดผล OpenAI', exact: true }).waitFor()
+  })
+  await test('oppref entry remains excluded despite OpenAI grant', { openaiConsent: 'granted' }, async f => {
+    await f.open('/?oppref=synthetic-opaque'); f.noAds()
+  })
+  for (const path of ['/learn', '/admin/login', '/auth/line/callback']) {
+    await test(`OpenAI-only private boundary ${path}`, { openaiConsent: 'granted' }, async f => {
+      await f.open(); assert.equal(f.openaiRequests.length, 1)
+      const old = await f.page.evaluate(() => window.__documentId)
+      await Promise.all([
+        f.page.waitForEvent('domcontentloaded'),
+        f.page.evaluate(path => { history.pushState(null, '', path); dispatchEvent(new PopStateEvent('popstate')) }, path),
+      ])
+      assert.notEqual(await f.page.evaluate(() => window.__documentId), old)
+      await f.page.waitForTimeout(300)
+      assert.equal(f.openaiRequests.length, 1)
+      assert.equal(await f.page.locator('#firstaid-training-openai').count(), 0)
+    })
+  }
   await test('anonymous landing requires fresh explicit consent; single verified PageView', {}, async f => {
     await f.open(); await f.page.getByRole('dialog', { name: 'การวัดผลโฆษณา' }).waitFor(); f.noAds()
     await f.grant()
@@ -281,10 +367,10 @@ try {
       assert.ok(f.calls.some(c => c.args[0] === 'consent' && c.args[1] === 'revoke'))
       assert.equal(f.calls.filter(c => ['track', 'trackSingle', 'trackCustom', 'trackSingleCustom'].includes(c.args[0])).length, 1)
     })
-    await test(`direct private route ${path} ignores saved consent`, { consent: 'granted', googleConsent: 'granted' }, async f => { await f.open(path); f.noAds() })
+    await test(`direct private route ${path} ignores saved consent`, { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted' }, async f => { await f.open(path); f.noAds() })
   }
   for (const path of ['/learn', '/admin/login', '/auth/line/callback', '/auth/hub/callback']) {
-    await test(`private-first document ${path} stays ad-free after SPA return`, { consent: 'granted', googleConsent: 'granted' }, async f => {
+    await test(`private-first document ${path} stays ad-free after SPA return`, { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted' }, async f => {
       await f.open(path); f.noAds()
       const documentId = await f.page.evaluate(() => window.__documentId)
       await f.page.evaluate(() => { history.pushState(null, '', '/'); dispatchEvent(new PopStateEvent('popstate')) })
@@ -316,12 +402,12 @@ try {
     ['/?email=test%40example.invalid'], ['/#learner'], ['/?utm_source=one&utm_source=two'],
     ['/?utm_campaign=1234567890123'], ['/', 'https://firstaid.morroo.com/learn/1'],
     ['/', 'https://firstaid.morroo.com/?email=test'],
-  ]) await test(`unsafe context ${path} ${referer || ''}`, { consent: 'granted', googleConsent: 'granted' }, async f => { await f.open(path, referer); f.noAds() })
+  ]) await test(`unsafe context ${path} ${referer || ''}`, { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted' }, async f => { await f.open(path, referer); f.noAds() })
   for (const profile of [{ name: 'Synthetic learner' }, { phone: '0000000000' }, { email: 'synthetic@example.invalid' }, { lineUserId: 'synthetic' }, { cohortCode: 'synthetic' }, { lineAdded: true }, { lineSkippedAt: 123 }]) {
-    await test(`local identity ${Object.keys(profile)[0]} blocks ads`, { consent: 'granted', googleConsent: 'granted', storage: { 'firstaid.learner': JSON.stringify({ state: { learner: profile }, version: 0 }) } }, async f => { await f.open(); f.noAds() })
+    await test(`local identity ${Object.keys(profile)[0]} blocks ads`, { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted', storage: { 'firstaid.learner': JSON.stringify({ state: { learner: profile }, version: 0 }) } }, async f => { await f.open(); f.noAds() })
   }
   for (const storageFailures of [['local:get'], ['session:get'], ['local:get', 'session:get']]) {
-    await test(`stored grant fails closed on ${storageFailures.join(',')}`, { consent: 'granted', googleConsent: 'granted', storageFailures }, async f => { await f.open(); f.noAds() })
+    await test(`stored grant fails closed on ${storageFailures.join(',')}`, { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted', storageFailures }, async f => { await f.open(); f.noAds() })
   }
   for (const storageFailures of [['local:set'], ['session:remove'], ['local:set', 'session:set']]) {
     await test(`explicit grant fails closed on ${storageFailures.join(',')}`, { storageFailures }, async f => {
@@ -578,7 +664,7 @@ try {
   const js = (await Promise.all(assets.filter(x => x.endsWith('.js')).map(x => readFile(resolve(DIST, 'assets', x), 'utf8')))).join('\n')
   if (js.includes(AUTH_HOST)) {
     const session = { access_token: 'synthetic-not-a-real-token', refresh_token: 'synthetic-not-a-real-refresh', token_type: 'bearer', expires_in: 31536000, expires_at: Math.floor(Date.now() / 1000) + 31536000, user: { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'synthetic@example.invalid', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' } }
-    await test('pending Supabase auth resolution fails closed', { consent: 'granted', googleConsent: 'granted', holdAuth: true, storage: { 'sb-ad-boundary-test-auth-token': JSON.stringify({ ...session, expires_at: 1 }) } }, async f => {
+    await test('pending Supabase auth resolution fails closed', { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted', holdAuth: true, storage: { 'sb-ad-boundary-test-auth-token': JSON.stringify({ ...session, expires_at: 1 }) } }, async f => {
       await f.open(); f.noAds()
       assert.ok(f.authRequests() > 0, 'Synthetic refresh must actually be pending')
       f.releaseAuth()
@@ -587,7 +673,7 @@ try {
       await f.page.waitForFunction(() => window.__stubGoogleLoaded === true)
       assert.equal(f.googleRequests.length, 1)
     })
-    await test('Supabase session without local learner blocks ads', { consent: 'granted', googleConsent: 'granted', storage: { 'sb-ad-boundary-test-auth-token': JSON.stringify(session) } }, async f => { await f.open(); f.noAds() })
+    await test('Supabase session without local learner blocks ads', { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted', storage: { 'sb-ad-boundary-test-auth-token': JSON.stringify(session) } }, async f => { await f.open(); f.noAds() })
   } else if (process.env.CI) {
     throw new Error('CI build must use VITE_SUPABASE_URL=https://ad-boundary-test.supabase.co for auth-session coverage')
   } else console.log('SKIP auth-session browser case: build lacks synthetic Supabase fixture (required in CI)')

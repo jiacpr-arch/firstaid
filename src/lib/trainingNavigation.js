@@ -5,6 +5,10 @@ import { eligibleLanding } from './trainingAds.js'
 // Once Google loads, even public URL changes use a new document so automatic
 // history collection cannot override the fixed page metadata with a new query.
 export function installMarketingNavigationBoundary(win, doc, revokeAll) {
+  // Later vendor loaders must join teardown even when another vendor installed
+  // the boundary first. Never replace wrappers or drop earlier callbacks.
+  const revokers = win.__firstaidNavigationRevokers ||= new Set()
+  if (typeof revokeAll === 'function') revokers.add(revokeAll)
   if (win.__firstaidNavigationBoundary) return
   const unsafe = value => {
     try {
@@ -17,7 +21,9 @@ export function installMarketingNavigationBoundary(win, doc, revokeAll) {
   const leave = (href, replace = false) => {
     win.__firstaidPrivateDocument = true
     win.__firstaidMarketingNavigationTarget = href
-    revokeAll(win, doc)
+    for (const revoke of revokers) {
+      try { revoke(win, doc) } catch { /* Still revoke other vendors and leave. */ }
+    }
     if (replace) win.location.replace(href)
     else win.location.assign(href)
   }
