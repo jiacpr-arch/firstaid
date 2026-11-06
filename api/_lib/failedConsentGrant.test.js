@@ -9,7 +9,7 @@ import { GOOGLE_CONSENT_KEY, readGoogleConsent, saveGoogleConsent, revokeTrainin
 // browser/storage objects. No React renderer, browser, SDK or network is used.
 function componentChoice(path, dependencies, { rollbackBlocked }) {
   const source = readFileSync(new URL('../../' + path, import.meta.url), 'utf8')
-  const match = source.match(/const choose = value => \{([\s\S]*?)\n  \}/)
+  const match = source.match(/const choose = value => \{([\s\S]*?)\n {2}\}/)
   assert.ok(match, 'Component must expose its local choice handler for this regression')
   const values = new Map(), session = new Map(), navigations = [], choices = []
   let grantWritten = false
