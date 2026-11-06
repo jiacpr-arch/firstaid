@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { readFile, stat, readdir } from 'node:fs/promises'
 import { resolve, extname, sep } from 'node:path'
 import { chromium } from 'playwright'
+import { GOOGLE_SDK_STUB, META_SDK_STUB } from './ad-boundary-fixtures.mjs'
 import { CONSENT_KEY } from '../src/lib/trainingAds.js'
 import { GOOGLE_CONSENT_KEY, TRAINING_GA4_ID, TRAINING_GOOGLE_ADS_ID, TRAINING_GOOGLE_LINE_CONVERSION, GOOGLE_PUBLIC_PAGE } from '../src/lib/trainingGoogleAds.js'
 
@@ -20,7 +21,7 @@ let passed = 0
 
 async function fixture(options = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block' })
-  const sdkRequests = [], calls = [], mounts = [], blocked = [], googleRequests = [], googleCalls = [], googleObservations = []
+  const sdkRequests = [], calls = [], mounts = [], blocked = [], googleRequests = [], googleCalls = [], googleObservations = [], googleHistoryArguments = []
   let releaseAuth, authRequests = 0
   const authGate = new Promise(resolve => { releaseAuth = resolve })
   await context.exposeBinding('__recordAdBoundary', (_source, kind, value) => {
@@ -28,6 +29,7 @@ async function fixture(options = {}) {
     if (kind === 'mount') mounts.push(value)
     if (kind === 'google') googleCalls.push(value)
     if (kind === 'googleObservation') googleObservations.push(value)
+    if (kind === 'googleHistoryArgument') googleHistoryArguments.push(value)
   })
   // Also block WebSockets, which context.route does not intercept.
   await context.routeWebSocket('**/*', socket => socket.close())
@@ -41,55 +43,12 @@ async function fixture(options = {}) {
     if (request.url() === GOOGLE_SDK) {
       assert.equal(request.headers().referer, undefined, 'Google SDK request must suppress referrer')
       googleRequests.push(request.url())
-      return route.fulfill({ contentType: 'text/javascript', body: `
-        window.__stubGoogleLoaded = true;
-        const observe = (reason, insertedPrivateNodes = false) => window.__recordAdBoundary('googleObservation', {
-          documentId: window.__documentId, reason, url: location.href,
-          forms: document.querySelectorAll('#root form, #root input, #root textarea').length,
-          privateNodes: document.querySelectorAll('#root .page-container').length, insertedPrivateNodes,
-          canonical: document.querySelector('link[data-seo][rel=canonical]')?.href || null,
-        });
-        const record = args => {
-          observe('command');
-          window.__recordAdBoundary('google', { documentId: window.__documentId, args: Array.from(args) });
-        };
-        const queued = window.dataLayer.splice(0);
-        window.dataLayer.push = (...rows) => { rows.forEach(record); return 0; };
-        queued.forEach(record);
-        // Emulate an SDK wrapping history after our application guard. If the
-        // native URL ever changes, this observer sees it before React's effect.
-        for (const method of ['pushState', 'replaceState']) {
-          const original = history[method];
-          history[method] = function (...args) {
-            const result = original.apply(this, args);
-            observe(method);
-            return result;
-          };
-        }
-        new MutationObserver(records => {
-          const privateSelector = '.page-container, form, input, textarea';
-          const insertedPrivateNodes = records.some(record => [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches(privateSelector) || node.querySelector(privateSelector))));
-          observe('dom', insertedPrivateNodes);
-        }).observe(document.getElementById('root'), { childList: true, subtree: true });
-        new MutationObserver(() => observe('head')).observe(document.head, { childList: true, subtree: true, attributes: true });
-        for (const event of ['popstate', 'hashchange', 'pagehide']) window.addEventListener(event, () => observe(event));
-      ` })
+      return route.fulfill({ contentType: 'text/javascript', body: GOOGLE_SDK_STUB })
     }
     if (request.url() === SDK) {
       assert.equal(request.headers().referer, undefined, 'SDK request must suppress referrer')
       sdkRequests.push(request.url())
-      return route.fulfill({ contentType: 'text/javascript', body: `
-        window.__stubSdkLoaded = true;
-        const record = args => window.__recordAdBoundary('call', { documentId: window.__documentId, args });
-        const queued = window.fbq.queue.splice(0);
-        window.fbq.callMethod = (...args) => record(args);
-        queued.forEach(record);
-        new MutationObserver(records => {
-          if (location.pathname !== '/' && records.some(r => [...r.addedNodes].some(n => n.nodeType === 1))) {
-            window.__recordAdBoundary('mount', { documentId: window.__documentId, path: location.pathname });
-          }
-        }).observe(document.getElementById('root'), { childList: true, subtree: true });
-      ` })
+      return route.fulfill({ contentType: 'text/javascript', body: META_SDK_STUB })
     }
     // Only static GET files at the production origin are fulfilled from disk.
     // Everything else is aborted, including same-origin APIs and analytics.
@@ -135,18 +94,51 @@ async function fixture(options = {}) {
     }
   }, { options, key: CONSENT_KEY, googleKey: GOOGLE_CONSENT_KEY })
   const page = await context.newPage()
+  let pageErrorSeen = false, scriptSyntaxErrorSeen = false
+  page.on('pageerror', error => {
+    pageErrorSeen = true
+    scriptSyntaxErrorSeen ||= error.name === 'SyntaxError' || /Identifier .*already been declared/.test(error.message)
+  })
+  async function waitForSdk(flag) {
+    try { await page.waitForFunction(key => window[key] === true, flag) }
+    catch (error) {
+      // Diagnostics contain only consent categories and booleans. Never include
+      // identity, actual URLs, queue contents, DOM text, or exception payloads.
+      const state = await page.evaluate(({ metaKey, googleKey, googleSdk }) => {
+        const consent = (store, key) => {
+          try {
+            const value = window[store].getItem(key)
+            return value === 'granted' || value === 'denied' ? value : value === '1' ? 'denied' : 'unset'
+          } catch { return 'unreadable' }
+        }
+        return {
+          metaConsent: consent('localStorage', metaKey), googleConsent: consent('localStorage', googleKey),
+          metaTabDenial: consent('sessionStorage', metaKey + '_denied'), googleTabDenial: consent('sessionStorage', googleKey + '_denied'),
+          publicLandingVisible: !!document.querySelector('.course-landing'),
+          privateDocument: !!window.__firstaidPrivateDocument, marketingRevoked: !!window.__firstaidMarketingRevoked,
+          metaLoaded: !!window.__firstaidMetaLoaded, googleLoaded: !!window.__firstaidGoogleLoaded,
+          metaRevoked: !!window.__firstaidMetaRevoked, googleRevoked: !!window.__firstaidGoogleRevoked,
+          hasGtag: typeof window.gtag === 'function', hasDataLayer: !!window.dataLayer,
+          dataLayerIsArray: Array.isArray(window.dataLayer), googleScriptPresent: [...document.scripts].some(script => script.src === googleSdk),
+          metaStubLoaded: !!window.__stubSdkLoaded, googleStubLoaded: !!window.__stubGoogleLoaded,
+        }
+      }, { metaKey: CONSENT_KEY, googleKey: GOOGLE_CONSENT_KEY, googleSdk: GOOGLE_SDK }).catch(() => ({ diagnosticsUnavailable: true }))
+      error.message += `; safe SDK diagnostics: ${JSON.stringify({ ...state, pageErrorSeen, scriptSyntaxErrorSeen })}`
+      throw error
+    }
+  }
   async function open(path = '/', referer) {
     await page.goto(ORIGIN + path, { waitUntil: 'load', ...(referer ? { referer } : {}) })
     await page.waitForTimeout(700)
   }
   async function grant() {
     await page.getByRole('button', { name: 'อนุญาต', exact: true }).click()
-    await page.waitForFunction(() => window.__stubSdkLoaded === true)
+    await waitForSdk('__stubSdkLoaded')
     await page.waitForTimeout(100)
   }
   async function grantGoogle() {
     await page.getByRole('button', { name: 'อนุญาต Google', exact: true }).click()
-    await page.waitForFunction(() => window.__stubGoogleLoaded === true)
+    await waitForSdk('__stubGoogleLoaded')
     await page.waitForTimeout(100)
   }
   function noAds() {
@@ -159,7 +151,7 @@ async function fixture(options = {}) {
     assert.ok(googleObservations.every(item => item.forms === 0 && item.privateNodes === 0 && !item.insertedPrivateNodes), 'Google-bearing document never contains even transient lesson, auth or form DOM')
     assert.ok(googleObservations.every(item => item.canonical === null || item.canonical === ORIGIN + '/'), 'Google-bearing document never exposes private SEO metadata')
   }
-  return { context, page, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, open, grant, grantGoogle, noAds, googleStayedPublic, releaseAuth, authRequests: () => authRequests }
+  return { context, page, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, noAds, googleStayedPublic, releaseAuth, authRequests: () => authRequests }
 }
 async function test(name, options, fn) {
   const f = await fixture(options)
@@ -363,7 +355,7 @@ try {
     assert.equal(f.googleRequests.length, 1)
   })
   for (const method of ['pushState', 'replaceState']) for (const path of ['/learn', '/learn/1', '/admin/login', '/auth/line/callback?code=synthetic', '/auth/hub/callback?code=synthetic']) {
-    await test(`Google ${method} ${path} leaves before private URL or DOM is visible`, {}, async f => {
+    await test(`Google ${method} ${path} keeps actual location and DOM public before document replacement`, {}, async f => {
       await f.open(); await f.grantGoogle()
       const oldDocument = await f.page.evaluate(() => window.__documentId)
       await f.page.evaluate(({ method, path }) => { history[method](null, '', path); dispatchEvent(new PopStateEvent('popstate')) }, { method, path })
@@ -374,22 +366,38 @@ try {
       assert.equal(f.sdkRequests.length, 0)
       assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
       assert.ok(f.googleObservations.some(item => item.reason === method), 'SDK history wrapper must observe the attempted navigation')
+      assert.ok(f.googleHistoryArguments.some(item => item.documentId === oldDocument && item.method === method && item.target === path), 'Later wrappers can observe synthetic arguments before our guard; only actual location and DOM are protected')
       f.googleStayedPublic()
     })
   }
-  await test('Google and Meta together leave before private link click reaches React or SDK', {}, async f => {
-    await f.open(); await f.grantGoogle(); await f.grant()
-    const oldDocument = await f.page.evaluate(() => window.__documentId)
-    await f.page.locator('.course-desktop-nav a[href="/learn"]').click()
-    await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
-    await f.page.waitForTimeout(500)
-    assert.equal(new URL(f.page.url()).pathname, '/learn')
-    assert.equal(f.sdkRequests.length, 1)
-    assert.equal(f.googleRequests.length, 1)
-    assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
-    assert.deepEqual(f.mounts, [])
-    f.googleStayedPublic()
-  })
+  for (const [name, selector, mobile] of [
+    ['desktop navigation', '.course-desktop-nav a[href="/learn"]', false],
+    ['start lesson', '.course-hero-actions a.btn-primary', false],
+    ['chapter anchor', '.course-chapter', false],
+    ['course tool', '.course-tools a[href="/schedule"]', false],
+    ['game link', '.course-game-shortcut', false],
+    ['mobile navigation', '.bottom-bar a[href="/call"]', true],
+  ]) {
+    await test(`Google and Meta public ${name} bypasses SDK history arguments`, {}, async f => {
+      if (mobile) await f.page.setViewportSize({ width: 390, height: 844 })
+      await f.open(); await f.grantGoogle(); await f.grant()
+      const oldDocument = await f.page.evaluate(() => window.__documentId)
+      const link = f.page.locator(selector).first()
+      const target = new URL(await link.getAttribute('href'), ORIGIN)
+      assert.notEqual(target.pathname, '/', 'Exercise a genuine private-page link')
+      const previousArguments = f.googleHistoryArguments.length
+      await link.click()
+      await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
+      await f.page.waitForTimeout(500)
+      assert.equal(new URL(f.page.url()).pathname, target.pathname)
+      assert.equal(f.sdkRequests.length, 1)
+      assert.equal(f.googleRequests.length, 1)
+      assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
+      assert.deepEqual(f.mounts, [])
+      assert.deepEqual(f.googleHistoryArguments.slice(previousArguments).filter(item => item.documentId === oldDocument), [], 'Captured public links never pass target arguments through an SDK history wrapper')
+      f.googleStayedPublic()
+    })
+  }
   for (const storageFailures of [[], ['local:set'], ['local:set', 'session:set']]) {
     await test(`Google withdrawal survives stale local grant and ${storageFailures.join(',') || 'working storage'}`, {}, async f => {
       await f.open(); await f.grantGoogle()
