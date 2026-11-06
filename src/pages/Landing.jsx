@@ -13,6 +13,7 @@ import { scenarios } from '../courses/firstaid/scenarios'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
 import Seo from '../components/Seo'
+import HubCertSample from '../components/HubCertSample'
 import { courseJsonLd } from '../lib/seo'
 import { trackLandingContact } from '../lib/trainingAds'
 import { trackGoogleLandingContact } from '../lib/trainingGoogleAds'
@@ -93,6 +94,7 @@ export default function Landing() {
             return <Link to={`/learn#chapter-${ch.id}`} key={ch.id} className="course-chapter"><div className="course-chapter-art"><img src={art.src} alt={art.alt} width="600" height="400" loading="lazy" /><span><Icon size={22} /></span></div><div className="course-chapter-copy"><small>หมวดที่ {ch.id} · {items.length} บทเรียน</small><h3>{ch.title}</h3><span className="course-chapter-bottom">ดูบทเรียน <ArrowRight size={17} /></span></div></Link>
           })}</div>
         </section>
+        <HubCertSample />
         <Link to="/game" className="course-game-shortcut" onClick={() => phCapture('landing_game_click')}><Gamepad2 size={26} /><span><strong>FIRST AID HERO</strong><small>ลองฝึกตัดสินใจผ่านเกมช่วยชีวิต</small></span><ArrowRight size={22} /></Link>
         <section className="course-tools"><h2>ทางลัดสำหรับผู้เรียน</h2><nav aria-label="ทางลัดสำหรับผู้เรียน">{OTHER_LINKS.map(({to, label, desc, icon: Icon}) => <Link to={to} key={to}><Icon size={23} /><span><strong>{label}</strong><small>{desc}</small></span><ArrowRight size={17} /></Link>)}</nav></section>
         <div className="course-practical-note"><Award size={21} /><p>ใบประกาศภาคทฤษฎีรับได้เมื่อเรียนและสอบผ่าน<br /><a href={LINE_URL} target="_blank" rel="noopener noreferrer" onClick={trackLineLead}><MessageCircle size={15} /> สนใจฝึกปฏิบัติ ทัก LINE {LINE_ID} ↗</a></p></div>
