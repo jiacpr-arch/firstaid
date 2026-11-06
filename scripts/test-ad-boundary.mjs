@@ -515,15 +515,24 @@ try {
       assert.equal(f.calls.length, 0)
       const oldDocument = await f.page.evaluate(() => window.__documentId)
       f.pauseNavigation()
-      if (retirement === 'private-navigation') {
-        await f.page.locator('.course-desktop-nav a[href="/learn"]').dispatchEvent('click')
-      } else {
-        const button = retirement === 'google-withdrawal' ? 'ถอนความยินยอม Google' : 'ถอนความยินยอมวัดผลโฆษณา'
-        await f.page.getByRole('button', { name: button, exact: true }).dispatchEvent('click')
-      }
-      await f.page.waitForFunction(({ google, meta }) => (!google || window.__firstaidGoogleRevoked) && (!meta || window.__firstaidMetaRevoked), { google, meta })
-      assert.equal(await f.page.evaluate(() => window.__documentId), oldDocument, 'Exercise the retiring document before navigation commits')
-      await f.page.evaluate(({ google, meta }) => {
+      const target = retirement === 'private-navigation'
+        ? f.page.locator('.course-desktop-nav a[href="/learn"]')
+        : f.page.getByRole('button', { name: retirement === 'google-withdrawal' ? 'ถอนความยินยอม Google' : 'ถอนความยินยอมวัดผลโฆษณา', exact: true })
+      // A pending reload can suspend later Playwright frame evaluations even
+      // while its response is held. Observe the real synchronous click handler
+      // and release the synthetic SDK in one evaluation, before it can commit.
+      const retired = await target.evaluate((element, { google, meta }) => {
+        const beforeDocument = window.__documentId
+        element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, button: 0 }))
+        const state = {
+          beforeDocument, afterDocument: window.__documentId,
+          googleRevoked: !!window.__firstaidGoogleRevoked, metaRevoked: !!window.__firstaidMetaRevoked,
+          marketingRevoked: !!window.__firstaidMarketingRevoked, privateDocument: !!window.__firstaidPrivateDocument,
+          googleReleaseReady: typeof window.__releaseGoogleSdk === 'function', metaReleaseReady: typeof window.__releaseMetaSdk === 'function',
+        }
+        // Missing revocation is a real failure, not a reason to bypass the
+        // guard or quietly cancel the late-SDK portion of this test.
+        if ((google && !state.googleRevoked) || (meta && !state.metaRevoked)) return state
         // Captured application shims must not repopulate the revoked queues.
         if (google) {
           window.gtag('event', 'synthetic_late_event', { send_to: 'synthetic' })
@@ -535,8 +544,17 @@ try {
           window.fbq('consent', 'grant')
           window.__releaseMetaSdk()
         }
+        return { ...state, afterReleaseDocument: window.__documentId, googleExecuted: !!window.__stubGoogleLoaded, metaExecuted: !!window.__stubSdkLoaded }
       }, { google, meta })
-      await f.page.waitForFunction(({ google, meta }) => (!google || window.__stubGoogleLoaded) && (!meta || window.__stubSdkLoaded), { google, meta })
+      // Diagnostics are fixture document IDs and booleans only, never user data.
+      const diagnostics = JSON.stringify(retired)
+      assert.equal(retired.beforeDocument, oldDocument, diagnostics)
+      assert.equal(retired.afterDocument, oldDocument, 'Exercise the retiring document before navigation commits: ' + diagnostics)
+      assert.ok(!google || retired.googleRevoked, 'Google must be revoked synchronously: ' + diagnostics)
+      assert.ok(!meta || retired.metaRevoked, 'Meta must be revoked synchronously: ' + diagnostics)
+      assert.equal(retired.afterReleaseDocument, oldDocument, diagnostics)
+      assert.ok(!google || (retired.googleReleaseReady && retired.googleExecuted), 'Late Google stub must actually execute: ' + diagnostics)
+      assert.ok(!meta || (retired.metaReleaseReady && retired.metaExecuted), 'Late Meta stub must actually execute: ' + diagnostics)
       await f.page.waitForTimeout(100)
       if (google) {
         assert.ok(f.googleCalls.length > 0, 'Late Google stub must execute and receive denial')
