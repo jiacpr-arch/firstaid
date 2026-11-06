@@ -18,8 +18,9 @@ export default function HubCertSample() {
         <h2 id="hub-cert-sample-title">ลงทะเบียนผ่าน JIA Hub รับใบประกาศแบบนี้</h2>
         <p>
           ลงทะเบียนผ่าน JIA Hub ได้ใบประกาศจากระบบกลาง — <b>ภาคทฤษฎี</b> เมื่อเรียนและสอบผ่านออนไลน์
-          และ <b>ภาคปฏิบัติ</b> เมื่อฝึกและผ่านการประเมินจริง ดาวน์โหลดเป็น PDF ได้ และมี QR Code ตรวจสอบได้
+          และ <b>ภาคปฏิบัติ</b> เมื่อฝึกและผ่านการประเมินจริง ดาวน์โหลดเป็น PDF ได้
         </p>
+        <p className="hub-cert-sample-verify"><b>ทุกใบมี QR Code — ใครก็สแกนตรวจสอบได้ทันทีว่าเป็นใบจริงที่ออกโดย JIA</b></p>
       </div>
       <div className="hub-cert-sample-grid">
         {SAMPLES.map(({ src, caption, alt }) => (

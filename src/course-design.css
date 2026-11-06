@@ -254,3 +254,11 @@ a:focus-visible,button:focus-visible { outline: 3px solid #23736a; outline-offse
 @media (max-width: 340px) {
   .hub-cert-sample-grid { grid-template-columns: 1fr; max-width: 240px; margin-inline: auto; width: 100%; }
 }
+
+.hub-cert-sample-verify {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(46, 125, 50, 0.08);
+  border: 1px solid rgba(46, 125, 50, 0.25);
+}
