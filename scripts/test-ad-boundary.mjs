@@ -23,6 +23,13 @@ async function fixture(options = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block' })
   const sdkRequests = [], calls = [], mounts = [], blocked = [], googleRequests = [], googleCalls = [], googleObservations = [], googleHistoryArguments = []
   let releaseAuth, authRequests = 0
+  let holdRetiringNavigation = false, resolveRetiringNavigation
+  const retiringNavigationGate = new Promise(resolve => { resolveRetiringNavigation = resolve })
+  const pauseNavigation = () => { holdRetiringNavigation = true }
+  const releaseNavigation = () => { holdRetiringNavigation = false; resolveRetiringNavigation() }
+  const sdkBody = (source, vendor) => options.deferSdkExecution
+    ? `window.__release${vendor}Sdk = () => { delete window.__release${vendor}Sdk; ${source} };`
+    : source
   const authGate = new Promise(resolve => { releaseAuth = resolve })
   await context.exposeBinding('__recordAdBoundary', (_source, kind, value) => {
     if (kind === 'call') calls.push(value)
@@ -35,6 +42,9 @@ async function fixture(options = {}) {
   await context.routeWebSocket('**/*', socket => socket.close())
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url())
+    // Pending-SDK cases deliberately keep the retiring document alive while
+    // releasing synthetic script execution after consent has been revoked.
+    if (holdRetiringNavigation && request.isNavigationRequest() && url.origin === ORIGIN) await retiringNavigationGate
     if (options.holdAuth && url.hostname === AUTH_HOST && url.pathname === '/auth/v1/token') {
       authRequests++
       await authGate
@@ -43,12 +53,12 @@ async function fixture(options = {}) {
     if (request.url() === GOOGLE_SDK) {
       assert.equal(request.headers().referer, undefined, 'Google SDK request must suppress referrer')
       googleRequests.push(request.url())
-      return route.fulfill({ contentType: 'text/javascript', body: GOOGLE_SDK_STUB })
+      return route.fulfill({ contentType: 'text/javascript', body: sdkBody(GOOGLE_SDK_STUB, 'Google') })
     }
     if (request.url() === SDK) {
       assert.equal(request.headers().referer, undefined, 'SDK request must suppress referrer')
       sdkRequests.push(request.url())
-      return route.fulfill({ contentType: 'text/javascript', body: META_SDK_STUB })
+      return route.fulfill({ contentType: 'text/javascript', body: sdkBody(META_SDK_STUB, 'Meta') })
     }
     // Only static GET files at the production origin are fulfilled from disk.
     // Everything else is aborted, including same-origin APIs and analytics.
@@ -76,6 +86,8 @@ async function fixture(options = {}) {
       sessionStorage.setItem('__boundarySeeded', '1')
     }
     window.__storageFailures = options.storageFailures || []
+    let partialGrantWritten = false
+    const partialGrantKey = options.partialGrantFailure === 'google' ? googleKey : options.partialGrantFailure === 'meta' ? key : null
     const originalGet = Storage.prototype.getItem
     const originalSet = Storage.prototype.setItem
     const originalRemove = Storage.prototype.removeItem
@@ -85,10 +97,19 @@ async function fixture(options = {}) {
       return originalGet.call(this, name)
     }
     Storage.prototype.setItem = function (name, value) {
+      // A single local grant succeeds, then denial rollback cannot write either
+      // store. This must not be treated as consent merely because it persisted.
+      if (partialGrantKey && partialGrantWritten) throw new DOMException('Synthetic post-grant write failure', 'SecurityError')
+      if (partialGrantKey && this === localStorage && name === partialGrantKey && value === 'granted') {
+        const result = originalSet.call(this, name, value)
+        partialGrantWritten = true
+        return result
+      }
       if (fails(this, 'set')) throw new DOMException('Test storage unavailable', 'SecurityError')
       return originalSet.call(this, name, value)
     }
     Storage.prototype.removeItem = function (name) {
+      if (partialGrantKey && partialGrantWritten && this === sessionStorage) throw new DOMException('Synthetic session removal failure', 'SecurityError')
       if (fails(this, 'remove')) throw new DOMException('Test storage unavailable', 'SecurityError')
       return originalRemove.call(this, name)
     }
@@ -151,13 +172,13 @@ async function fixture(options = {}) {
     assert.ok(googleObservations.every(item => item.forms === 0 && item.privateNodes === 0 && !item.insertedPrivateNodes), 'Google-bearing document never contains even transient lesson, auth or form DOM')
     assert.ok(googleObservations.every(item => item.canonical === null || item.canonical === ORIGIN + '/'), 'Google-bearing document never exposes private SEO metadata')
   }
-  return { context, page, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, noAds, googleStayedPublic, releaseAuth, authRequests: () => authRequests }
+  return { context, page, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, noAds, googleStayedPublic, releaseAuth, pauseNavigation, releaseNavigation, authRequests: () => authRequests }
 }
 async function test(name, options, fn) {
   const f = await fixture(options)
   try { await fn(f); passed++; console.log(`PASS ${name}`) }
   catch (error) { error.message = `${name}: ${error.message}`; throw error }
-  finally { await f.context.close() }
+  finally { f.releaseNavigation(); await f.context.close() }
 }
 try {
   await test('anonymous landing requires fresh explicit consent; single verified PageView', {}, async f => {
@@ -447,6 +468,94 @@ try {
     f.googleStayedPublic()
     await other.close()
   })
+  for (const vendor of ['meta', 'google']) {
+    await test(`${vendor} partial grant with failed rollback uses a no-ads document`, { partialGrantFailure: vendor }, async f => {
+      await f.open(); f.noAds()
+      const oldDocument = await f.page.evaluate(() => window.__documentId)
+      const button = vendor === 'google' ? 'อนุญาต Google' : 'อนุญาต'
+      await f.page.getByRole('button', { name: button, exact: true }).click()
+      await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
+      await f.page.waitForTimeout(500)
+      assert.equal(new URL(f.page.url()).searchParams.get('marketing_consent'), 'denied')
+      const key = vendor === 'google' ? GOOGLE_CONSENT_KEY : CONSENT_KEY
+      assert.equal(await f.page.evaluate(key => localStorage.getItem(key), key), 'granted', 'Verify the surviving partial grant, not an accidentally successful rollback')
+      f.noAds()
+      assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
+      await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500)
+      f.noAds()
+    })
+  }
+  for (const retirement of ['google-withdrawal', 'meta-withdrawal', 'private-navigation']) {
+    await test(`pending SDK cannot replay queued LINE intent after ${retirement}`, { deferSdkExecution: true }, async f => {
+      const google = retirement !== 'meta-withdrawal'
+      const meta = retirement !== 'google-withdrawal'
+      await f.open()
+      if (google) {
+        await f.page.getByRole('button', { name: 'อนุญาต Google', exact: true }).click()
+        await f.page.waitForFunction(() => typeof window.__releaseGoogleSdk === 'function')
+      }
+      if (meta) {
+        await f.page.getByRole('button', { name: 'อนุญาต', exact: true }).click()
+        await f.page.waitForFunction(() => typeof window.__releaseMetaSdk === 'function')
+      }
+      await f.page.evaluate(() => document.addEventListener('click', event => {
+        if (event.target.closest?.('a')?.href.startsWith('https://line.me/')) event.preventDefault()
+      }, true))
+      await f.page.locator('.course-practical-note a[href^="https://line.me/"]').dispatchEvent('click')
+      const prepared = await f.page.evaluate(() => ({
+        googleContactPending: !!window.dataLayer?.some(args => args[0] === 'event' && args[1] === 'conversion'),
+        metaContactPending: !!window.fbq?.queue?.some(args => args.includes('Contact')),
+        googleExecuted: !!window.__stubGoogleLoaded, metaExecuted: !!window.__stubSdkLoaded,
+      }))
+      assert.equal(prepared.googleContactPending, google)
+      assert.equal(prepared.metaContactPending, meta)
+      assert.equal(prepared.googleExecuted, false)
+      assert.equal(prepared.metaExecuted, false)
+      assert.equal(f.googleCalls.length, 0)
+      assert.equal(f.calls.length, 0)
+      const oldDocument = await f.page.evaluate(() => window.__documentId)
+      f.pauseNavigation()
+      if (retirement === 'private-navigation') {
+        await f.page.locator('.course-desktop-nav a[href="/learn"]').dispatchEvent('click')
+      } else {
+        const button = retirement === 'google-withdrawal' ? 'ถอนความยินยอม Google' : 'ถอนความยินยอมวัดผลโฆษณา'
+        await f.page.getByRole('button', { name: button, exact: true }).dispatchEvent('click')
+      }
+      await f.page.waitForFunction(({ google, meta }) => (!google || window.__firstaidGoogleRevoked) && (!meta || window.__firstaidMetaRevoked), { google, meta })
+      assert.equal(await f.page.evaluate(() => window.__documentId), oldDocument, 'Exercise the retiring document before navigation commits')
+      await f.page.evaluate(({ google, meta }) => {
+        // Captured application shims must not repopulate the revoked queues.
+        if (google) {
+          window.gtag('event', 'synthetic_late_event', { send_to: 'synthetic' })
+          window.gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: 'granted' })
+          window.__releaseGoogleSdk()
+        }
+        if (meta) {
+          window.fbq('trackSingle', 'synthetic', 'Contact')
+          window.fbq('consent', 'grant')
+          window.__releaseMetaSdk()
+        }
+      }, { google, meta })
+      await f.page.waitForFunction(({ google, meta }) => (!google || window.__stubGoogleLoaded) && (!meta || window.__stubSdkLoaded), { google, meta })
+      await f.page.waitForTimeout(100)
+      if (google) {
+        assert.ok(f.googleCalls.length > 0, 'Late Google stub must execute and receive denial')
+        assert.ok(f.googleCalls.every(call => call.documentId === oldDocument && call.args[0] === 'consent' && call.args[1] === 'update' && ['analytics_storage', 'ad_storage', 'ad_user_data', 'ad_personalization'].every(key => call.args[2][key] === 'denied')), 'No old grant, config, pageview or Ads conversion may replay')
+        f.googleStayedPublic()
+      }
+      if (meta) {
+        assert.ok(f.calls.length > 0, 'Late Meta stub must execute and receive revocation')
+        assert.ok(f.calls.every(call => call.documentId === oldDocument && call.args.length === 2 && call.args[0] === 'consent' && call.args[1] === 'revoke'), 'No old Meta initialization, PageView or Contact may replay')
+      }
+      assert.equal(f.context.pages().length, 1)
+      f.releaseNavigation()
+      await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
+      await f.page.waitForTimeout(500)
+      assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
+      assert.equal(f.googleRequests.length, google ? 1 : 0)
+      assert.equal(f.sdkRequests.length, meta ? 1 : 0)
+    })
+  }
   const assets = await readdir(resolve(DIST, 'assets'))
   const js = (await Promise.all(assets.filter(x => x.endsWith('.js')).map(x => readFile(resolve(DIST, 'assets', x), 'utf8')))).join('\n')
   if (js.includes(AUTH_HOST)) {

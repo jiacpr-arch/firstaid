@@ -24,14 +24,25 @@ export default function MetaPixel({ publicLanding = false }) {
   if (!eligible) return null
   const choose = value => {
     const saved = saveConsent(window, value)
+    if (value === 'granted' && !saved) {
+      setChoice('denied')
+      revokeTrainingPixel(window, document)
+      const denialSaved = saveConsent(window, 'denied')
+      // A failed save may still leave a partial local grant behind. Only a
+      // verified denial makes this document safe to keep; otherwise use the
+      // no-ads URL even though the visitor originally requested a grant.
+      if (!denialSaved || readConsent(window) !== 'denied') window.location.replace(denialFallbackUrl(window.location))
+      else if (window.__firstaidMetaLoaded) window.location.reload()
+      return
+    }
     if (value === 'granted' && saved && window.__firstaidMetaRevoked) {
       if (window.__firstaidMetaLoaded) { window.location.reload(); return }
       window.__firstaidMetaRevoked = false
     }
-    setChoice(value === 'granted' && !saved ? 'denied' : value)
+    setChoice(value)
     if (value === 'denied') {
       revokeTrainingPixel(window, document)
-      if (!saved) window.location.replace(denialFallbackUrl(window.location))
+      if (!saved || readConsent(window) !== 'denied') window.location.replace(denialFallbackUrl(window.location))
       else if (window.__firstaidMetaLoaded) window.location.reload()
     }
   }

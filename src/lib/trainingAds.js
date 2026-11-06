@@ -57,6 +57,8 @@ export function canUseMarketingDocument(win, { urlEligible, anonymous, auth, pro
 export function loadTrainingPixel(win, doc, pixelId) {
   if (pixelId !== TRAINING_PIXEL_ID || win.__firstaidMetaLoaded || win.__firstaidMetaRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument || win.fbq) return
   const fbq = win.fbq = function (...args) {
+    const revoked = win.__firstaidMetaRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument
+    if (revoked && !(args.length === 2 && args[0] === 'consent' && args[1] === 'revoke')) return
     if (fbq.callMethod) fbq.callMethod(...args)
     else fbq.queue.push(args)
   }
@@ -79,6 +81,9 @@ export function loadTrainingPixel(win, doc, pixelId) {
 
 export function revokeTrainingPixel(win, doc) {
   win.__firstaidMetaRevoked = true
+  // Only clear our bootstrap queue before Meta has installed callMethod.
+  // Already-running SDK state is revoked normally and the document is discarded.
+  try { if (win.__firstaidMetaLoaded && !win.fbq?.callMethod) win.fbq?.queue?.splice(0) } catch { /* still revoke */ }
   try { win.fbq?.('consent', 'revoke') } catch { /* non-blocking */ }
   for (const name of ['_fbp', '_fbc']) {
     for (const domain of ['', '; Domain=firstaid.morroo.com', '; Domain=.morroo.com']) {

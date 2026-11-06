@@ -15,14 +15,25 @@ export default function GoogleTrainingConsent({ publicLanding = false }) {
   if (!eligible) return null
   const choose = value => {
     const saved = saveGoogleConsent(window, value)
+    if (value === 'granted' && !saved) {
+      setChoice('denied')
+      revokeTrainingGoogle(window, document)
+      const denialSaved = saveGoogleConsent(window, 'denied')
+      // A failed save may still leave a partial local grant behind. Only a
+      // verified denial makes this document safe to keep; otherwise use the
+      // no-ads URL even though the visitor originally requested a grant.
+      if (!denialSaved || readGoogleConsent(window) !== 'denied') window.location.replace(denialFallbackUrl(window.location))
+      else if (window.__firstaidGoogleLoaded) window.location.reload()
+      return
+    }
     if (value === 'granted' && saved && window.__firstaidGoogleRevoked) {
       if (window.__firstaidGoogleLoaded) { window.location.reload(); return }
       window.__firstaidGoogleRevoked = false
     }
-    setChoice(value === 'granted' && !saved ? 'denied' : value)
+    setChoice(value)
     if (value === 'denied') {
       revokeTrainingGoogle(window, document)
-      if (!saved) window.location.replace(denialFallbackUrl(window.location))
+      if (!saved || readGoogleConsent(window) !== 'denied') window.location.replace(denialFallbackUrl(window.location))
       else if (window.__firstaidGoogleLoaded) window.location.reload()
     }
   }

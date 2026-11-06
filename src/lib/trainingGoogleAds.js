@@ -37,7 +37,15 @@ export function loadTrainingGoogle(win, doc, { enabled = GOOGLE_TRAINING_ENABLED
     revokeTrainingGoogle(currentWindow, currentDocument)
   })
   win.dataLayer = []
-  win.gtag = function () { win.dataLayer.push(arguments) }
+  win.gtag = function () {
+    const revoked = win.__firstaidGoogleRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument
+    // Only our immutable denial may pass after revocation. A captured gtag
+    // reference must not requeue events, config or a stale consent grant.
+    const internalDenial = arguments.length === 3 && arguments[0] === 'consent'
+      && arguments[1] === 'update' && arguments[2] === DENIED
+    if (revoked && !internalDenial) return
+    win.dataLayer.push(arguments)
+  }
   win.__firstaidGoogleLoaded = true
   win.__firstaidMarketingLoaded = true // Any vendor requires document teardown.
   win[`ga-disable-${TRAINING_GA4_ID}`] = false
@@ -75,7 +83,11 @@ export function revokeTrainingGoogle(win, doc) {
   win.__firstaidGoogleRevoked = true
   win[`ga-disable-${TRAINING_GA4_ID}`] = true
   if (win.__firstaidGoogleLoaded) {
-    try { win.gtag?.('consent', 'update', { ...DENIED }) } catch { /* non-blocking */ }
+    // Preserve the array and any installed push handler. Clearing only its
+    // buffered entries prevents a late SDK from replaying an earlier grant,
+    // config, pageview or contact before it reaches the denial below.
+    try { win.dataLayer?.splice(0) } catch { /* still deny and discard document */ }
+    try { win.gtag?.('consent', 'update', DENIED) } catch { /* non-blocking */ }
   }
   // The caller must discard a loaded document; removing a script cannot unload
   // an SDK. Cookie cleanup is best-effort and never replaces that boundary.
