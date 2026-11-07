@@ -14,7 +14,8 @@
 jia-online แล้วต้องคัดลอกมาใหม่ ให้ตรงกับ `ANSWER_KEY` ใน edge function `grade-quiz`), ตรวจผ่าน `api/cpr/grade.js`
 → `grade-quiz`, สิทธิ์ที่ `api/_lib/cprAccess.js` (ฟรีเฉพาะคลาส `includes_cpr` / ซื้อ chapter 5 หรือ 0 เอง — คลาส `unlock_lessons`
 ไม่ได้ CPR: `/api/entitlements` ส่ง `cpr` แยกจาก `chapters`), ความคืบหน้าเก็บใน
-`online_students` (แท็ก `firstaid-class:<promo>` หรือ `firstaid-learner:<id>`), ใบประกาศ = Hub courseId `cpr`
+`online_students` (แท็ก `firstaid-class:<promo>` หรือ `firstaid-learner:<id>`), ใบประกาศ = Hub courseId `cpr`,
+คนที่ซื้อเอง (โค้ดราคา > 0) ผ่านปลายภาค → คูปอง ฿100 (`promo_codes`) + คิวขาย `sales_tracking` (`api/cpr/progress.js` action `reward`)
 คู่มือ: ครู/แอดมิน `/admin/guide` (#cpr-class, #cpr-chapter), นักเรียน `/cpr/guide`
 
 คำสั่งหลัก: `npm run dev` (รัน local), `npm run build` (build + ตรวจว่าโค้ดพัง), `npx eslint src/`
