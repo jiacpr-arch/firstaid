@@ -11,7 +11,7 @@ const MAX_COUNT = 100
 // /api/entitlements/redeem.
 //
 // Body:
-//   chapter   0-4 (0 = whole-course bundle)                        required
+//   chapter   0-5 (0 = whole-course bundle, 5 = CPR & AED)                        required
 //   count     how many distinct codes to mint (1-100)              default 1
 //   priceThb  price recorded on each code                          optional
 //   validDays access lasts this many days after each redemption;   optional
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   const chapter = Number(req.body?.chapter)
   const count = Math.min(MAX_COUNT, Math.max(1, Number(req.body?.count) || 1))
   const priceThb = req.body?.priceThb != null ? Number(req.body.priceThb) : null
-  if (!Number.isInteger(chapter) || chapter < 0 || chapter > 4) {
+  if (!Number.isInteger(chapter) || chapter < 0 || chapter > 5) {
     res.status(400).json({ error: 'Invalid chapter' })
     return
   }

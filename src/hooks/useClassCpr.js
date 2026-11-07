@@ -35,9 +35,8 @@ async function fetchStatus(learnerId, code) {
 }
 
 // คอร์ส CPR ของคลาสรวมอยู่ในเว็บนี้แล้ว (เดิมต้องข้ามไป cpr.morroo.com/?promo= แล้วกรอกชื่อ/เบอร์/โค้ดใหม่ —
-// นักเรียนงงที่ต้องข้ามไปข้ามมา) — คนทั่วไปที่ไม่ได้อยู่ในคลาสยังซื้อคอร์ส CPR ที่ cpr.morroo.com (CPR_PUBLIC_URL)
+// นักเรียนงงที่ต้องข้ามไปข้ามมา) — คนทั่วไปก็เรียนที่นี่ได้ (หมวด 5 ปลดล็อกแบบหมวดอื่น)
 export const CPR_COURSE_PATH = '/cpr'
-export const CPR_PUBLIC_URL = 'https://cpr.morroo.com'
 
 export function useClassCpr() {
   const learner = useLearnerStore((s) => s.learner)

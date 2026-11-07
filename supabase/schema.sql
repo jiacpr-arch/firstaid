@@ -206,7 +206,7 @@ alter table course_interest enable row level security;
 -- via LINE before an entitlement can be granted, so purchases survive a device change.
 create table if not exists lesson_entitlements (
   learner_id  uuid not null,
-  chapter     int  not null default 0 check (chapter between 0 and 4),
+  chapter     int  not null default 0 check (chapter between 0 and 5),
   source      text not null check (source in ('voucher', 'admin_grant')),
   order_ref   text,
   granted_at  timestamptz not null default now(),
@@ -216,7 +216,7 @@ create index if not exists idx_entitlements_learner on lesson_entitlements(learn
 
 create table if not exists vouchers (
   code        text primary key,
-  chapter     int  not null default 0 check (chapter between 0 and 4),
+  chapter     int  not null default 0 check (chapter between 0 and 5),
   status      text not null default 'active' check (status in ('active', 'redeemed', 'void')),
   price_thb   int,
   redeemed_by uuid,

@@ -2,7 +2,7 @@
 // ใช้โดย api/cpr/grade.js: ตรวจคำตอบที่ edge function grade-quiz ของ jia-online (เฉลยอยู่ที่นั่นที่เดียว)
 // แล้วบันทึกผลลง online_students แถวเดียวกับที่ cpr.morroo.com ใช้ — ครู/dashboard/my-cpr
 // (api/_lib/cprProgress.js) จึงเห็นความคืบหน้าแบบเดิมโดยไม่ต้องแก้ schema
-import { cprCompanyTag, phoneKey } from './cprProgress.js'
+import { phoneKey } from './cprProgress.js'
 
 export const CPR_FINAL_MODULE_ID = 7
 // จำนวนข้อต่อบท — ต้องตรงกับ REQUIRED_COUNT ใน grade-quiz (jia-online)
@@ -20,13 +20,21 @@ export function validateGradeRequest({ moduleId, questions, answers }) {
   return null
 }
 
-// เลือกแถว online_students ที่จะอัปเดต: แถวที่ติดแท็กคลาสนี้ + เบอร์ตรงก่อน ไม่มีก็ null (สร้างแถวใหม่)
+// แท็ก online_students.company ของผู้เรียนที่ซื้อหมวด CPR เอง (ไม่ได้อยู่ในคลาสรวม) — หาแถวของตัวเองด้วย learnerId
+export function cprLearnerTag(learnerId) {
+  return `firstaid-learner:${learnerId}`
+}
+
+// เลือกแถว online_students ที่จะอัปเดต (ไม่มี = สร้างใหม่)
+// - คลาสรวม (matchPhone): แถวที่ติดแท็กคลาสนี้ + เบอร์ตรง — แท็กเดียวใช้ร่วมทั้งคลาส
+// - ซื้อเอง: แถวที่ติดแท็กของผู้เรียนคนนี้
 // ไม่แตะแถวของคนเดียวกันที่สมัครคอร์สเองบน cpr.morroo.com (แท็กอื่น) — แถวนั้นเป็นของระบบขาย
-export function pickClassRow(rows = [], promoCode, phone) {
+export function pickStudentRow(rows = [], { tag, phone, matchPhone }) {
+  const mine = rows.filter((r) => r.company === tag)
+  if (!matchPhone) return mine[0] || null
   const key = phoneKey(phone)
   if (!key) return null
-  const tag = cprCompanyTag(promoCode)
-  return rows.find((r) => r.company === tag && phoneKey(r.phone) === key) || null
+  return mine.find((r) => phoneKey(r.phone) === key) || null
 }
 
 // คะแนนรายบท: เก็บคะแนนที่ดีที่สุดของแต่ละบท (สอบซ้ำได้คะแนนน้อยลงไม่ทับ)
@@ -38,7 +46,8 @@ export function mergeScores(prev, moduleId, score) {
 }
 
 // patch/insert สำหรับ online_students หลังสอบผ่าน 1 บท — คืน null ถ้าไม่ต้องบันทึก (สอบไม่ผ่าน)
-export function buildStudentWrite({ existing, enrollment, promoCode, moduleId, graded, now = new Date() }) {
+// owner: { tag, name, phone, preCourse } — preCourse (คลาสรวมจ่ายค่าคลาสแล้ว) กันคูปอง/คิวติดตามขายของ jia-online
+export function buildStudentWrite({ existing, owner, moduleId, graded, now = new Date() }) {
   if (!graded?.passed) return null
   const chapter_scores = mergeScores(existing?.chapter_scores, moduleId, graded.score)
   const patch = { chapter_scores }
@@ -56,11 +65,10 @@ export function buildStudentWrite({ existing, enrollment, promoCode, moduleId, g
   return {
     op: 'insert',
     row: {
-      name: (enrollment.name || '').trim() || 'นักเรียนคลาส',
-      phone: String(enrollment.phone || '').replace(/\D/g, ''),
-      company: cprCompanyTag(promoCode),
-      // คลาสรวมจ่ายค่าคลาสแล้ว — pre_course กันคูปอง/คิวติดตามขายของ jia-online เหมือนนักเรียน pre-course
-      pre_course: true,
+      name: (owner.name || '').trim() || 'ผู้เรียน firstaid',
+      phone: String(owner.phone || '').replace(/\D/g, ''),
+      company: owner.tag,
+      pre_course: owner.preCourse === true,
       status: 'กำลังเรียน',
       ...patch,
     },

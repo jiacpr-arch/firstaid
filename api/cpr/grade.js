@@ -2,16 +2,17 @@ import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { authFromToken, reconcileLearner, isLearnerIdBound } from '../_lib/authLearner.js'
 import { rateLimited } from '../_lib/rateLimit.js'
-import { cprCompanyTag, phoneKey } from '../_lib/cprProgress.js'
-import { CPR_FINAL_MODULE_ID, validateGradeRequest, pickClassRow, buildStudentWrite } from '../_lib/cprCourse.js'
+import { CPR_FINAL_MODULE_ID, validateGradeRequest, pickStudentRow, buildStudentWrite } from '../_lib/cprCourse.js'
+import { resolveCprAccess } from '../_lib/cprAccess.js'
 
-// ตรวจแบบทดสอบ CPR & AED ออนไลน์ที่เรียนในเว็บนี้ (หน้า /cpr — คลาสรวม CPR + ปฐมพยาบาล)
-// 1) ต้องเป็นนักเรียนในคลาสรวม CPR (cohorts.includes_cpr) — คอร์ส CPR สำหรับคนทั่วไปยังขายที่ cpr.morroo.com
+// ตรวจแบบทดสอบ CPR & AED ออนไลน์ที่เรียนในเว็บนี้ (หน้า /cpr — หมวดที่ 5 ของคอร์ส)
+// 1) ต้องมีสิทธิ์ (api/_lib/cprAccess.js): คลาสรวม CPR + ปฐมพยาบาล (ฟรี) หรือซื้อหมวด CPR / ทั้งคอร์ส
 // 2) ส่งต่อให้ edge function grade-quiz (jia-online) ตรวจ — เฉลยอยู่ที่นั่นที่เดียว; ข้อสอบปลายภาคต้องล็อกอิน
 //    (แนบ access token ของผู้เรียนต่อไป) grade-quiz จะบันทึกผลเข้าระบบกลาง JIA → ได้ใบประกาศ CPR ที่ Hub
-// 3) สอบผ่าน → บันทึกคะแนนลง online_students (แถวที่ติดแท็กคลาส) ครู/dashboard เห็นทันทีแบบเดิม
+// 3) สอบผ่าน → บันทึกคะแนนลง online_students (คลาสรวม: แถวติดแท็กคลาส ครู/dashboard เห็นทันทีแบบเดิม;
+//    ซื้อเอง: แถวติดแท็ก firstaid-learner:<learnerId> ใช้ดูความคืบหน้าข้ามเครื่องผ่าน api/cpr/progress.js)
 //
-// POST { code, learnerId, moduleId, questions:[origIndex], answers:[origChoice] }
+// POST { code?, learnerId, moduleId, questions:[origIndex], answers:[origChoice], name?, phone? }
 //   → { score, correct, total, passed, corrects? }
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
   const auth = await authFromToken(admin, req)
   const { learnerId, forbidden } = reconcileLearner(body.learnerId, auth?.learnerId || null)
   if (forbidden) { res.status(403).json({ error: 'learnerId does not match session' }); return }
-  if (!learnerId || !code) { res.status(400).json({ error: 'Missing learnerId or code' }); return }
+  if (!learnerId) { res.status(400).json({ error: 'Missing learnerId' }); return }
   if (!auth?.learnerId && await isLearnerIdBound(admin, learnerId)) {
     res.status(401).json({ error: 'กรุณาเข้าสู่ระบบอีกครั้ง' })
     return
@@ -43,24 +44,14 @@ export default async function handler(req, res) {
     return
   }
 
-  const { data: cohort, error: cErr } = await admin
-    .from('cohorts')
-    .select('id, deleted_at, includes_cpr, cpr_promo_code')
-    .eq('code', code)
-    .maybeSingle()
-  if (cErr) { res.status(500).json({ error: cErr.message }); return }
-  if (!cohort || cohort.deleted_at || !cohort.includes_cpr || !cohort.cpr_promo_code) {
-    res.status(403).json({ error: 'คลาสนี้ไม่ได้รวมคอร์ส CPR & AED' })
+  let access
+  try {
+    access = await resolveCprAccess(admin, { code, learnerId, tokenLearnerId: auth?.learnerId, name: body.name, phone: body.phone })
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'ตรวจสิทธิ์ไม่สำเร็จ' })
     return
   }
-  const { data: enrollment, error: eErr } = await admin
-    .from('enrollments')
-    .select('learner_id, name, phone')
-    .eq('cohort_id', cohort.id)
-    .eq('learner_id', learnerId)
-    .maybeSingle()
-  if (eErr) { res.status(500).json({ error: eErr.message }); return }
-  if (!enrollment) { res.status(403).json({ error: 'ยังไม่ได้เข้าคลาสนี้' }); return }
+  if (!access) { res.status(403).json({ error: 'locked' }); return }
 
   // ตรวจที่ grade-quiz — token ของผู้เรียนส่งต่อเฉพาะข้อสอบปลายภาค (grade-quiz ใช้ยืนยันตัวตน/จำกัดครั้ง/ส่งผลเข้า Hub)
   const authz = req.headers?.authorization || ''
@@ -82,16 +73,18 @@ export default async function handler(req, res) {
 
   // สอบผ่าน → บันทึกลง online_students (ไม่สำเร็จไม่ขวางผลสอบ — ผลปลายภาคอยู่ที่ Hub แล้ว)
   let saved = !graded.passed
-  const key = phoneKey(enrollment.phone)
-  if (graded.passed && key) {
+  if (graded.passed) {
     try {
       const { data: rows, error } = await admin
         .from('online_students')
         .select('id, phone, company, chapter_scores, completed_at, final_score')
-        .eq('company', cprCompanyTag(cohort.cpr_promo_code))
+        .eq('company', access.tag)
       if (error) throw error
-      const existing = pickClassRow(rows || [], cohort.cpr_promo_code, enrollment.phone)
-      const write = buildStudentWrite({ existing, enrollment, promoCode: cohort.cpr_promo_code, moduleId, graded })
+      const existing = pickStudentRow(rows || [], access)
+      // คลาสรวมต้องมีเบอร์ (ครูจับคู่ด้วยเบอร์) — ไม่มีแถวและไม่มีเบอร์ = ไม่สร้างแถว
+      const write = existing || !access.matchPhone || access.phone
+        ? buildStudentWrite({ existing, owner: access, moduleId, graded })
+        : null
       if (write?.op === 'update') {
         const { error: uErr } = await admin.from('online_students').update(write.patch).eq('id', write.id)
         if (uErr) throw uErr
@@ -99,7 +92,7 @@ export default async function handler(req, res) {
         const { error: iErr } = await admin.from('online_students').insert(write.row)
         if (iErr) throw iErr
       }
-      saved = true
+      saved = !!write
     } catch (err) {
       console.error('cpr progress save failed', err)
     }

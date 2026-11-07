@@ -1,25 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Circle, ExternalLink, HeartPulse, Lock, PlayCircle, QrCode, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, HeartPulse, Lock, PlayCircle, QrCode, RefreshCw } from 'lucide-react'
 import { CPR_MODULES, CPR_FINAL_ID, cprDrawCount, cprModule } from '../courses/cpr/modules'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
-import { useClassCpr, CPR_PUBLIC_URL } from '../hooks/useClassCpr'
+import { useClassCpr } from '../hooks/useClassCpr'
 import { useAuthSession } from '../hooks/useAuthSession'
 import { authHeader } from '../utils/authHeader'
 import { fetchHubCourseCert, claimHubCourseCertificate, HUB_CPR_COURSE_ID } from '../utils/hubCertificate'
+import { useEnsureEntitlements } from '../hooks/useEntitlements'
+import { useEntitlementStore, entitlementKey } from '../stores/entitlementStore'
+import { isChapterUnlocked, CPR_CHAPTER } from '../config/pricing'
+import ChapterUnlockCard from '../components/ChapterUnlockCard'
 import YouTubeLessonPlayer from '../components/YouTubeLessonPlayer'
 import LineLoginGate from '../components/LineLoginGate'
 import HubCertificateCard from '../components/HubCertificateCard'
 import { phCapture } from '../lib/posthog'
 import Seo from '../components/Seo'
 
-// คอร์ส CPR & AED ออนไลน์ 7 บท ในเว็บนี้ — สำหรับนักเรียน "คลาสรวม CPR + ปฐมพยาบาล"
-// (เดิมต้องข้ามไปเรียนที่ cpr.morroo.com กรอกชื่อ/เบอร์/โค้ดคลาสใหม่ แล้วกลับมาเอา QR ที่นี่ — นักเรียนงง)
-// ลำดับ: ปฐมพยาบาล (Post-test ผ่าน) → CPR บท 1–6 (ดูวิดีโอ + แบบทดสอบ 5 ข้อ ผ่าน 80%) → ข้อสอบปลายภาค 10 ข้อ
-// ตรวจคำตอบที่ api/cpr/grade.js → grade-quiz (เฉลยอยู่ที่ server) บันทึกลง online_students ให้ครูเห็นเหมือนเดิม
+// คอร์ส CPR & AED ออนไลน์ 7 บท = หมวดที่ 5 ของคอร์สปฐมพยาบาล (เดิมแยกอยู่ cpr.morroo.com — นักเรียนงงที่ต้องข้ามเว็บ)
+// - คลาสรวม CPR + ปฐมพยาบาล: ฟรี เรียนหลังจบปฐมพยาบาล (Post-test ผ่าน) ผลผูกกับเบอร์ในคลาสให้ครูเห็น
+// - คนทั่วไป: เห็นทุกบท แต่ต้องปลดล็อกหมวด 5 (฿99) หรือทั้งคอร์สก่อน (ChapterUnlockCard แบบหมวดอื่น)
+// บท 1–6 ดูวิดีโอ + แบบทดสอบ 5 ข้อ ผ่าน 80% → ข้อสอบปลายภาค 10 ข้อ
+// ตรวจคำตอบที่ api/cpr/grade.js → grade-quiz (เฉลยอยู่ที่ server) แล้วบันทึกลง online_students
 // ผ่านปลายภาค (ต้องล็อกอิน) → ระบบกลาง JIA ออกใบประกาศ CPR ให้ (รับได้ในหน้านี้เลย)
 
 function shuffled(arr) {
@@ -41,16 +46,46 @@ function drawQuiz(mod) {
     })
 }
 
-// คะแนนรวมจาก server (รวมที่เคยเรียนบน cpr.morroo.com) + ที่เพิ่งผ่านในเครื่อง (server อาจยังไม่ทันอัปเดต)
-function usePassed(cpr, learner) {
+// คะแนนจาก server (คลาส: รวมที่เคยเรียนบน cpr.morroo.com) + ที่เพิ่งผ่านในเครื่อง (server อาจยังไม่ทันอัปเดต)
+function usePassed(ctx, learner) {
   return useMemo(() => {
     const s = new Set()
-    for (const k of Object.keys(cpr.cpr?.scores || {})) s.add(Number(k))
-    const local = learner?.cprScoresCode === learner?.cohortCode ? learner?.cprScores || {} : {}
+    for (const k of Object.keys(ctx.scores || {})) s.add(Number(k))
+    const local = learner?.cprScoresCode === ctx.scopeKey ? learner?.cprScores || {} : {}
     for (const k of Object.keys(local)) s.add(Number(k))
-    if (cpr.status === 'done') s.add(CPR_FINAL_ID)
+    if (ctx.completed) s.add(CPR_FINAL_ID)
     return s
-  }, [cpr.cpr?.scores, cpr.status, learner?.cprScores, learner?.cprScoresCode, learner?.cohortCode])
+  }, [ctx.scores, ctx.completed, ctx.scopeKey, learner?.cprScores, learner?.cprScoresCode])
+}
+
+// ความคืบหน้าของคนที่ซื้อหมวด CPR เอง (api/cpr/progress.js) — ข้ามเครื่องได้
+function usePaidProgress(enabled, learnerId) {
+  const [state, setState] = useState({ scores: {}, completed: false, loaded: false })
+  const [checking, setChecking] = useState(false)
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    if (!enabled || !learnerId) return undefined
+    let cancelled = false
+    ;(async () => {
+      setChecking(true)
+      try {
+        const r = await fetch('/api/cpr/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+          body: JSON.stringify({ learnerId }),
+        })
+        const body = await r.json().catch(() => ({}))
+        if (!cancelled) setState({ scores: body.scores || {}, completed: !!body.completed, loaded: true })
+      } catch {
+        if (!cancelled) setState((s) => ({ ...s, loaded: true }))
+      } finally {
+        if (!cancelled) setChecking(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [enabled, learnerId, tick])
+  const refresh = useCallback(() => setTick((t) => t + 1), [])
+  return { ...state, checking, refresh }
 }
 
 const isUnlocked = (id, passed) => {
@@ -61,22 +96,47 @@ const isUnlocked = (id, passed) => {
 
 export default function CprCourse() {
   useEnsureLearner()
+  useEnsureEntitlements()
   const learner = useLearnerStore((s) => s.learner)
   useEnsureProgress(learner?.id)
   const postTestDone = useProgressStore((s) => s.postTestDone)
   const progressLoaded = useProgressStore((s) => s.loaded)
+  const { session } = useAuthSession()
+  const unlockedChapters = useEntitlementStore((s) => s.chapters)
+  const entitlementStatus = useEntitlementStore((s) => s.status)
+  const entitlementResultKey = useEntitlementStore((s) => s.key)
   const cpr = useClassCpr()
-  const passed = usePassed(cpr, learner)
+  const inClass = !!learner?.cohortCode && cpr.status !== 'none'
+  const paid = !inClass && isChapterUnlocked(CPR_CHAPTER, unlockedChapters)
+  const paidProgress = usePaidProgress(paid, learner?.id)
+  const ctx = inClass
+    ? { mode: 'class', code: learner.cohortCode, scopeKey: learner.cohortCode, scores: cpr.cpr?.scores, completed: cpr.status === 'done', refresh: cpr.refresh, checking: cpr.checking }
+    : { mode: paid ? 'paid' : 'locked', code: null, scopeKey: 'paid', scores: paidProgress.scores, completed: paidProgress.completed, refresh: paidProgress.refresh, checking: paidProgress.checking }
+  const passed = usePassed(ctx, learner)
+  // จำคะแนนจาก server ไว้ในเครื่องด้วย — หน้าเรียน (Learn หมวด 5) จะแสดงบทที่ผ่านแล้วตรงกันโดยไม่ต้องโหลดใหม่
+  const updateLearner = useLearnerStore((s) => s.updateLearner)
+  const serverScores = ctx.scores
+  useEffect(() => {
+    const keys = Object.keys(serverScores || {})
+    if (!keys.length || !learner) return
+    const local = learner.cprScoresCode === ctx.scopeKey ? learner.cprScores || {} : {}
+    if (keys.every((k) => k in local)) return
+    updateLearner({ cprScores: { ...serverScores, ...local }, cprScoresCode: ctx.scopeKey })
+  }, [serverScores, ctx.scopeKey, learner, updateLearner])
   const { moduleId } = useParams()
   const mod = moduleId ? cprModule(moduleId) : null
+  const loading = <div className="page-container"><div className="card text-caption" style={{ textAlign: 'center' }}>กำลังโหลดคอร์ส CPR…</div></div>
 
-  if (!learner?.cohortCode || cpr.status === 'none') return <NotInClass />
-  if (cpr.status === 'loading' || !progressLoaded) {
-    return <div className="page-container"><div className="card text-caption" style={{ textAlign: 'center' }}>กำลังโหลดคอร์ส CPR…</div></div>
+  if (inClass) {
+    if (cpr.status === 'loading' || !progressLoaded) return loading
+    if (!postTestDone) return <FirstAidFirst />
+  } else {
+    const fresh = entitlementStatus === 'ok' && entitlementResultKey === entitlementKey(session, learner?.id)
+    if (!paid && !fresh && entitlementStatus !== 'error') return loading
+    if (paid && !paidProgress.loaded) return loading
   }
-  if (!postTestDone) return <FirstAidFirst />
-  if (mod && isUnlocked(mod.id, passed)) return <CprModule key={mod.id} mod={mod} passed={passed} cpr={cpr} />
-  return <CprOverview passed={passed} cpr={cpr} />
+  if (ctx.mode !== 'locked' && mod && isUnlocked(mod.id, passed)) return <CprModule key={mod.id} mod={mod} passed={passed} ctx={ctx} />
+  return <CprOverview passed={passed} ctx={ctx} />
 }
 
 function Header({ title, back = '/' }) {
@@ -84,28 +144,6 @@ function Header({ title, back = '/' }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
       <Link to={back} className="btn btn-ghost" aria-label="ย้อนกลับ" style={{ padding: 6 }}><ArrowLeft size={20} /></Link>
       <div className="text-title" style={{ flex: 1 }}>{title}</div>
-    </div>
-  )
-}
-
-function NotInClass() {
-  return (
-    <div className="page-container">
-      <Seo title="CPR & AED ออนไลน์" path="/cpr" noindex />
-      <Header title="CPR & AED ออนไลน์" />
-      <div className="card">
-        <div className="text-body-strong"><HeartPulse size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />คอร์สนี้สำหรับนักเรียนคลาสรวม CPR + ปฐมพยาบาล</div>
-        <div className="text-caption" style={{ marginTop: 6 }}>
-          ถ้าคุณอยู่ในคลาส ให้เข้าคลาสด้วยรหัสคลาสก่อน (เมนู “เข้าคลาส”) — ถ้าอยากเรียน CPR & AED ออนไลน์ด้วยตัวเอง เรียนได้ที่ cpr.morroo.com
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <Link to="/join" className="btn btn-primary">เข้าคลาส</Link>
-          <a href={CPR_PUBLIC_URL} target="_blank" rel="noopener noreferrer" className="btn btn-secondary"
-            onClick={() => phCapture('cpr_online_click', { source: 'cpr_page_public', promo: false })}>
-            <ExternalLink size={14} /> cpr.morroo.com
-          </a>
-        </div>
-      </div>
     </div>
   )
 }
@@ -126,7 +164,9 @@ function FirstAidFirst() {
   )
 }
 
-function CprOverview({ passed, cpr }) {
+function CprOverview({ passed, ctx }) {
+  const locked = ctx.mode === 'locked'
+  const isClass = ctx.mode === 'class'
   const doneCount = CPR_MODULES.filter((m) => passed.has(m.id)).length
   const complete = passed.has(CPR_FINAL_ID)
   const next = CPR_MODULES.find((m) => !passed.has(m.id) && isUnlocked(m.id, passed))
@@ -137,16 +177,20 @@ function CprOverview({ passed, cpr }) {
       <div className="card" style={{ borderColor: '#F3C4C4', background: '#FFF7F7' }}>
         <div className="text-body-strong" style={{ color: '#B91C1C' }}>
           <HeartPulse size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-          {complete ? 'เรียน CPR & AED จบแล้ว 🎉' : `ขั้นสุดท้ายของคลาส — เรียนไปแล้ว ${doneCount}/7 บท`}
+          {locked ? 'หมวด 5: CPR & AED — ช่วยชีวิตคนหัวใจหยุดเต้น'
+            : complete ? 'เรียน CPR & AED จบแล้ว 🎉'
+              : `${isClass ? 'ขั้นสุดท้ายของคลาส — ' : ''}เรียนไปแล้ว ${doneCount}/7 บท`}
         </div>
         <div className="text-caption" style={{ marginTop: 4 }}>
-          {complete
-            ? 'ครูเห็นแล้วว่าคุณพร้อม — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติได้เลย'
-            : 'ดูวิดีโอแต่ละบทแล้วทำแบบทดสอบ 5 ข้อให้ได้ 80% ขึ้นไป ครบ 6 บทแล้วสอบปลายภาค 10 ข้อ — เรียนที่นี่ได้เลย ไม่ต้องไปเว็บอื่น'}
+          {locked
+            ? 'CPR ผู้ใหญ่/ทารก, สำลัก, การใช้เครื่อง AED — วิดีโอสั้น 6 บท + ข้อสอบปลายภาค ผ่านแล้วได้ใบประกาศ CPR & AED ออนไลน์ของ JIA (มี QR ตรวจสอบได้)'
+            : complete
+              ? (isClass ? 'ครูเห็นแล้วว่าคุณพร้อม — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติได้เลย' : 'รับใบประกาศ CPR & AED ด้านล่างได้เลย')
+              : 'ดูวิดีโอแต่ละบทแล้วทำแบบทดสอบ 5 ข้อให้ได้ 80% ขึ้นไป ครบ 6 บทแล้วสอบปลายภาค 10 ข้อ'}
         </div>
-        {complete ? (
+        {locked ? null : complete ? (isClass && (
           <Link to="/my-qr" className="btn btn-primary btn-block" style={{ marginTop: 12 }}><QrCode size={16} /> เปิด QR ของฉัน</Link>
-        ) : next && (
+        )) : next && (
           <Link to={`/cpr/${next.id}`} className="btn btn-primary btn-block" style={{ marginTop: 12 }}
             onClick={() => phCapture('cpr_module_open', { module_id: next.id, source: 'overview_next' })}>
             {doneCount === 0 ? 'เริ่มบทที่ 1' : `เรียนต่อ: ${next.short}`}
@@ -154,9 +198,18 @@ function CprOverview({ passed, cpr }) {
         )}
       </div>
 
+      {locked && (
+        <>
+          <ChapterUnlockCard chapter={CPR_CHAPTER} />
+          <div className="text-caption" style={{ marginTop: 8, textAlign: 'center' }}>
+            อยู่ในคลาสรวม CPR + ปฐมพยาบาล? <Link to="/join">เข้าคลาสด้วยรหัสคลาส</Link> แล้วเรียนฟรี
+          </div>
+        </>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
         {CPR_MODULES.map((m) => {
-          const ok = isUnlocked(m.id, passed)
+          const ok = !locked && isUnlocked(m.id, passed)
           const dn = passed.has(m.id)
           const inner = (
             <>
@@ -176,14 +229,16 @@ function CprOverview({ passed, cpr }) {
 
       {complete && <CprCertificate />}
 
-      <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 12, fontSize: 13 }} onClick={cpr.refresh} disabled={cpr.checking}>
-        <RefreshCw size={13} /> {cpr.checking ? 'กำลังเช็ค…' : 'เช็คความคืบหน้าอีกครั้ง'}
-      </button>
+      {!locked && (
+        <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 12, fontSize: 13 }} onClick={ctx.refresh} disabled={ctx.checking}>
+          <RefreshCw size={13} /> {ctx.checking ? 'กำลังเช็ค…' : 'เช็คความคืบหน้าอีกครั้ง'}
+        </button>
+      )}
     </div>
   )
 }
 
-function CprModule({ mod, passed, cpr }) {
+function CprModule({ mod, passed, ctx }) {
   const navigate = useNavigate()
   const learner = useLearnerStore((s) => s.learner)
   const updateLearner = useLearnerStore((s) => s.updateLearner)
@@ -213,7 +268,9 @@ function CprModule({ mod, passed, cpr }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({
-          code: learner.cohortCode,
+          code: ctx.code,
+          name: learner.name || '',
+          phone: learner.phone || '',
           learnerId: learner.id,
           moduleId: mod.id,
           questions: quiz.map((q) => q.i),
@@ -226,10 +283,10 @@ function CprModule({ mod, passed, cpr }) {
       setResult({ ...body, corrects })
       phCapture('cpr_quiz_result', { module_id: mod.id, score: body.score, passed: body.passed, is_final: isFinal })
       if (body.passed) {
-        const prev = learner.cprScoresCode === learner.cohortCode ? learner.cprScores || {} : {}
-        updateLearner({ cprScores: { ...prev, [mod.id]: Math.max(prev[mod.id] || 0, body.score) }, cprScoresCode: learner.cohortCode })
+        const prev = learner.cprScoresCode === ctx.scopeKey ? learner.cprScores || {} : {}
+        updateLearner({ cprScores: { ...prev, [mod.id]: Math.max(prev[mod.id] || 0, body.score) }, cprScoresCode: ctx.scopeKey })
         if (isFinal) phCapture('cpr_course_complete', { score: body.score })
-        cpr.refresh()
+        ctx.refresh()
       }
       topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     } catch {
