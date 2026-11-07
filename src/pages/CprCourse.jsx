@@ -9,7 +9,7 @@ import { useProgressStore } from '../stores/progressStore'
 import { useClassCpr } from '../hooks/useClassCpr'
 import { useAuthSession } from '../hooks/useAuthSession'
 import { authHeader } from '../utils/authHeader'
-import { fetchHubCourseCert, claimHubCourseCertificate, HUB_CPR_COURSE_ID } from '../utils/hubCertificate'
+import { fetchHubCourseCert, claimHubCourseCertificate, saveCardName, HUB_CPR_COURSE_ID } from '../utils/hubCertificate'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { useEntitlementStore, entitlementKey } from '../stores/entitlementStore'
 import { isChapterUnlocked, CPR_CHAPTER } from '../config/pricing'
@@ -86,6 +86,16 @@ function usePaidProgress(enabled, learnerId) {
   }, [enabled, learnerId, tick])
   const refresh = useCallback(() => setTick((t) => t + 1), [])
   return { ...state, checking, refresh }
+}
+
+// ข้อความชมหลังสอบผ่านแต่ละบท (แบบเดียวกับ cpr.morroo.com ให้กำลังใจเรียนต่อ)
+const ENCOURAGE = {
+  1: 'เยี่ยมมาก! รู้เรื่อง CPR ผู้ใหญ่แล้ว ไปบทต่อไปเลย',
+  2: 'ดีมาก! CPR ทารกก็ไม่ยากเลย',
+  3: 'เก่งมาก! ช่วยผู้ใหญ่สำลักได้แล้ว — เรียนมาครึ่งทางแล้ว',
+  4: 'สุดยอด! ช่วยทารกสำลักได้แล้ว',
+  5: 'ใกล้จบแล้ว! ใช้ AED กับผู้ใหญ่เป็นแล้ว อีกบทเดียว',
+  6: 'ผ่านครบทุกบทแล้ว! พร้อมสอบข้อสอบปลายภาคได้เลย',
 }
 
 const isUnlocked = (id, passed) => {
@@ -251,7 +261,14 @@ function CprModule({ mod, passed, ctx }) {
   const [result, setResult] = useState(null)
   const [grading, setGrading] = useState(false)
   const [error, setError] = useState('')
+  // สอบไม่ผ่าน → ต้องดูวิดีโอใหม่ก่อนสอบอีกครั้ง (เหมือน cpr.morroo.com) — เปลี่ยน key ให้ player เริ่มนับใหม่
+  const [videoKey, setVideoKey] = useState(0)
   const topRef = useRef(null)
+  const rewatch = () => {
+    setQuiz(null); setResult(null); setAns({}); setWatched(false); setVideoKey((k) => k + 1)
+    phCapture('cpr_rewatch', { module_id: mod.id })
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const begin = useCallback(() => {
     setQuiz(drawQuiz(mod)); setAns({}); setResult(null); setError('')
@@ -301,7 +318,7 @@ function CprModule({ mod, passed, ctx }) {
     return (
       <div className="page-container">
         <Header title={mod.title} back="/cpr" />
-        <LineLoginGate inline title="เข้าสู่ระบบก่อนสอบปลายภาค CPR" source="cpr_final" />
+        <LineLoginGate inline title="เข้าสู่ระบบก่อนสอบปลายภาค CPR" source="cpr_final" returnTo={`/cpr/${mod.id}`} />
       </div>
     )
   }
@@ -316,6 +333,14 @@ function CprModule({ mod, passed, ctx }) {
           style={{ marginBottom: 12, borderColor: result.passed ? '#9BC7A9' : '#E8B4AC', background: result.passed ? '#F1F8F3' : '#FDF3F1' }}>
           <div className="text-title">{result.passed ? 'ผ่านแล้ว 🎉' : 'ยังไม่ผ่าน'} — {result.score}%</div>
           <div className="text-caption">ตอบถูก {result.correct}/{result.total} ข้อ (ต้องได้ 80% ขึ้นไป)</div>
+          {result.passed && ENCOURAGE[mod.id] && (
+            <div className="text-body-strong" style={{ marginTop: 8, color: '#347053' }} data-testid="cpr-encourage">{ENCOURAGE[mod.id]}</div>
+          )}
+          {!result.passed && (
+            <div className="text-caption" style={{ marginTop: 6 }}>
+              {isFinal ? 'ไม่เป็นไร ทบทวนบทเรียนแล้วลองใหม่ได้ (สอบได้วันละ 5 ครั้ง)' : 'ไม่เป็นไร ทบทวนวิดีโออีกครั้ง แล้วสอบใหม่ได้เลย'}
+            </div>
+          )}
           {result.passed ? (
             isFinal ? (
               <Link to="/cpr" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>รับใบประกาศ CPR & ดูขั้นต่อไป</Link>
@@ -326,19 +351,20 @@ function CprModule({ mod, passed, ctx }) {
               </button>
             )
           ) : (
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={begin}>ทำแบบทดสอบใหม่</button>
-              {!isFinal && (
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setQuiz(null); setResult(null) }}>ดูวิดีโอทบทวน</button>
-              )}
-            </div>
+            isFinal ? (
+              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={begin}>ทำข้อสอบใหม่</button>
+            ) : (
+              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={rewatch} data-testid="cpr-rewatch">
+                ← กลับดูวิดีโอใหม่แล้วสอบอีกครั้ง
+              </button>
+            )
           )}
         </div>
       )}
 
       {mod.vid && !quiz && (
         <>
-          <YouTubeLessonPlayer videoId={mod.vid} orientation="landscape" onWatched={() => setWatched(true)} />
+          <YouTubeLessonPlayer videoId={mod.vid} orientation="landscape" resetKey={videoKey} onWatched={() => setWatched(true)} />
           <div className="text-caption" style={{ marginTop: 8 }}>{mod.desc}</div>
         </>
       )}
@@ -395,36 +421,92 @@ function CprModule({ mod, passed, ctx }) {
 }
 
 // ใบประกาศ CPR ของระบบกลาง JIA — มีสิทธิ์แล้ว (ผ่านปลายภาคขณะล็อกอิน) ขอรับให้อัตโนมัติครั้งเดียว
+// ขอรับไม่สำเร็จ (ส่วนใหญ่เพราะบัตรนักเรียน JIA ยังไม่มีชื่อ) → ให้กรอกชื่อ–นามสกุลลงบัตร แล้วขอรับใหม่
+// (แบบเดียวกับหน้าใบประกาศของ cpr.morroo.com) — ไม่ล็อกอิน → ปุ่มล็อกอินแล้วกลับมาหน้านี้
 function CprCertificate() {
+  const learner = useLearnerStore((s) => s.learner)
   const [state, setState] = useState(null)
   const [error, setError] = useState('')
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
   const tried = useRef(false)
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      let s = await fetchHubCourseCert(HUB_CPR_COURSE_ID)
-      if (s?.claimable && !s.cert && !tried.current) {
-        tried.current = true
-        try {
-          await claimHubCourseCertificate(HUB_CPR_COURSE_ID)
-          phCapture('hub_cert_claimed', { course: HUB_CPR_COURSE_ID, auto: true })
-          s = await fetchHubCourseCert(HUB_CPR_COURSE_ID)
-        } catch (e) {
-          if (!cancelled) setError(e.message || 'ขอรับใบประกาศไม่สำเร็จ')
-        }
+
+  const load = useCallback(async ({ autoClaim }) => {
+    let s = await fetchHubCourseCert(HUB_CPR_COURSE_ID)
+    if (autoClaim && s?.claimable && !s.cert && !tried.current) {
+      tried.current = true
+      try {
+        await claimHubCourseCertificate(HUB_CPR_COURSE_ID)
+        phCapture('hub_cert_claimed', { course: HUB_CPR_COURSE_ID, auto: true })
+        s = await fetchHubCourseCert(HUB_CPR_COURSE_ID)
+      } catch (e) {
+        setError(e.message || 'ขอรับใบประกาศไม่สำเร็จ')
       }
-      if (!cancelled) setState(s || { unavailable: true })
-    })()
-    return () => { cancelled = true }
+    }
+    setState(s || { unavailable: true })
+    return s
   }, [])
+
+  const fallbackName = learner?.name || ''
+  useEffect(() => {
+    // เริ่มแบบ async (ไม่ setState ตรง ๆ ใน effect) — ชื่อตั้งต้นจากบัตรนักเรียน JIA หรือชื่อในเครื่อง
+    const t = setTimeout(() => {
+      load({ autoClaim: true }).then((s) => setName((s?.profile?.nameTh || fallbackName).trim()))
+    }, 0)
+    return () => clearTimeout(t)
+  }, [load, fallbackName])
+
+  const submit = async (e) => {
+    e.preventDefault()
+    const n = name.trim()
+    if (n.length < 2) { setError('กรุณากรอกชื่อ–นามสกุล'); return }
+    setBusy(true); setError('')
+    try {
+      if (state?.profile) await saveCardName(state.profile, { name: n, phone: state.profile.phone || learner?.phone || '' })
+      await claimHubCourseCertificate(HUB_CPR_COURSE_ID)
+      phCapture('hub_cert_claimed', { course: HUB_CPR_COURSE_ID, auto: false })
+      await load({ autoClaim: false })
+    } catch (err) {
+      setError(err.message || 'ขอรับใบประกาศไม่สำเร็จ ลองใหม่อีกครั้ง')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   if (!state) return <div className="card text-caption" style={{ marginTop: 12 }}>กำลังตรวจใบประกาศ CPR ที่ระบบกลาง JIA…</div>
   if (state.cert) return <HubCertificateCard cert={state.cert} courseLabel="CPR & AED" />
+  if (state.signedIn === false) {
+    return (
+      <div style={{ marginTop: 12 }} data-testid="cpr-cert-login">
+        <LineLoginGate inline title="เข้าสู่ระบบเพื่อรับใบประกาศ CPR" source="cpr_cert" returnTo="/cpr" />
+      </div>
+    )
+  }
+  if (state.claimable) {
+    return (
+      <form className="card" style={{ marginTop: 12, borderColor: '#9BC7A9', background: '#F1F8F3' }} onSubmit={submit} data-testid="cpr-cert-claim">
+        <div className="text-body-strong">ผ่านข้อสอบปลายภาคแล้ว — รับใบประกาศ CPR & AED</div>
+        <div className="text-caption" style={{ marginTop: 4 }}>
+          {state.profile?.nameLocked
+            ? 'ชื่อบนใบประกาศใช้ชื่อบนบัตรนักเรียน JIA ที่ยืนยันแล้ว'
+            : 'กรอกชื่อ–นามสกุลจริง ชื่อนี้จะอยู่บนบัตรนักเรียน JIA และใบประกาศของคุณ (ตรวจสอบได้ด้วย QR)'}
+        </div>
+        {!state.profile?.nameLocked && (
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อ–นามสกุล"
+            autoComplete="name" style={{ width: '100%', marginTop: 10 }} data-testid="cpr-cert-name" />
+        )}
+        <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={busy}>
+          {busy ? 'กำลังขอรับ…' : 'รับใบประกาศ CPR'}
+        </button>
+        {error && <div className="text-caption" style={{ marginTop: 6, color: '#A0392F' }}>{error}</div>}
+      </form>
+    )
+  }
   return (
     <div className="card text-caption" style={{ marginTop: 12 }} data-testid="cpr-cert-pending">
-      {state.signedIn === false
-        ? 'เข้าสู่ระบบด้วยบัญชีเดียวกับที่สอบ เพื่อดูใบประกาศ CPR & AED'
-        : error || 'ใบประกาศ CPR & AED จะออกจากระบบกลาง JIA หลังผ่านข้อสอบปลายภาค (ขณะเข้าสู่ระบบ) — ถ้ายังไม่ขึ้น ลองเปิดหน้านี้ใหม่ภายหลัง หรือดูที่ class.jiacpr.com'}
+      {state.unavailable
+        ? 'ตรวจใบประกาศที่ระบบกลาง JIA ไม่สำเร็จ — ลองเปิดหน้านี้ใหม่ภายหลัง หรือดูที่ class.jiacpr.com'
+        : 'ยังไม่มีผลสอบปลายภาค CPR ในบัญชีนี้ — ใบประกาศออกจากข้อสอบปลายภาคที่สอบขณะเข้าสู่ระบบ (บัญชีเดียวกับที่สอบ)'}
     </div>
   )
 }
