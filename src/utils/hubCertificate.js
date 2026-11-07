@@ -71,3 +71,28 @@ export function claimHubCertificate() {
 export function certificateAdmin(action, payload = {}) {
   return rpc('jia_certificate_admin', action, payload)
 }
+
+// ใบประกาศ CPR & AED ออนไลน์ของ Hub (courseId 'cpr') — ออกจากผลข้อสอบปลายภาค CPR ที่ grade-quiz ส่งเข้าระบบกลาง
+// (นักเรียนคลาสรวมสอบที่หน้า /cpr ของเว็บนี้ หรือที่ cpr.morroo.com ก็ได้ใบเดียวกัน บัญชีเดียวกัน)
+export const HUB_CPR_COURSE_ID = 'cpr'
+
+// { signedIn, cert, claimable } ของคอร์สที่ระบุ — null เมื่อ Hub ตอบไม่ได้ ไม่ throw
+export async function fetchHubCourseCert(courseId) {
+  try {
+    if (!supabase) return { signedIn: false }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return { signedIn: false }
+    const mine = await rpc('jia_person_certificates', 'mine')
+    return {
+      signedIn: true,
+      cert: (mine?.certificates || []).find((c) => c.courseId === courseId && c.status === 'issued') || null,
+      claimable: (mine?.claimable || []).some((c) => c.courseId === courseId),
+    }
+  } catch {
+    return null
+  }
+}
+
+export function claimHubCourseCertificate(courseId) {
+  return rpc('jia_person_certificates', 'claim', { courseId })
+}

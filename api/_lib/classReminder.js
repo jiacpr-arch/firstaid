@@ -63,10 +63,8 @@ export function reminderMessage({ learner, cohort, missing, days, appUrl = APP_U
   ]
   if (needsFirstAid) lines.push('', `📚 เรียนปฐมพยาบาลต่อ 👉 ${appUrl}/learn`)
   if (needsCpr) {
-    const cprUrl = cohort.cprPromoCode
-      ? `https://cpr.morroo.com/?promo=${encodeURIComponent(cohort.cprPromoCode)}`
-      : 'https://cpr.morroo.com'
-    lines.push('', `❤️ เรียน CPR & AED ออนไลน์ 👉 ${cprUrl}`, '(ใช้ชื่อจริง + เบอร์โทรเดียวกับที่เข้าคลาส)')
+    // คอร์ส CPR ของคลาสรวมอยู่ในเว็บนี้แล้ว (/cpr) — เปิดหลังทำ Post-test ปฐมพยาบาลผ่าน
+    lines.push('', `❤️ เรียน CPR & AED ออนไลน์ (ต่อจากปฐมพยาบาล) 👉 ${appUrl}/cpr`)
   }
   return lines.join('\n') + FOOTER
 }

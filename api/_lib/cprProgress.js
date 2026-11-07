@@ -22,7 +22,7 @@ export function phoneKey(phone) {
 // enrollments: [{ learner_id, phone }]
 // redemptions: [{ phone_key, redeemed_at }]            (lead_promo_redemptions for the class code)
 // students:    [{ phone, status, final_score, completed_at, chapter_scores }]  (online_students)
-// Returns Map(learnerId → { redeemed, modulesDone, finalScore, completed })
+// Returns Map(learnerId → { redeemed, modulesDone, finalScore, completed, scores })
 export function matchCprProgress({ enrollments = [], redemptions = [], students = [] } = {}) {
   const redeemed = new Set(redemptions.map((r) => r.phone_key).filter(Boolean))
   const byPhone = new Map()
@@ -45,6 +45,8 @@ export function matchCprProgress({ enrollments = [], redemptions = [], students 
       modulesDone: s ? countModules(s.chapter_scores) : 0,
       finalScore: s?.final_score ?? null,
       completed: s ? isCompleted(s) : false,
+      // คะแนนรายบท { "1": 100, ... } — หน้า /cpr ใช้รู้ว่าบทไหนผ่านแล้ว (รวมที่เคยเรียนบน cpr.morroo.com)
+      scores: s ? passedScores(s.chapter_scores) : {},
     })
   }
   return out
@@ -53,6 +55,11 @@ export function matchCprProgress({ enrollments = [], redemptions = [], students 
 function countModules(scores) {
   if (!scores || typeof scores !== 'object') return 0
   return Object.values(scores).filter((v) => Number(v) > 0).length
+}
+
+function passedScores(scores) {
+  if (!scores || typeof scores !== 'object') return {}
+  return Object.fromEntries(Object.entries(scores).filter(([, v]) => Number(v) > 0).map(([k, v]) => [k, Number(v)]))
 }
 
 function isCompleted(s) {

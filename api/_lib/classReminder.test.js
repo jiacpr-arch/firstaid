@@ -49,14 +49,15 @@ test('manual cooldown is 12 hours; scheduled kinds send once each', () => {
   assert.equal(planClassReminders({ summary, identities: ids, logs: recent, kind: 'd1', now: NOW }).toSend.length, 1)
 })
 
-test('blended class: first aid done but CPR not → CPR link with promo, no /learn link', () => {
+test('blended class: first aid done but CPR not → in-app /cpr link (no other site), no /learn link', () => {
   const l = { learnerId: 'b', name: 'ก', lessonsRead: 24, postTest: { score: 80, passed: true }, cpr: { modulesDone: 2 } }
   const text = reminderMessage({
     learner: l, cohort: cohort({ includesCpr: true, cprPromoCode: 'JIA-FA-ABC123' }),
     missing: ['CPR & AED ออนไลน์ยังไม่จบ (2/7 บท)'], days: 1, appUrl: 'https://x',
   })
   assert.match(text, /พรุ่งนี้/)
-  assert.match(text, /cpr\.morroo\.com\/\?promo=JIA-FA-ABC123/)
+  assert.match(text, /https:\/\/x\/cpr/)
+  assert.doesNotMatch(text, /cpr\.morroo\.com/)
   assert.doesNotMatch(text, /https:\/\/x\/learn/)
   assert.match(text, /พิมพ์ "หยุด"/)
 })

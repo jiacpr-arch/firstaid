@@ -46,6 +46,8 @@ import NotFound from './pages/NotFound'
 
 // เกมโหมดโบนัส (FIRST AID HERO) — lazy เพื่อไม่ให้ chunk หลักโตจนชน PWA precache cap
 const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
+// คอร์ส CPR & AED ของคลาสรวม (เดิมอยู่ cpr.morroo.com) — lazy เพราะใช้เฉพาะนักเรียนคลาสรวม
+const CprCourse = lazy(() => import('./pages/CprCourse'))
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -181,6 +183,8 @@ export default function App() {
           </>
         } />
 
+        <Route path="/cpr" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><CprCourse /></Suspense>} />
+        <Route path="/cpr/:moduleId" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><CprCourse /></Suspense>} />
         <Route path="/certificate" element={<Certification />} />
         <Route path="/call" element={<EmergencyCall />} />
         <Route path="/checkin" element={<CheckIn />} />

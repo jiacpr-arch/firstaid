@@ -145,21 +145,20 @@ export default function JoinClass() {
   }
 
   if (joined?.cprPromoCode) {
-    // คลาสรวม CPR + ปฐมพยาบาล: เรียนออนไลน์ 2 เว็บก่อนวันเรียนจริง — CPR ใช้โค้ดคลาส
-    // (?promo= เปิดหน้ากรอกโค้ดของ cpr.morroo.com ให้เลย) ด้วยชื่อ+เบอร์เดียวกับที่เข้าคลาสนี้
-    // เพราะครูจับคู่ความคืบหน้า CPR กับคลาสด้วยเบอร์โทร
+    // คลาสรวม CPR + ปฐมพยาบาล: เรียนออนไลน์ 2 ส่วนในเว็บนี้ก่อนวันเรียนจริง — ปฐมพยาบาล แล้วต่อ CPR (/cpr)
+    // ไม่ต้องข้ามเว็บ/กรอกโค้ดใหม่ ผลสอบ CPR ผูกกับเบอร์ในคลาสนี้ให้ครูเห็นอัตโนมัติ (api/cpr/grade.js)
     return (
       <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
           <CheckCircle2 size={44} color="#347053" style={{ margin: '0 auto' }} />
           <div className="text-title" style={{ marginTop: 10 }}>เข้าร่วมคลาสแล้ว!</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
-            {joined.cohortName} — ก่อนวันเรียนจริง ต้องเรียนออนไลน์ให้ครบทั้ง 2 เว็บ
+            {joined.cohortName} — ก่อนวันเรียนจริง ต้องเรียนออนไลน์ให้ครบ 2 ส่วน (ในเว็บนี้ทั้งหมด)
           </div>
         </div>
 
         <div className="card" style={{ marginTop: 12 }}>
-          <div className="text-body-strong"><BookOpen size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 1: ปฐมพยาบาล (เว็บนี้)</div>
+          <div className="text-body-strong"><BookOpen size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 1: ปฐมพยาบาล</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
             ทำ pre-test → เรียนทุกบท → ฝึกสถานการณ์ผ่านหมวดละ 1 ฉาก → post-test ผ่าน 80% (ล็อกอิน LINE เพื่อเปิดบทที่ 2 เป็นต้นไป — คนในคลาสเรียนฟรีทุกบท)
           </div>
@@ -169,12 +168,12 @@ export default function JoinClass() {
         </div>
 
         <div className="card" style={{ marginTop: 12 }}>
-          <div className="text-body-strong"><HeartPulse size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 2: CPR & AED (cpr.morroo.com)</div>
+          <div className="text-body-strong"><HeartPulse size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />ขั้นที่ 2: CPR & AED</div>
           <div className="callout" style={{ margin: '6px 0 0', padding: '8px 12px' }}>
-            <b>บังคับ</b> — เรียน<b>หลังจบปฐมพยาบาล</b> (ทำ Post-test ผ่านแล้ว ปุ่มไปเรียน CPR จะขึ้นด้านบนหน้าหลักและหน้าเรียน) ให้จบก่อนวันอบรม
+            <b>บังคับ</b> — เรียน<b>หลังจบปฐมพยาบาล</b> (ทำ Post-test ผ่านแล้ว ปุ่มเรียน CPR จะขึ้นด้านบนหน้าหลักและหน้าเรียน) ให้จบก่อนวันอบรม
           </div>
           <div className="text-caption" style={{ marginTop: 6 }}>
-            เรียนฟรีทุกบทด้วยโค้ดคลาส — กรอก<b>ชื่อและเบอร์เดียวกัน</b>กับที่ใช้เข้าคลาสนี้ ครูจึงจะเห็นความคืบหน้า
+            เรียนในเว็บนี้ได้เลย ฟรีทุกบทสำหรับคนในคลาส — ไม่ต้องสมัครหรือกรอกโค้ดใหม่ ครูเห็นความคืบหน้าอัตโนมัติ
           </div>
         </div>
       </div>

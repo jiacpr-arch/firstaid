@@ -75,7 +75,7 @@ export default function Certification() {
 
       {/* ชวนต่อยอดไปอบรมภาคปฏิบัติ — แสดงเมื่อได้ใบประกาศแล้ว */}
       {theoryCert && cpr.status !== 'done' && (
-        <CprOnlineCard promoCode={cpr.promoCode || learner?.cprPromoCode} source="cert_page" title="จบ First Aid ออนไลน์แล้ว — ต่อด้วย CPR & AED ออนไลน์" />
+        <CprOnlineCard inClass={cpr.status !== 'none' && cpr.status !== 'loading'} source="cert_page" title="จบ First Aid ออนไลน์แล้ว — ต่อด้วย CPR & AED ออนไลน์" />
       )}
       {(theoryCert || practicalCert) && <CertUpsellCard source="cert_page" />}
     </div>
