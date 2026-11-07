@@ -10,6 +10,8 @@ const SAME_QR_COOLDOWN_MS = 3000
 // โหมด "สแกนนักเรียนก่อน แล้วค่อยเลือกฐาน" — ใช้ค่าใน dropdown เดียวกับรายชื่อฐาน
 const PICK_AFTER = '__pick__'
 const modeKey = (sid) => `scan-station-mode:${sid}`
+// ฐานที่ครูติ๊กไว้ครั้งล่าสุดในรอบนี้ (โหมดเลือกฐานหลังสแกน) — ครั้งแรก = ทุกฐาน
+const pickedKey = (sid) => `scan-station-picked:${sid}`
 
 // เช็คชื่อเข้าฐาน — ใช้ทั้งตอนสแกนตรงเข้าฐาน (payload) และตอนเลือกฐานหลังสแกน (learnerId)
 async function checkinStation(sessionId, station, who) {
@@ -35,6 +37,8 @@ export default function AdminSessionScan() {
   const [picking, setPicking] = useState(null) // student ที่สแกนแล้ว รอเลือกฐาน
   const [saving, setSaving] = useState(false)
   const [groupSaved, setGroupSaved] = useState('')
+  const [picked, setPicked] = useState(() => new Set()) // ฐานที่ติ๊กในหน้าเลือกฐาน
+  const [examFullPass, setExamFullPass] = useState(true) // ฐานสอบ: ผ่านครบทุกข้อเลย ไม่ต้องติ๊กรายข้อ
   const stationRef = useRef({ id: '', list: [] })
   const busyRef = useRef(false)
   const lastScanRef = useRef({ text: '', at: 0 })
@@ -50,6 +54,10 @@ export default function AdminSessionScan() {
         try { saved = localStorage.getItem(modeKey(id)) } catch { /* ignore */ }
         const valid = saved === '' || saved === PICK_AFTER || list.some((x) => x.id === saved)
         if (list.length) setStationId(valid ? saved : PICK_AFTER)
+        let savedPicked = null
+        try { savedPicked = JSON.parse(localStorage.getItem(pickedKey(id)) || 'null') } catch { /* ignore */ }
+        const keep = Array.isArray(savedPicked) ? savedPicked.filter((x) => list.some((st) => st.id === x)) : []
+        setPicked(new Set(keep.length ? keep : list.map((st) => st.id)))
       })
       .catch(() => {})
   }, [id])
@@ -81,22 +89,48 @@ export default function AdminSessionScan() {
     return false
   }, [])
 
-  const pickStation = async (station) => {
+  const togglePicked = (stId) => setPicked((prev) => {
+    const next = new Set(prev)
+    if (next.has(stId)) next.delete(stId); else next.add(stId)
+    try { localStorage.setItem(pickedKey(id), JSON.stringify([...next])) } catch { /* ignore */ }
+    return next
+  })
+
+  // สแกนครั้งเดียว → เช็คชื่อทุกฐานที่ติ๊กในคำขอเดียว (api/attendance/station-checkin.js action:'bulk')
+  const saveBulk = async () => {
     if (!picking || saving) return
+    const chosen = stations.filter((st) => picked.has(st.id))
+    if (!chosen.length) return
+    const exam = chosen.find((st) => st.kind === 'exam')
+    const examPassed = !!exam && examFullPass
     setSaving(true)
     try {
-      const { resp, body } = await checkinStation(id, station, { learnerId: picking.id })
+      const resp = await instructorFetch(id, '/api/attendance/station-checkin', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'bulk', sessionId: id, learnerId: picking.id, stationIds: chosen.map((st) => st.id), examPassed }),
+      })
+      const body = await resp.json().catch(() => ({}))
       if (!resp.ok) {
         navigator.vibrate?.([200, 100, 200])
-        // ยังค้างหน้าเลือกฐานไว้ ให้ครูเลือกฐานอื่นหรือยกเลิกได้
-        setLast({ ok: false, name: picking.name, message: body.error || 'เช็คชื่อเข้าฐานไม่สำเร็จ' })
+        // ยังค้างหน้าเลือกฐานไว้ ให้ครูแก้ที่ติ๊กหรือยกเลิกได้
+        setLast({ ok: false, name: picking.name, message: body.error || 'บันทึกฐานไม่สำเร็จ' })
         return
       }
       navigator.vibrate?.(80)
+      const student = picking
       setPicking(null)
-      if (!applyStationResult(station, body)) busyRef.current = false
+      setGroupSaved('')
+      const msg = `บันทึก ${chosen.length} ฐาน${body.examPassed ? ' · สอบผ่าน' : ''}`
+      setLast({ ok: true, name: student.name, learnerId: student.id, message: msg })
+      setRecent((r) => [{ name: `${student.name} → ${msg}`, at: Date.now() }, ...r].slice(0, 8))
+      if (exam && !examPassed) {
+        // ให้คะแนนฐานสอบรายข้อต่อ — หยุดรับสแกนจนกว่าจะบันทึกผล
+        setGrading({ station: exam, student })
+        return
+      }
+      busyRef.current = false
     } catch {
-      setLast({ ok: false, name: picking.name, message: 'เครือข่ายขัดข้อง ลองเลือกฐานใหม่' })
+      setLast({ ok: false, name: picking.name, message: 'เครือข่ายขัดข้อง ลองกดบันทึกใหม่' })
     } finally { setSaving(false) }
   }
 
@@ -186,12 +220,22 @@ export default function AdminSessionScan() {
     let scanner = null
     ;(async () => {
       try {
-        const { Html5Qrcode } = await import('html5-qrcode')
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
         if (!active) return
-        scanner = new Html5Qrcode(REGION_ID)
+        // อ่านเฉพาะ QR และใช้ตัวถอดรหัสของเครื่อง (BarcodeDetector) ถ้ามี — เร็วกว่าตัวถอดรหัส JS หลายเท่า
+        scanner = new Html5Qrcode(REGION_ID, {
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          verbose: false,
+        })
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 240, height: 240 } },
+          {
+            fps: 15,
+            // กรอบสแกน 80% ของภาพ — ไม่ต้องเล็งให้ตรงกรอบเล็ก
+            qrbox: (w, h) => { const size = Math.max(160, Math.floor(Math.min(w, h) * 0.8)); return { width: size, height: size } },
+            disableFlip: true,
+          },
           (text) => handleScan(text),
           () => {},
         )
@@ -220,7 +264,7 @@ export default function AdminSessionScan() {
         <div style={{ marginTop: 12 }}>
           <label className="label">สแกนเข้าฐาน</label>
           <select className="input" value={stationId} onChange={(e) => changeStation(e.target.value)} disabled={!!grading || !!picking}>
-            <option value={PICK_AFTER}>สแกนนักเรียนก่อน แล้วค่อยเลือกฐาน</option>
+            <option value={PICK_AFTER}>สแกนนักเรียนก่อน แล้วเลือกฐาน (ได้หลายฐาน)</option>
             <option value="">เช็คชื่อรวม (ไม่เลือกฐาน)</option>
             {stations.map((st) => (
               <option key={st.id} value={st.id}>{st.name}{st.kind === 'exam' ? ' (สอบ)' : ''}</option>
@@ -231,14 +275,28 @@ export default function AdminSessionScan() {
 
       {picking && (
         <div className="card" style={{ marginTop: 12 }}>
-          <div className="text-body-strong">{picking.name} — เลือกฐาน</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          <div className="text-body-strong">{picking.name} — เลือกฐานที่ผ่าน</div>
+          <div className="text-caption">ติ๊กได้หลายฐาน ระบบจำที่ติ๊กไว้สำหรับคนถัดไป</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
             {stations.map((st) => (
-              <button key={st.id} type="button" className="btn btn-secondary" disabled={saving}
-                onClick={() => pickStation(st)}>
-                {st.name}{st.kind === 'exam' ? ' (สอบ)' : ''}
-              </button>
+              <label key={st.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={picked.has(st.id)} onChange={() => togglePicked(st.id)} disabled={saving}
+                  style={{ width: 20, height: 20 }} />
+                <span className="text-body">{st.name}{st.kind === 'exam' ? ' (สอบ)' : ''}</span>
+              </label>
             ))}
+          </div>
+          {stations.some((st) => st.kind === 'exam' && picked.has(st.id)) && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', marginTop: 4, borderTop: '1px solid var(--color-border)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={examFullPass} onChange={(e) => setExamFullPass(e.target.checked)} disabled={saving}
+                style={{ width: 20, height: 20 }} />
+              <span className="text-body">สอบผ่านครบทุกข้อ<span className="text-caption" style={{ display: 'block' }}>เอาติ๊กออกถ้าจะให้คะแนนรายข้อ</span></span>
+            </label>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            <button type="button" className="btn btn-primary btn-lg" disabled={saving || picked.size === 0} onClick={saveBulk}>
+              {saving ? 'กำลังบันทึก…' : `บันทึกผ่าน ${picked.size} ฐาน`}
+            </button>
             <button type="button" className="btn btn-ghost" disabled={saving} onClick={cancelPick}>
               ไม่เข้าฐาน (เช็คชื่ออย่างเดียว)
             </button>

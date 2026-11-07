@@ -72,3 +72,30 @@ test('validateExamResult: JSON string keys count, unknown or missing checklist b
   assert.equal(validateExamResult({ checklist: null, checklistId: null, passed: true }).ok, false)
   assert.equal(validateExamResult({ checklist: null, checklistId: null, passed: false }).ok, true)
 })
+
+test('bulk: practice stations and the exam can be passed together in one go', async () => {
+  const { planBulkCheckin } = await import('./stationLogic.js')
+  const all = planBulkCheckin(stations, [], ['a', 'b', 'x'])
+  assert.deepEqual(all, { ok: true, insertIds: ['a', 'b', 'x'], examIds: ['x'] })
+  // already-checked stations are not inserted again
+  assert.deepEqual(planBulkCheckin(stations, ['a'], ['a', 'b']).insertIds, ['b'])
+  // exam alone is fine when practice was done earlier
+  assert.equal(planBulkCheckin(stations, ['a', 'b'], ['x']).ok, true)
+})
+
+test('bulk: refuses the exam while a practice station is missing, and junk selections', async () => {
+  const { planBulkCheckin } = await import('./stationLogic.js')
+  const r = planBulkCheckin(stations, [], ['a', 'x'])
+  assert.equal(r.ok, false)
+  assert.match(r.error, /สำลัก/)
+  assert.equal(planBulkCheckin(stations, [], []).ok, false)
+  assert.equal(planBulkCheckin(stations, [], ['zzz']).ok, false)
+  assert.equal(planBulkCheckin(stations, [], 'a').ok, false)
+})
+
+test('full pass ticks every checklist item', async () => {
+  const { fullPassResult } = await import('./stationLogic.js')
+  const r = fullPassResult({ items: [{ no: 1, critical: true }, { no: 2 }] })
+  assert.deepEqual(r, { score: 2, items: { 1: true, 2: true } })
+  assert.deepEqual(fullPassResult(null), { score: null, items: null })
+})

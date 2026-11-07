@@ -21,7 +21,8 @@ export default function MyQr() {
   useEffect(() => {
     if (!ready) return
     const text = encodeStudentQr({ id: learner.id, name: learner.name, phone: learner.phone })
-    QRCode.toDataURL(text, { width: 560, margin: 2, errorCorrectionLevel: 'M' })
+    // ระดับ L = จุดน้อยลง โมดูลใหญ่ขึ้น กล้องจับได้ไวกว่า (จอมือถือไม่ค่อยมีรอยเปื้อนแบบกระดาษ)
+    QRCode.toDataURL(text, { width: 640, margin: 4, errorCorrectionLevel: 'L' })
       .then(setDataUrl)
       .catch(() => {})
   }, [ready, learner?.id, learner?.name, learner?.phone])
