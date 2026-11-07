@@ -13,6 +13,12 @@ const modeKey = (sid) => `scan-station-mode:${sid}`
 // ฐานที่ครูติ๊กไว้ครั้งล่าสุดในรอบนี้ (โหมดเลือกฐานหลังสแกน) — ครั้งแรก = ทุกฐาน
 const pickedKey = (sid) => `scan-station-picked:${sid}`
 
+// ปุ่มบันทึกในหน้าเลือกฐาน: ติ๊กฐานเดียว = ทำเหมือนเลือกฐานก่อนสแกน (ฐานสอบไปใบประเมินรายข้อ)
+function singleLabel(chosen, count) {
+  if (count !== 1 || chosen.length !== 1) return `บันทึกผ่าน ${count} ฐาน`
+  return chosen[0].kind === 'exam' ? 'ประเมินฐานสอบ (ติ๊กรายข้อ)' : `บันทึกเข้า ${chosen[0].name}`
+}
+
 // เช็คชื่อเข้าฐาน — ใช้ทั้งตอนสแกนตรงเข้าฐาน (payload) และตอนเลือกฐานหลังสแกน (learnerId)
 async function checkinStation(sessionId, station, who) {
   const resp = await instructorFetch(sessionId, '/api/attendance/station-checkin', {
@@ -96,11 +102,31 @@ export default function AdminSessionScan() {
     return next
   })
 
+  // ติ๊กไว้ฐานเดียว = ทำงานเหมือน "เลือกฐานก่อนสแกน": ฐานสอบเปิดใบประเมินรายข้อเสมอ
+  const saveSingle = async (station) => {
+    setSaving(true)
+    try {
+      const { resp, body } = await checkinStation(id, station, { learnerId: picking.id })
+      if (!resp.ok) {
+        navigator.vibrate?.([200, 100, 200])
+        // ยังค้างหน้าเลือกฐานไว้ ให้ครูแก้ที่ติ๊กหรือยกเลิกได้
+        setLast({ ok: false, name: picking.name, message: body.error || 'เช็คชื่อเข้าฐานไม่สำเร็จ' })
+        return
+      }
+      navigator.vibrate?.(80)
+      setPicking(null)
+      if (!applyStationResult(station, body)) busyRef.current = false
+    } catch {
+      setLast({ ok: false, name: picking.name, message: 'เครือข่ายขัดข้อง ลองกดบันทึกใหม่' })
+    } finally { setSaving(false) }
+  }
+
   // สแกนครั้งเดียว → เช็คชื่อทุกฐานที่ติ๊กในคำขอเดียว (api/attendance/station-checkin.js action:'bulk')
   const saveBulk = async () => {
     if (!picking || saving) return
     const chosen = stations.filter((st) => picked.has(st.id))
     if (!chosen.length) return
+    if (chosen.length === 1) { await saveSingle(chosen[0]); return }
     const exam = chosen.find((st) => st.kind === 'exam')
     const examPassed = !!exam && examFullPass
     setSaving(true)
@@ -276,7 +302,7 @@ export default function AdminSessionScan() {
       {picking && (
         <div className="card" style={{ marginTop: 12 }}>
           <div className="text-body-strong">{picking.name} — เลือกฐานที่ผ่าน</div>
-          <div className="text-caption">ติ๊กได้หลายฐาน ระบบจำที่ติ๊กไว้สำหรับคนถัดไป</div>
+          <div className="text-caption">ติ๊กได้หลายฐาน ระบบจำที่ติ๊กไว้สำหรับคนถัดไป · ติ๊กฐานเดียว = ประเมินทีละฐาน (ฐานสอบไปใบประเมินรายข้อ)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
             {stations.map((st) => (
               <label key={st.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', cursor: 'pointer' }}>
@@ -286,7 +312,7 @@ export default function AdminSessionScan() {
               </label>
             ))}
           </div>
-          {stations.some((st) => st.kind === 'exam' && picked.has(st.id)) && (
+          {picked.size > 1 && stations.some((st) => st.kind === 'exam' && picked.has(st.id)) && (
             <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', marginTop: 4, borderTop: '1px solid var(--color-border)', cursor: 'pointer' }}>
               <input type="checkbox" checked={examFullPass} onChange={(e) => setExamFullPass(e.target.checked)} disabled={saving}
                 style={{ width: 20, height: 20 }} />
@@ -295,7 +321,7 @@ export default function AdminSessionScan() {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             <button type="button" className="btn btn-primary btn-lg" disabled={saving || picked.size === 0} onClick={saveBulk}>
-              {saving ? 'กำลังบันทึก…' : `บันทึกผ่าน ${picked.size} ฐาน`}
+              {saving ? 'กำลังบันทึก…' : singleLabel(stations.filter((st) => picked.has(st.id)), picked.size)}
             </button>
             <button type="button" className="btn btn-ghost" disabled={saving} onClick={cancelPick}>
               ไม่เข้าฐาน (เช็คชื่ออย่างเดียว)
