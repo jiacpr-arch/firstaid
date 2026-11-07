@@ -76,17 +76,21 @@ export function certificateAdmin(action, payload = {}) {
 // (นักเรียนคลาสรวมสอบที่หน้า /cpr ของเว็บนี้ หรือที่ cpr.morroo.com ก็ได้ใบเดียวกัน บัญชีเดียวกัน)
 export const HUB_CPR_COURSE_ID = 'cpr'
 
-// { signedIn, cert, claimable } ของคอร์สที่ระบุ — null เมื่อ Hub ตอบไม่ได้ ไม่ throw
+// { signedIn, cert, claimable, profile } ของคอร์สที่ระบุ — null เมื่อ Hub ตอบไม่ได้ ไม่ throw
 export async function fetchHubCourseCert(courseId) {
   try {
     if (!supabase) return { signedIn: false }
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return { signedIn: false }
-    const mine = await rpc('jia_person_certificates', 'mine')
+    const [mine, profile] = await Promise.all([
+      rpc('jia_person_certificates', 'mine'),
+      rpc('jia_identity', 'me').catch(() => null),
+    ])
     return {
       signedIn: true,
       cert: (mine?.certificates || []).find((c) => c.courseId === courseId && c.status === 'issued') || null,
       claimable: (mine?.claimable || []).some((c) => c.courseId === courseId),
+      profile, // บัตรนักเรียน JIA — ชื่อบนใบประกาศมาจากที่นี่ (saveCardName)
     }
   } catch {
     return null

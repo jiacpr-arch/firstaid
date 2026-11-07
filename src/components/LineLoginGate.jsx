@@ -21,7 +21,8 @@ function fbqTrack(...args) {
 // - ป๊อปอัพ (ค่าเริ่มต้น): เด้งตอนเรียนจบบทแรก — onLater ("ไว้ทีหลัง") แค่ปิดป๊อปอัพให้กลับไปใช้
 //   ส่วนอื่นของแอป (ผังช่วยชีวิต/ปุ่ม 1669 ที่ป๊อปอัพบังอยู่) แต่บทถัดไปยังเปิดไม่ได้จนกว่าจะล็อกอิน
 // - inline: การ์ดในหน้า ใช้ตอนเปิดบทที่ 2 ขึ้นไปโดยยังไม่ล็อกอิน — แถบเมนูล่างยังกดได้
-export default function LineLoginGate({ inline = false, title = 'เรียนจบบทแรกแล้ว 🎉', source = 'lesson1', onLater }) {
+// returnTo (ไม่บังคับ): path ในแอปที่จะกลับมาหลังล็อกอินเสร็จ (เช่นข้อสอบปลายภาค CPR /cpr/7) — ไม่ใส่ = /learn
+export default function LineLoginGate({ inline = false, title = 'เรียนจบบทแรกแล้ว 🎉', source = 'lesson1', onLater, returnTo }) {
   const learner = useLearnerStore((s) => s.learner)
 
   // วัด drop-off ของด่าน: lesson_complete (บท 1) → login_gate_view → student_registered
@@ -35,7 +36,7 @@ export default function LineLoginGate({ inline = false, title = 'เรียน
       source: `${source}_line_login`,
       channel: 'line',
     })
-    startHubLogin(learner?.id, undefined, { line: true })
+    startHubLogin(learner?.id, returnTo, { line: true })
   }
 
   // ทางเลือกสำรอง (LINE เป็นหลัก) สำหรับคนไม่มี/ไม่อยากใช้ LINE — ด่านนี้บังคับต้องล็อกอินทางใด
@@ -46,7 +47,7 @@ export default function LineLoginGate({ inline = false, title = 'เรียน
       source: `${source}_hub_login`,
       channel: 'jia_hub',
     })
-    startHubLogin(learner?.id)
+    startHubLogin(learner?.id, returnTo)
   }
 
   const onLaterClick = () => {
