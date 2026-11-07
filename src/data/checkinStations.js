@@ -1,4 +1,4 @@
-import { FIRST_AID_CHECKLISTS } from './checklists/firstAidChecklists'
+import { FIRST_AID_CHECKLISTS } from './checklists/firstAidChecklists.js'
 
 // ชุดฐานมาตรฐานสำหรับ session ภาคปฏิบัติ — ปุ่ม "เพิ่มฐานมาตรฐาน" ในหน้ารายละเอียดคลาส
 // ครูแก้ชื่อ/ลบ/เพิ่มเองได้ทั้งหมด; checklistId เป็นแค่คำแนะนำเริ่มต้นให้ใบประเมิน

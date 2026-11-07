@@ -3,13 +3,17 @@ import { applyCors } from '../_lib/cors.js'
 import { authorizeInstructor } from '../_lib/instructorAuth.js'
 import { issuePracticalCertificate } from '../_lib/issuePractical.js'
 import { resolveStudent, approveAttendance, loadOpenSession } from '../_lib/attendanceCheckin.js'
-import { missingPracticeStations, validateExamResult } from '../_lib/stationLogic.js'
+import { missingPracticeStations, validateExamResult, planBulkCheckin, fullPassResult } from '../_lib/stationLogic.js'
 import { FIRST_AID_CHECKLISTS } from '../../src/data/checklists/firstAidChecklists.js'
+import { suggestedChecklistId } from '../../src/data/checkinStations.js'
 
 // POST { sessionId, stationId, payload | learnerId }            → เช็คชื่อเข้าฐาน
 // POST { action:'result', sessionId, stationId, learnerId, passed, score?, checklistId?, checklistItems?, note? }
 //                                                               → บันทึกผลฐานสอบ
 // POST { action:'undo', sessionId, stationId, learnerId }       → ยกเลิกการเช็คชื่อ/ผลของฐานนั้น
+// POST { action:'bulk', sessionId, payload | learnerId, stationIds:[...], examPassed? }
+//      → สแกนครั้งเดียว เช็คชื่อหลายฐานพร้อมกัน; examPassed:true = ฐานสอบที่เลือก "ผ่านครบทุกข้อ"
+//        (คอร์สนี้ผู้ผ่านต้องทำได้ครบทุกข้ออยู่แล้ว) — ไม่ส่ง = เช็คชื่อฐานสอบไว้ รอให้คะแนนรายข้อ
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
@@ -18,9 +22,10 @@ export default async function handler(req, res) {
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const { action, sessionId, stationId, payload, learnerId } = req.body || {}
+  const bulk = action === 'bulk'
   const actor = await authorizeInstructor(req, res, admin, sessionId)
   if (!actor) return
-  if (!sessionId || !stationId || (!payload && !learnerId)) {
+  if (!sessionId || (!stationId && !bulk) || (!payload && !learnerId)) {
     res.status(400).json({ error: 'Missing fields' }); return
   }
 
@@ -31,11 +36,55 @@ export default async function handler(req, res) {
     .from('session_stations').select('id, name, kind').eq('session_id', sessionId)
   if (stErr) { res.status(500).json({ error: stErr.message }); return }
   const station = (stations || []).find((x) => x.id === stationId)
-  if (!station) { res.status(404).json({ error: 'ไม่พบสถานีนี้ใน session' }); return }
+  if (!station && !bulk) { res.status(404).json({ error: 'ไม่พบสถานีนี้ใน session' }); return }
 
   const r = await resolveStudent(admin, s.session, { payload, learnerId })
   if (r.error) { res.status(r.status).json({ error: r.error }); return }
   const student = r.student
+
+  if (bulk) {
+    const { data: done, error: dErr } = await admin.from('station_checkins').select('station_id, passed')
+      .eq('session_id', sessionId).eq('learner_id', student.id)
+    if (dErr) { res.status(500).json({ error: dErr.message }); return }
+    const plan = planBulkCheckin(stations || [], (done || []).map((d) => d.station_id), req.body.stationIds)
+    if (!plan.ok) { res.status(409).json({ error: plan.error, student }); return }
+
+    const a = await approveAttendance(admin, s.session, student, actor.user, r.method)
+    if (a.error) { res.status(500).json({ error: a.error }); return }
+
+    if (plan.insertIds.length) {
+      const { error } = await admin.from('station_checkins').insert(plan.insertIds.map((id) => ({
+        session_id: sessionId, station_id: id, learner_id: student.id, checked_in_by: actor.user?.id ?? null,
+      })))
+      if (error) { res.status(500).json({ error: error.message }); return }
+    }
+
+    // ฐานสอบ: ผ่านครบทุกข้อ (ใช้ใบประเมินที่ตรงกับชื่อฐาน) — ผลที่บันทึกไว้แล้วไม่ทับ
+    const examPassed = req.body.examPassed === true
+    let passedExam = false
+    if (examPassed) {
+      const already = new Map((done || []).map((d) => [d.station_id, d.passed]))
+      for (const id of plan.examIds) {
+        if (already.get(id) != null) { passedExam = passedExam || already.get(id) === true; continue }
+        const st = stations.find((x) => x.id === id)
+        const checklistId = suggestedChecklistId(st.name)
+        const full = fullPassResult(checklistId ? FIRST_AID_CHECKLISTS[checklistId] : null)
+        const { error } = await admin.from('station_checkins').update({
+          passed: true, score: full.score, checklist_id: checklistId, checklist_items: full.items,
+          note: 'ผ่านครบทุกข้อ — ผู้สอนบันทึกแบบรวม',
+        }).eq('station_id', id).eq('learner_id', student.id)
+        if (error) { res.status(500).json({ error: error.message }); return }
+        passedExam = true
+      }
+    }
+    // ใบเซอร์ภาคปฏิบัติออกเมื่อสอบผ่าน (เหมือนบันทึกผลทีละฐาน)
+    if (passedExam && a.attendanceId) await issuePracticalCertificate(admin, a.attendanceId).catch(() => {})
+    res.status(200).json({
+      ok: true, student, attendanceId: a.attendanceId || null,
+      added: plan.insertIds.length, examIds: plan.examIds, examPassed: passedExam,
+    })
+    return
+  }
 
   if (action === 'undo') {
     const { error } = await admin.from('station_checkins')
