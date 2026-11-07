@@ -2,10 +2,16 @@
 // หมวด 1 ฟรีถาวร — เป็นตัวล่อของ funnel โฆษณา ("เรียนฟรี") และ try-before-buy
 export const FREE_CHAPTER = 1
 
+// หมวด 5 = CPR & AED ออนไลน์ 7 บท (หน้า /cpr — ไม่ได้อยู่ใน lessons.js) ขายราคาเดียวกับหมวดอื่น
+// คนในคลาสรวม CPR + ปฐมพยาบาลเรียนฟรี; ทั้งคอร์ส (chapter 0) รวมหมวดนี้ด้วย
+export const CPR_CHAPTER = 5
+export const CPR_CHAPTER_TITLE = 'CPR & AED ออนไลน์'
+
 export const CHAPTER_PRICES = {
   2: 99,
   3: 99,
   4: 99,
+  [CPR_CHAPTER]: 99,
 }
 
 // ปลดล็อกทั้งคอร์สทีเดียว (ทุกหมวดที่เหลือ) — ถูกกว่าซื้อแยก

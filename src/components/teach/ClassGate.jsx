@@ -109,7 +109,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
             </div>
             {created.cprPromoCode && (
               <div className="card" style={{ marginTop: 10, textAlign: 'center' }}>
-                <div className="text-caption">โค้ดเรียน CPR ออนไลน์ (cpr.morroo.com)</div>
+                <div className="text-caption">โค้ด CPR ของคลาส (ผูกผลเรียน CPR ในเว็บนี้ / cpr.morroo.com)</div>
                 <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 2, color: '#B91C1C' }}>{created.cprPromoCode}</div>
                 <div className="text-caption" style={{ marginTop: 4 }}>
                   นักเรียนเห็นปุ่มไปเรียน CPR พร้อมโค้ดนี้หลังเข้าคลาสด้วยรหัสคลาสอยู่แล้ว — ไม่ต้องแจกแยก
@@ -137,7 +137,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
               <span>
                 <span className="text-body-strong">คลาสรวม CPR + ปฐมพยาบาล</span>
                 <span className="text-caption" style={{ display: 'block' }}>
-                  สร้างโค้ดเรียน CPR ออนไลน์ที่ cpr.morroo.com ให้อัตโนมัติ และเปิดทุกบทปฐมพยาบาลให้คนในคลาส
+                  นักเรียนเรียน CPR & AED ต่อในเว็บนี้ได้เลยหลังจบปฐมพยาบาล (ระบบสร้างโค้ดคลาส CPR ให้อัตโนมัติ) และเปิดทุกบทปฐมพยาบาลให้คนในคลาส
                 </span>
               </span>
             </label>

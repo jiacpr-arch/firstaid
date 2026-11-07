@@ -5,13 +5,14 @@ import { ArrowLeft, Plus, Copy, Check, QrCode, Download, X } from 'lucide-react'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 import { adminFetch } from '../utils/adminFetch'
 import { chapters } from '../courses/firstaid/lessons'
-import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, COURSE_BUNDLE_CHAPTER } from '../config/pricing'
+import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, COURSE_BUNDLE_CHAPTER, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
 
 const CHAPTER_OPTIONS = [
   { value: COURSE_BUNDLE_CHAPTER, label: `ทั้งคอร์ส (฿${COURSE_BUNDLE_PRICE})` },
   ...chapters
     .filter((c) => CHAPTER_PRICES[c.id])
     .map((c) => ({ value: c.id, label: `หมวด ${c.id}: ${c.title} (฿${CHAPTER_PRICES[c.id]})` })),
+  { value: CPR_CHAPTER, label: `หมวด ${CPR_CHAPTER}: ${CPR_CHAPTER_TITLE} (฿${CHAPTER_PRICES[CPR_CHAPTER]})` },
 ]
 
 const defaultPriceFor = (chapter) =>

@@ -18,7 +18,7 @@ function examCell(exam) {
   return `${exam.score}% ${exam.passed ? '✅' : '✗'}`
 }
 
-// CPR ออนไลน์ (cpr.morroo.com) ของคลาสรวม — จับคู่ด้วยเบอร์โทร (api/_lib/cprProgress.js)
+// CPR ออนไลน์ของคลาสรวม (เรียนที่ /cpr ในเว็บนี้ หรือ cpr.morroo.com เดิม) — จับคู่ด้วยเบอร์โทร (api/_lib/cprProgress.js)
 function cprCell(cpr) {
   if (!cpr) return '—'
   if (cpr.completed) return `จบ${cpr.finalScore != null ? ` ${cpr.finalScore}%` : ''} ✅`
@@ -169,8 +169,8 @@ export default function AdminCohortDetail() {
             </div>
             {data.cohort.includesCpr && data.cohort.cprPromoCode && (
               <div className="callout callout-info" style={{ marginTop: 10, textAlign: 'left' }}>
-                คลาสรวม CPR — หลังเข้าคลาส ผู้เรียนเห็นปุ่มไปเรียน CPR ที่ cpr.morroo.com พร้อมโค้ด{' '}
-                <b>{data.cohort.cprPromoCode}</b> (ใช้ชื่อ+เบอร์เดียวกับที่เข้าคลาสนี้ — คอลัมน์ "CPR ออนไลน์" จับคู่ด้วยเบอร์)
+                คลาสรวม CPR — หลังจบปฐมพยาบาล ผู้เรียนเรียน CPR & AED ต่อในเว็บนี้ (/cpr) ได้เลย ไม่ต้องกรอกโค้ด
+                — คอลัมน์ "CPR ออนไลน์" อัปเดตเองเมื่อสอบผ่านแต่ละบท (โค้ดคลาส <b>{data.cohort.cprPromoCode}</b> ใช้ภายในระบบ)
               </div>
             )}
           </div>

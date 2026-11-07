@@ -1,7 +1,7 @@
 import { chapterArtwork } from '../config/courseArtwork'
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { BookOpen, Check, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Lock, Activity } from 'lucide-react'
+import { BookOpen, Check, CheckCircle2, ChevronRight, ClipboardCheck, FileText, HeartPulse, Lock, Activity } from 'lucide-react'
 import { lessons, lessonsByChapter } from '../courses/firstaid/lessons'
 import { useEnsureLearner } from '../hooks/useLearner'
 import { useLearnerStore } from '../stores/learnerStore'
@@ -9,7 +9,9 @@ import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { useEntitlementStore } from '../stores/entitlementStore'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
-import { isChapterUnlocked, CHAPTER_PRICES } from '../config/pricing'
+import { isChapterUnlocked, CHAPTER_PRICES, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
+import { CPR_MODULES } from '../courses/cpr/modules'
+import { useClassCpr } from '../hooks/useClassCpr'
 import { isPracticeDone, practiceChaptersRemaining, practiceChapterStatus, practiceLink, practiceGateChapter } from '../utils/practice'
 import ProgressBar from '../components/ProgressBar'
 import CallEmergencyButton from '../components/CallEmergencyButton'
@@ -26,7 +28,7 @@ import CprTopBar from '../components/CprTopBar'
 export default function Learn() {
   const { hash } = useLocation()
   useEffect(() => {
-    if (/^#chapter-[1-4]$/.test(hash)) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
+    if (/^#chapter-[1-5]$/.test(hash)) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
   }, [hash])
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
@@ -39,6 +41,7 @@ export default function Learn() {
   useEnsureProgress(learner?.id)
   const unlockedChapters = useEntitlementStore((s) => s.chapters)
   useEnsureEntitlements()
+  const classCpr = useClassCpr()
 
   const total = lessons.length
   const done = lessons.filter((l) => readSet.has(l.id)).length
@@ -82,7 +85,7 @@ export default function Learn() {
         ]}
       />
       <header className="course-learn-header" style={{ marginTop: 8 }}>
-        <div className="text-eyebrow">{total} lessons · {lessonsByChapter.length} chapters</div>
+        <div className="text-eyebrow">{total + CPR_MODULES.length} lessons · {lessonsByChapter.length + 1} chapters</div>
         <h1 className="text-display" style={{ margin: 0 }}>บทเรียน</h1>
       </header>
 
@@ -264,6 +267,8 @@ export default function Learn() {
         )
       })}
 
+      <CprChapter learner={learner} classCpr={classCpr} unlockedChapters={unlockedChapters} />
+
       <div style={{ marginTop: 24, padding: 12, fontSize: 14, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
         เนื้อหาดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป<br />
         โดย หมอเจี่ย (Jia1669.com)
@@ -271,5 +276,69 @@ export default function Learn() {
 
       <CallEmergencyButton />
     </div>
+  )
+}
+
+// หมวด 5: CPR & AED (7 บท อยู่ที่หน้า /cpr — src/pages/CprCourse.jsx) — ทุกคนเห็นในหน้าเรียน
+// คลาสรวม CPR เรียนฟรี (หลัง Post-test ปฐมพยาบาล), คนทั่วไปปลดล็อกแบบหมวดอื่น (฿99 หรือทั้งคอร์ส)
+function CprChapter({ learner, classCpr, unlockedChapters }) {
+  const inClass = !!learner?.cohortCode && classCpr.status !== 'none'
+  const scopeKey = inClass ? learner.cohortCode : 'paid'
+  const local = learner?.cprScoresCode === scopeKey ? learner?.cprScores || {} : {}
+  const passed = new Set([...Object.keys(local), ...Object.keys((inClass && classCpr.cpr?.scores) || {})].map(Number))
+  if (inClass && classCpr.status === 'done') CPR_MODULES.forEach((m) => passed.add(m.id))
+  const paidLocked = !inClass && !isChapterUnlocked(CPR_CHAPTER, unlockedChapters)
+  const chDone = CPR_MODULES.filter((m) => passed.has(m.id)).length
+  const chComplete = chDone === CPR_MODULES.length
+  const minutes = CPR_MODULES.reduce((sum, m) => sum + Math.ceil((m.dur || 300) / 60), 0)
+  return (
+    <section id={`chapter-${CPR_CHAPTER}`} className="card course-chapter-list" style={{ marginTop: 16, padding: 0, overflow: 'hidden' }} data-testid="cpr-chapter">
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '16px 18px', borderBottom: '1px solid var(--color-border)',
+        background: chComplete ? '#E5F0E5' : '#FFF7F7',
+      }}>
+        <span style={{ fontFamily: 'Georgia, serif', fontSize: 26, lineHeight: 1, color: chComplete ? '#366749' : '#B91C1C' }}>
+          {CPR_CHAPTER}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 className="text-body-strong" style={{ margin: 0 }}>
+            <HeartPulse size={16} color="#B91C1C" style={{ verticalAlign: 'middle', marginRight: 4 }} />{CPR_CHAPTER_TITLE}
+          </h2>
+          <div className="text-caption" style={{ fontSize: 14, color: chComplete ? '#366749' : undefined }}>
+            {chComplete ? `เรียนครบ ${CPR_MODULES.length} บทแล้ว` : `${chDone} / ${CPR_MODULES.length} บท · ~${minutes} นาที · มีใบประกาศ CPR`}
+            {inClass && !chComplete ? ' · คลาสของคุณเรียนฟรี' : ''}
+          </div>
+        </div>
+        {paidLocked && <span className="badge badge-brand">฿{CHAPTER_PRICES[CPR_CHAPTER]} ทั้งหมวด</span>}
+      </div>
+      <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {CPR_MODULES.map((m, i) => {
+          const isDone = passed.has(m.id)
+          return (
+            <li key={m.id}>
+              <Link to={paidLocked ? '/cpr' : `/cpr/${m.id}`} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px',
+                borderTop: i === 0 ? 'none' : '1px solid #EDF1EC', opacity: paidLocked ? 0.8 : 1,
+              }}>
+                <span style={{
+                  width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                  background: isDone ? '#E2F0E3' : '#F0F1EB', color: isDone ? '#407048' : '#5F6F5D',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700,
+                }}>
+                  {paidLocked ? <Lock size={15} strokeWidth={1.8} aria-label="ล็อกอยู่" />
+                    : isDone ? <Check size={16} strokeWidth={2.4} aria-label="เรียนแล้ว" /> : String(m.id).padStart(2, '0')}
+                </span>
+                <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.45 }}>{m.title}</span>
+                  <span className="text-caption" style={{ fontSize: 14 }}>{m.desc}</span>
+                </span>
+                <ChevronRight size={18} strokeWidth={1.6} color="var(--color-brand)" style={{ flexShrink: 0 }} />
+              </Link>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
   )
 }

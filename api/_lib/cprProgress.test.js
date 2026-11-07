@@ -18,7 +18,7 @@ test('matches CPR progress by phone and skips learners with no CPR activity', ()
     redemptions: [{ phone_key: '812345678' }],
     students: [{ phone: '66812345678', status: 'กำลังเรียน', chapter_scores: { 1: 90, 2: 80, 3: 0 } }],
   })
-  assert.deepEqual(out.get(A), { redeemed: true, modulesDone: 2, finalScore: null, completed: false })
+  assert.deepEqual(out.get(A), { redeemed: true, modulesDone: 2, finalScore: null, completed: false, scores: { 1: 90, 2: 80 } })
   assert.equal(out.has(B), false)
 })
 
@@ -30,7 +30,7 @@ test('keeps the most advanced row when a phone has several online_students rows'
       { phone: '0812345678', status: 'จบคอร์ส ✅', final_score: 92, completed_at: '2026-10-01T00:00:00Z', chapter_scores: {} },
     ],
   })
-  assert.deepEqual(out.get(A), { redeemed: false, modulesDone: 0, finalScore: 92, completed: true })
+  assert.deepEqual(out.get(A), { redeemed: false, modulesDone: 0, finalScore: 92, completed: true, scores: {} })
 })
 
 test('learner without a usable phone is never matched', () => {

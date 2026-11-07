@@ -3,7 +3,8 @@ import { useLearnerStore } from '../stores/learnerStore'
 import { authHeader } from '../utils/authHeader'
 import { isSupabaseConfigured } from '../config/supabaseClient'
 
-// คลาสรวม CPR + ปฐมพยาบาล: นักเรียนต้องเรียน CPR & AED ออนไลน์ที่ cpr.morroo.com ด้วย
+// คลาสรวม CPR + ปฐมพยาบาล: นักเรียนต้องเรียน CPR & AED ออนไลน์ด้วย — เรียนในเว็บนี้ที่ /cpr
+// (src/pages/CprCourse.jsx) ความคืบหน้าที่เคยเรียนบน cpr.morroo.com ด้วยเบอร์เดียวกันก็นับให้
 // hook นี้ดึงสถานะ CPR ของตัวเองจาก api/cohorts/my-cpr.js ให้แบนเนอร์คลาสกับ Post-test ใช้บังคับลำดับ
 //
 // status:
@@ -33,9 +34,9 @@ async function fetchStatus(learnerId, code) {
   }
 }
 
-export function cprCourseUrl(promoCode) {
-  return promoCode ? `https://cpr.morroo.com/?promo=${encodeURIComponent(promoCode)}` : 'https://cpr.morroo.com'
-}
+// คอร์ส CPR ของคลาสรวมอยู่ในเว็บนี้แล้ว (เดิมต้องข้ามไป cpr.morroo.com/?promo= แล้วกรอกชื่อ/เบอร์/โค้ดใหม่ —
+// นักเรียนงงที่ต้องข้ามไปข้ามมา) — คนทั่วไปก็เรียนที่นี่ได้ (หมวด 5 ปลดล็อกแบบหมวดอื่น)
+export const CPR_COURSE_PATH = '/cpr'
 
 export function useClassCpr() {
   const learner = useLearnerStore((s) => s.learner)
@@ -46,8 +47,7 @@ export function useClassCpr() {
   // จำไว้ในเครื่องว่าคลาสนี้เป็นคลาสรวม CPR/เรียนจบแล้ว — เช็คไม่ได้ (ออฟไลน์) ก็ยังใช้ค่านี้
   const known = learner?.cprStatusCode === code ? learner?.cprStatus || null : null
   // โค้ด CPR ของคลาส = JIA-FA-<รหัสคลาส> เสมอ (api/_lib/classes.js cprPromoRow) — ระหว่างเช็คหรือเช็คไม่ได้
-  // (เช่นเพิ่งล็อกอินแล้ว learner ในเครื่องยังไม่มี cprPromoCode) ใช้ค่านี้ ไม่งั้นปุ่มไป cpr.morroo.com ไม่มีโค้ด
-  // แล้วนักเรียนไปกด "ยังไม่มีโค้ด? รับฟรี" แทน (เจอจริง: คลาส ซีเอ็มเอ 2/2569)
+  // (เช่นเพิ่งล็อกอินแล้ว learner ในเครื่องยังไม่มี cprPromoCode) ใช้ค่านี้ ไม่งั้นแถบ CPR ไม่ขึ้น
   const knownPromo = learner?.cprPromoCode || (code && known !== 'none' ? `JIA-FA-${code}` : null)
 
   // result: { key, value } ของการเช็คล่าสุด — ผูกกับ key กันค่าค้างจากคลาส/คนก่อน
@@ -85,7 +85,7 @@ export function useClassCpr() {
     if (!key) return undefined
     // เริ่มเช็คแบบ async (ไม่ setState ตรง ๆ ใน effect)
     const t = setTimeout(() => run(false), 0)
-    // กลับมาจากแท็บ cpr.morroo.com → เช็คใหม่ให้เลย
+    // กลับมาที่แท็บนี้ → เช็คใหม่ให้เลย
     const onVisible = () => { if (document.visibilityState === 'visible') run(true) }
     document.addEventListener('visibilitychange', onVisible)
     return () => {

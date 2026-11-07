@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
-import { QrCode, ArrowRight, CheckCircle2, Circle, ExternalLink, AlertTriangle } from 'lucide-react'
+import { QrCode, ArrowRight, CheckCircle2, Circle, AlertTriangle } from 'lucide-react'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useProgressStore } from '../stores/progressStore'
 import { lessons } from '../courses/firstaid/lessons'
 import { isPracticeDone, practiceChaptersRemaining, practiceLink, nextLearningStep } from '../utils/practice'
-import { useClassCpr, cprCourseUrl } from '../hooks/useClassCpr'
+import { useClassCpr, CPR_COURSE_PATH } from '../hooks/useClassCpr'
 
 // แบนเนอร์คลาสบนหน้าหลักของนักเรียน (แบบ ACLS class banner + progress card): เห็นชื่อคลาส,
 // ขั้นตอนถัดไป (Pre-test → บทเรียน → ฝึกสถานการณ์ → [CPR & AED ออนไลน์] → Post-test → วันอบรมภาคปฏิบัติ)
-// และปุ่ม QR ของฉัน — คลาสรวม CPR: เรียน CPR ที่ cpr.morroo.com หลัง Post-test ได้ (ไม่บล็อกแล้ว) ปุ่มด้านบนอยู่ที่ CprTopBar
+// และปุ่ม QR ของฉัน — คลาสรวม CPR: เรียน CPR ในเว็บนี้ (/cpr) หลัง Post-test ปุ่มด้านบนอยู่ที่ CprTopBar
 export default function ClassBanner() {
   const learner = useLearnerStore((s) => s.learner)
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
@@ -30,7 +30,6 @@ export default function ClassBanner() {
   // คลาสรวม CPR: ต้องเรียน CPR & AED ออนไลน์ให้จบด้วย (เช็คไม่ได้ = ไม่ล็อก แต่ยังเตือน)
   const cprClass = cpr.status !== 'none'
   const cprDone = cpr.status === 'done'
-  const cprUrl = cprCourseUrl(cpr.promoCode || learner.cprPromoCode)
 
   let next
   if (!preTestDone) next = { to: '/pre-test', label: 'ทำ Pre-test' }
@@ -39,7 +38,7 @@ export default function ClassBanner() {
   else if (!practiceDone && !postTestDone) next = { to: practiceLink(passedScenarioIds), label: `ฝึกสถานการณ์ให้ผ่านหมวดละ 1 ฉาก (เหลืออีก ${practiceRemaining} หมวด)` }
   else if (!postTestDone) next = { to: '/post-test', label: 'ทำ Post-test' }
   // คลาสรวม CPR: ยังไม่จบ CPR (รวมกรณีเช็คไม่ได้) = ยังไม่พร้อมไปวันอบรม — ครูก็นับแบบเดียวกัน (readiness requireCpr)
-  else if (cprClass && !cprDone) next = { href: cprUrl, label: 'ขั้นสุดท้าย: ไปเรียน CPR & AED ออนไลน์ให้จบ (ก่อนพร้อมเข้าอบรมภาคปฏิบัติ)' }
+  else if (cprClass && !cprDone) next = { to: CPR_COURSE_PATH, label: 'ขั้นสุดท้าย: เรียน CPR & AED ออนไลน์ให้จบ (ก่อนพร้อมเข้าอบรมภาคปฏิบัติ)' }
   else next = { to: '/my-qr', label: 'พร้อมแล้ว — เปิด QR ของฉันไปวันอบรมภาคปฏิบัติ' }
 
   // เหลือแค่ Post-test (คลาสรวม CPR: CPR จบแล้ว หรือเช็คไม่ได้)
@@ -87,15 +86,9 @@ export default function ClassBanner() {
           </div>
         </div>
       )}
-      {next.href ? (
-        <a href={next.href} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
-          {next.label} <ExternalLink size={16} />
-        </a>
-      ) : (
-        <Link to={next.to} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
-          {next.label} <ArrowRight size={16} />
-        </Link>
-      )}
+      <Link to={next.to} className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+        {next.label} <ArrowRight size={16} />
+      </Link>
     </section>
   )
 }

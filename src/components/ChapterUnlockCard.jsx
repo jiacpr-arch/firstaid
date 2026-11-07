@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Lock, MessageCircle, KeyRound, CheckCircle2 } from 'lucide-react'
 import { chapters } from '../courses/firstaid/lessons'
-import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE } from '../config/pricing'
+import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
 import { useAuthStore } from '../stores/authStore'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useEntitlementStore } from '../stores/entitlementStore'
@@ -24,7 +24,7 @@ export default function ChapterUnlockCard({ chapter }) {
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
-  const chapterInfo = chapters.find((c) => c.id === chapter)
+  const chapterInfo = chapter === CPR_CHAPTER ? { id: CPR_CHAPTER, title: CPR_CHAPTER_TITLE } : chapters.find((c) => c.id === chapter)
   const price = CHAPTER_PRICES[chapter]
 
   useEffect(() => {

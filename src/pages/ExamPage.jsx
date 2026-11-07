@@ -178,7 +178,7 @@ export default function ExamPage({ kind }) {
         {passedTheory && <TheoryCertCard postAttempt={done} />}
         {/* จบ First Aid ออนไลน์แล้ว → ต่อ CPR & AED ออนไลน์ (คนที่เรียน CPR จบแล้วไม่ต้องโชว์) */}
         {passedTheory && cpr.status !== 'done' && (
-          <CprOnlineCard promoCode={cpr.promoCode || learner?.cprPromoCode} source="post_test_pass"
+          <CprOnlineCard inClass={cpr.status !== 'none' && cpr.status !== 'loading'} source="post_test_pass"
             title={cpr.status === 'todo' ? 'ขั้นสุดท้าย: เรียน CPR & AED ออนไลน์ (คลาสนี้ต้องเรียน)' : 'จบ First Aid ออนไลน์แล้ว — ต่อด้วย CPR & AED ออนไลน์'} />
         )}
         {passedTheory && <CertUpsellCard source="post_test_pass" />}
