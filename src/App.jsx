@@ -48,6 +48,7 @@ import NotFound from './pages/NotFound'
 const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
 // คอร์ส CPR & AED ของคลาสรวม (เดิมอยู่ cpr.morroo.com) — lazy เพราะใช้เฉพาะนักเรียนคลาสรวม
 const CprCourse = lazy(() => import('./pages/CprCourse'))
+const CprGuide = lazy(() => import('./pages/CprGuide'))
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -184,6 +185,7 @@ export default function App() {
         } />
 
         <Route path="/cpr" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><CprCourse /></Suspense>} />
+        <Route path="/cpr/guide" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><CprGuide /></Suspense>} />
         <Route path="/cpr/:moduleId" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><CprCourse /></Suspense>} />
         <Route path="/certificate" element={<Certification />} />
         <Route path="/call" element={<EmergencyCall />} />

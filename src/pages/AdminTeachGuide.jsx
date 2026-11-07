@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, KeyRound, QrCode, Users, ShieldCheck, Copy, Check, HeartPulse } from 'lucide-react'
+import { ArrowLeft, KeyRound, QrCode, Users, ShieldCheck, Copy, Check, HeartPulse, Ticket } from 'lucide-react'
+import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, CPR_CHAPTER } from '../config/pricing'
 import { READINESS } from '../../api/_lib/readiness.js'
 import { DEFAULT_STATIONS } from '../data/checkinStations'
 import { FIRST_AID_CHECKLISTS } from '../data/checklists/firstAidChecklists'
@@ -92,7 +93,23 @@ const STUDENT_LINE_MESSAGE_CPR = [
   'ถ้าเปิดลิงก์ใน LINE แล้วข้อมูลหาย ให้กด "…" มุมขวาบน → เปิดในเบราว์เซอร์',
 ].join('\n')
 
-function CopyStudentMessage({ text = STUDENT_LINE_MESSAGE, title = 'ข้อความส่งนักเรียน (วางในกลุ่ม LINE)' }) {
+// ข้อความส่งลูกค้าที่ซื้อหมวด 5 (CPR & AED) — ใส่โค้ดแทน ______
+const CPR_CUSTOMER_MESSAGE = [
+  'ขอบคุณที่สั่งซื้อคอร์ส CPR & AED ออนไลน์ค่ะ 🙏',
+  '',
+  'โค้ดของคุณ: ______',
+  '',
+  'วิธีเรียน',
+  '1. เปิด firstaid.morroo.com/cpr ในมือถือ แล้วกด "เข้าสู่ระบบด้วย LINE"',
+  '2. กรอกโค้ดด้านบนในช่อง "มีโค้ดแล้ว" — บทเรียนเปิดทันที',
+  '3. ดูวิดีโอ 6 บท แต่ละบททำแบบทดสอบ 5 ข้อ ให้ได้ 80%',
+  '4. สอบปลายภาค 10 ข้อ ได้ 80% → กดรับใบประกาศ CPR ได้ทันที (มี QR ตรวจสอบได้)',
+  '',
+  'คู่มือละเอียด: firstaid.morroo.com/cpr/guide',
+  'ติดปัญหาทักแอดมินได้เลยค่ะ',
+].join('\n')
+
+function CopyStudentMessage({ text = STUDENT_LINE_MESSAGE, title = 'ข้อความส่งนักเรียน (วางในกลุ่ม LINE)', hint = 'เติมรหัสคลาสแทน ______ ก่อนส่ง' }) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     try {
@@ -109,7 +126,7 @@ function CopyStudentMessage({ text = STUDENT_LINE_MESSAGE, title = 'ข้อค
           {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
         </button>
       </div>
-      <div className="text-caption">เติมรหัสคลาสแทน ______ ก่อนส่ง</div>
+      <div className="text-caption">{hint}</div>
       <pre style={{
         whiteSpace: 'pre-wrap', margin: '8px 0 0', padding: 10, borderRadius: 8, fontSize: 13,
         fontFamily: 'inherit', background: 'var(--color-bg-tertiary)', userSelect: 'all',
@@ -153,6 +170,10 @@ export default function AdminTeachGuide() {
           <li><b>หลังอบรม</b> — เช็คว่าทุกคนได้ใบประกาศ ส่งสรุปเข้า LINE แล้วกดปิดคลาส</li>
         </ol>
         <Link to="/admin/teach" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>เริ่มเลย → ไปหน้าคลาสของฉัน</Link>
+      </div>
+      <div className="text-caption" style={{ marginTop: 8 }}>
+        ข้ามไป: <a href="#cpr-class">คลาสรวม CPR + ปฐมพยาบาล</a> · <a href="#cpr-chapter">ขายหมวด {CPR_CHAPTER} CPR & AED ให้คนทั่วไป</a> ·
+        คู่มือนักเรียน CPR <Link to="/cpr/guide">firstaid.morroo.com/cpr/guide</Link>
       </div>
 
       <h2 style={h2}>รหัสและ QR มี 3 อย่าง อย่าสับสน</h2>
@@ -338,7 +359,8 @@ export default function AdminTeachGuide() {
         <b> “4 บท”</b> = กำลังเรียน ผ่านไปกี่บท · <b>“—”</b> = ยังไม่ได้เริ่มเรียน CPR หรือเบอร์ไม่ตรงกัน
       </p>
       <p className="text-caption" style={{ marginTop: 4 }}>
-        ข้อมูลนี้มาจากเว็บ CPR ใช้ติดตามความคืบหน้า ไม่ใช่หลักฐานว่าสอบผ่าน (ใบประกาศ CPR ดูที่ระบบกลาง JIA)
+        คะแนนตรวจที่เซิร์ฟเวอร์ (ระบบตรวจข้อสอบเดียวกับ cpr.morroo.com) ใช้ติดตามความคืบหน้า — ใบประกาศ CPR ดูที่ระบบกลาง JIA
+        · ส่งคู่มือนักเรียน <Link to="/cpr/guide">firstaid.morroo.com/cpr/guide</Link> ให้นักเรียนที่ไม่แน่ใจวิธีเรียนได้
       </p>
 
       <h3 style={{ fontSize: 16, fontWeight: 700, margin: '20px 0 6px' }}>แบ่งกลุ่ม A–D วันอบรม</h3>
@@ -353,6 +375,44 @@ export default function AdminTeachGuide() {
         ปุ่ม <b>ผ่าน</b> ในใบประเมินจะกดได้เมื่อติ๊กข้อ ★ ครบทุกข้อ (ระบบเช็คซ้ำฝั่งเซิร์ฟเวอร์ด้วย)
         ข้ออื่นที่ไม่มี ★ ครูตัดสินเองได้ตามเกณฑ์แนะนำ 80% — กด <b>ไม่ผ่าน</b> ได้เสมอ แล้วให้นักเรียนสอบซ้ำ
       </p>
+
+      <h2 id="cpr-chapter" style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Ticket size={20} color="#0891B2" /> ขายหมวด {CPR_CHAPTER}: CPR & AED ให้คนทั่วไป (แอดมิน/ทีมขาย)
+      </h2>
+      <p className="text-body">
+        CPR & AED ออนไลน์ (6 บท + ข้อสอบปลายภาค) เป็น <b>หมวดที่ {CPR_CHAPTER}</b> ของคอร์สใน firstaid ทุกคนเห็นในหน้าเรียน
+        แต่ต้องปลดล็อกด้วยโค้ดเหมือนหมวด 2–4 — คนในคลาสรวม CPR ไม่ต้องใช้โค้ด
+      </p>
+      <div className="card" style={{ marginTop: 8 }}>
+        <div className="text-body-strong">ราคา</div>
+        <ul style={list}>
+          <li>หมวด {CPR_CHAPTER} อย่างเดียว <b>฿{CHAPTER_PRICES[CPR_CHAPTER]}</b></li>
+          <li>ทั้งคอร์ส <b>฿{COURSE_BUNDLE_PRICE}</b> — ได้ทุกหมวด รวม CPR (โค้ดทั้งคอร์สที่ขายไปก่อนหน้าก็เรียน CPR ได้ด้วย)</li>
+          <li>คลาสที่ตั้ง “เปิดทุกบท” ให้คนในคลาส ได้หมวด CPR ไปด้วย</li>
+        </ul>
+      </div>
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '16px 0 6px' }}>ขั้นตอนขาย</h3>
+      <ol style={{ ...list, listStyle: 'decimal' }}>
+        <li>ลูกค้าโอนเงิน/ทักซื้อทาง LINE @jiacpr</li>
+        <li>หน้าควบคุม → <Link to="/admin/vouchers">โค้ดปลดล็อกบทเรียน</Link> → เลือก <b>หมวด {CPR_CHAPTER}: CPR & AED ออนไลน์ (฿{CHAPTER_PRICES[CPR_CHAPTER]})</b>
+          (หรือ “ทั้งคอร์ส”) → ตั้งจำนวนครั้งที่ใช้ได้/วันหมดอายุ → สร้างโค้ด</li>
+        <li>คัดลอกข้อความด้านล่าง ใส่โค้ด แล้วส่งให้ลูกค้า</li>
+        <li>ลูกค้าเข้าสู่ระบบด้วย LINE → เปิด firstaid.morroo.com/cpr → กรอกโค้ดในช่อง <b>มีโค้ดแล้ว</b> → เรียนได้ทันที</li>
+        <li>สอบปลายภาคผ่าน → ลูกค้ากดรับใบประกาศ CPR ในหน้าเดียวกัน (ใบอยู่ที่ระบบกลาง JIA class.jiacpr.com)</li>
+      </ol>
+      <CopyStudentMessage text={CPR_CUSTOMER_MESSAGE} title="ข้อความส่งลูกค้า — หมวด CPR" hint="เติมโค้ดแทน ______ ก่อนส่ง" />
+
+      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '16px 0 6px' }}>เกณฑ์เรียน/สอบ (เหมือน cpr.morroo.com)</h3>
+      <ul style={list}>
+        <li>บทที่ 1–6: ดูวิดีโอให้จบ → แบบทดสอบ 5 ข้อ ได้ 80% · ไม่ผ่านต้องดูวิดีโอใหม่ก่อนสอบซ้ำ</li>
+        <li>ข้อสอบปลายภาค: 10 ข้อ ได้ 80% · ต้องเข้าสู่ระบบ · สอบได้วันละ 5 ครั้ง</li>
+        <li>ตรวจคำตอบที่เซิร์ฟเวอร์ (เฉลยไม่อยู่ในหน้าเว็บ) — ผ่านปลายภาคแล้วระบบกลาง JIA ออกใบประกาศ CPR ให้</li>
+      </ul>
+      <div className="callout callout-info" style={{ marginTop: 10 }}>
+        ต่างจาก cpr.morroo.com: ซื้อที่ firstaid ไม่มีคูปองส่วนลด on-site อัตโนมัติ และไม่เข้าคิวติดตามขายของ jia-online —
+        ทีมขายติดตามเองจากรายชื่อที่ซื้อโค้ด · บทที่ลูกค้าเคยเรียนบน cpr.morroo.com ไม่นับต่อ (นับต่อเฉพาะนักเรียนคลาสรวม)
+      </div>
 
       <h2 style={h2}>เมนูอื่นในหน้าควบคุมต้องใช้ไหม?</h2>
       <ul style={list}>
@@ -387,6 +447,17 @@ export default function AdminTeachGuide() {
         <Faq q="คลาสรวม CPR: นักเรียนเรียน CPR จบแล้วแต่ยังขึ้นว่ายังไม่จบ">
           ให้นักเรียนกด <b>เช็คอีกครั้ง</b> ในแถบ CPR ด้านบนของหน้าหลัก ถ้ายังไม่ขึ้น ให้ดูเรื่องเบอร์ไม่ตรงกันในข้อด้านบน
           (CPR ไม่ล็อก Post-test แล้ว นักเรียนสอบ Post-test ได้เลยเมื่อเรียนและฝึกครบ)
+        </Faq>
+        <Faq q="หมวด CPR: ลูกค้ากรอกโค้ดแล้วยังล็อก">
+          ให้เช็คว่าเข้าสู่ระบบด้วย LINE แล้ว (สิทธิ์ผูกกับบัญชี) และโค้ดเป็นหมวด {CPR_CHAPTER} หรือทั้งคอร์ส — โค้ดหมวด 2–4 เปิด CPR ไม่ได้
+          ดูสถานะโค้ดได้ที่ <Link to="/admin/vouchers">โค้ดปลดล็อกบทเรียน</Link>
+        </Faq>
+        <Faq q="หมวด CPR: สอบผ่านแล้วแต่ไม่ได้ใบประกาศ">
+          ให้ลูกค้าเปิด firstaid.morroo.com/cpr ด้วยบัญชี LINE เดียวกับที่สอบ — ถ้ามีช่องกรอกชื่อ ให้กรอกชื่อจริงแล้วกด <b>รับใบประกาศ CPR</b>
+          ยังไม่ได้ ค้นชื่อในเมนู <b>ใบประกาศ</b> (ระบบกลาง JIA)
+        </Faq>
+        <Faq q="หมวด CPR: สอบปลายภาคไม่ได้ ขึ้นว่าครบจำนวนครั้ง">
+          สอบได้วันละ 5 ครั้งต่อบัญชี ให้ลองใหม่วันถัดไป (กรณีจำเป็น ทีมเทคนิคเปิดสิทธิ์สอบไม่จำกัดชั่วคราวรายบัญชีได้ — ตาราง online_exam_passes ใช้ร่วมกับ cpr.morroo.com)
         </Faq>
         <Faq q="กดผ่านในใบประเมินไม่ได้">
           ยังติ๊กข้อ ★ ไม่ครบ ข้อ ★ คือข้อวิกฤตที่ต้องทำได้ทุกข้อ ถ้านักเรียนทำข้อ ★ ไม่ได้ ให้กด ไม่ผ่าน แล้วให้สอบซ้ำ

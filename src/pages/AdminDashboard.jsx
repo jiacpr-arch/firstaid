@@ -10,7 +10,7 @@ const GROUPS = [
     title: 'งานสอน',
     items: [
       { to: '/admin/teach', label: 'คลาสของฉัน', desc: 'สร้างคลาส · ดูความพร้อมนักเรียน · เช็คชื่อวันอบรม · รายงาน LINE', icon: GraduationCap, color: '#0F766E' },
-      { to: '/admin/guide', label: 'คู่มือผู้สอน', desc: 'วิธีสร้างคลาส รหัสผู้ช่วย เช็คชื่อ สถานี และรายงาน LINE', icon: BookOpen, color: '#475569' },
+      { to: '/admin/guide', label: 'คู่มือผู้สอน', desc: 'วิธีสร้างคลาส รหัสผู้ช่วย เช็คชื่อ สถานี รายงาน LINE และขายหมวด CPR', icon: BookOpen, color: '#475569' },
     ],
   },
   {
@@ -24,7 +24,7 @@ const GROUPS = [
   {
     title: 'ขาย & ใบประกาศ',
     items: [
-      { to: '/admin/vouchers', label: 'โค้ดปลดล็อกบทเรียน', desc: 'สร้าง/ดูโค้ดขายเรียนออนไลน์รายหมวด', icon: Ticket, color: '#0891B2' },
+      { to: '/admin/vouchers', label: 'โค้ดปลดล็อกบทเรียน', desc: 'สร้าง/ดูโค้ดขายเรียนออนไลน์รายหมวด (รวมหมวด 5 CPR & AED)', icon: Ticket, color: '#0891B2' },
       { to: '/admin/certificates', label: 'ใบประกาศ', desc: 'ออกจากระบบกลาง JIA — ค้นหา / แก้ชื่อ / เพิกถอน / ดาวน์โหลด CSV', icon: Award, color: '#D97706' },
     ],
   },

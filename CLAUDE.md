@@ -5,9 +5,16 @@
 ## โปรเจกต์คืออะไร
 
 **FirstAid Morroo** (https://firstaid.morroo.com) — แพลตฟอร์มเรียนปฐมพยาบาลออนไลน์ (PWA)
-สำหรับบุคคลทั่วไป โดย Jia Training Center: 24 บทเรียนสั้น ๆ, 17 ผังช่วยชีวิตฉุกเฉิน,
+สำหรับบุคคลทั่วไป โดย Jia Training Center: 24 บทเรียนสั้น ๆ (หมวด 1–4), 17 ผังช่วยชีวิตฉุกเฉิน,
 40 สถานการณ์จำลอง, สอบ pre/post-test และออกใบเซอร์ — React + Vite, deploy บน Vercel,
 ข้อมูล sync ผ่าน Supabase
+
+**หมวด 5: CPR & AED ออนไลน์** (`/cpr`, ย้ายมาจาก cpr.morroo.com พ.ย. 2026 เพื่อให้คลาสรวม CPR + ปฐมพยาบาล
+เรียนเว็บเดียว): เนื้อหาอยู่ `src/courses/cpr/modules.js` (สำเนาจาก jia-online `COURSE.modules` — แก้คำถามที่
+jia-online แล้วต้องคัดลอกมาใหม่ ให้ตรงกับ `ANSWER_KEY` ใน edge function `grade-quiz`), ตรวจผ่าน `api/cpr/grade.js`
+→ `grade-quiz`, สิทธิ์ที่ `api/_lib/cprAccess.js` (คลาส `includes_cpr` ฟรี / chapter 5 หรือ 0), ความคืบหน้าเก็บใน
+`online_students` (แท็ก `firstaid-class:<promo>` หรือ `firstaid-learner:<id>`), ใบประกาศ = Hub courseId `cpr`
+คู่มือ: ครู/แอดมิน `/admin/guide` (#cpr-class, #cpr-chapter), นักเรียน `/cpr/guide`
 
 คำสั่งหลัก: `npm run dev` (รัน local), `npm run build` (build + ตรวจว่าโค้ดพัง), `npx eslint src/`
 
