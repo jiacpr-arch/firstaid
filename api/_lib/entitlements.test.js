@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveChapters, cleanLocalLearnerId } from './entitlements.js'
+import { resolveChapters, resolveEntitlements, cleanLocalLearnerId } from './entitlements.js'
 
 // fake ขั้นต่ำ: lesson_entitlements, enrollments+cohorts (unlock), line_identities, rpc hub
 function fake({ purchases = {}, unlockedLearners = [], lineBound = [], hubBound = [] } = {}) {
@@ -52,4 +52,14 @@ test('cleanLocalLearnerId rejects junk and duplicates of the token learner', () 
   assert.equal(cleanLocalLearnerId('same-1234', 'same-1234'), null)
   assert.equal(cleanLocalLearnerId('bad id;', null), null)
   assert.equal(cleanLocalLearnerId(undefined, null), null)
+})
+
+test('CPR (chapter 5) opens only from a purchase — a class that unlocks every lesson does not include CPR', async () => {
+  const db = fake({ purchases: { 'tok-cpr1': [5], 'tok-all1': [0], 'tok-fa22': [2] }, unlockedLearners: ['tok-cls1', 'local-1234'] })
+  assert.deepEqual(await resolveEntitlements(db, { tokenLearnerId: 'tok-cpr1' }), { chapters: [5], cpr: true })
+  assert.deepEqual(await resolveEntitlements(db, { tokenLearnerId: 'tok-all1' }), { chapters: [0], cpr: true })
+  assert.deepEqual(await resolveEntitlements(db, { tokenLearnerId: 'tok-fa22' }), { chapters: [2], cpr: false })
+  // คลาสเปิดทุกบท: ได้หมวด 1–4 (chapter 0) แต่ไม่ได้ CPR
+  assert.deepEqual(await resolveEntitlements(db, { tokenLearnerId: 'tok-cls1' }), { chapters: [0], cpr: false })
+  assert.deepEqual(await resolveEntitlements(db, { localLearnerId: 'local-1234' }), { chapters: [0], cpr: false })
 })
