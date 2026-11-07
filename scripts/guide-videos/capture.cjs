@@ -154,7 +154,7 @@ async function answerAll(p) {
 
   // ===== admin =====
   const vouchers = [
-    { code: 'CPR-8KD2QW', chapter: 5, price_thb: 99, valid_days: 365, max_uses: 1, use_count: 0, status: 'active', created_at: new Date().toISOString() },
+    { code: 'CPR-8KD2QW', chapter: 5, price_thb: 149, valid_days: 365, max_uses: 1, use_count: 0, status: 'active', created_at: new Date().toISOString() },
     { code: 'ALL-4TZ9MX', chapter: 0, price_thb: 249, valid_days: 365, max_uses: 1, use_count: 1, status: 'redeemed', created_at: new Date(Date.now() - 86400000).toISOString() },
   ];
   s = await setup(b, { session: true, vouchers });
