@@ -92,3 +92,31 @@ export function buildBoardCsv(board, formatTime = (iso) => iso) {
   })
   return '﻿' + lines.join('\n')
 }
+
+// บันทึกหลายฐานในครั้งเดียว (สแกน 1 ครั้ง → ให้ผ่านทุกฐานที่เลือก) — api/attendance/station-checkin.js action:'bulk'
+// stations = ฐานทั้งหมดของรอบ, doneIds = ฐานที่เช็คชื่อไว้แล้ว, selectedIds = ฐานที่ครูเลือก
+// ฐานสอบเลือกได้เมื่อฐานฝึกทุกฐานเช็คชื่อแล้ว หรืออยู่ในชุดที่เลือกครั้งนี้
+// คืน { ok, insertIds, examIds } หรือ { ok:false, error }
+export function planBulkCheckin(stations, doneIds, selectedIds) {
+  const byId = new Map(stations.map((s) => [s.id, s]))
+  const picked = [...new Set(Array.isArray(selectedIds) ? selectedIds : [])]
+  if (picked.length === 0) return { ok: false, error: 'ยังไม่ได้เลือกฐาน' }
+  const unknown = picked.filter((id) => !byId.has(id))
+  if (unknown.length) return { ok: false, error: 'มีฐานที่ไม่อยู่ในรอบนี้' }
+  const done = new Set(doneIds)
+  const examIds = picked.filter((id) => byId.get(id).kind === 'exam')
+  if (examIds.length) {
+    const missing = missingPracticeStations(stations, [...done, ...picked])
+    if (missing.length) {
+      return { ok: false, error: `ยังเช็คชื่อฐานฝึกไม่ครบ: ${missing.map((m) => m.name).join(', ')}` }
+    }
+  }
+  return { ok: true, insertIds: picked.filter((id) => !done.has(id)), examIds }
+}
+
+// ผลฐานสอบเมื่อครูกด "ผ่านครบทุกข้อ" แบบรวม — ติ๊กทุกข้อของใบประเมินที่ใช้กับฐานนั้น
+// (คอร์สนี้ผู้ผ่านต้องทำได้ครบทุกข้ออยู่แล้ว) ไม่มีใบประเมิน = บันทึกผ่านโดยไม่มีคะแนนรายข้อ
+export function fullPassResult(checklist) {
+  if (!checklist) return { score: null, items: null }
+  return { score: checklist.items.length, items: Object.fromEntries(checklist.items.map((it) => [it.no, true])) }
+}
