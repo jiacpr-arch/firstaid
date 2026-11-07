@@ -312,6 +312,10 @@ function CprChapter({ learner, classCpr, unlockedChapters }) {
         </div>
         {paidLocked && <span className="badge badge-brand">฿{CHAPTER_PRICES[CPR_CHAPTER]} ทั้งหมวด</span>}
       </div>
+      <Link to="/cpr/guide" className="text-caption" style={{ display: 'block', padding: '10px 18px', borderBottom: '1px solid #EDF1EC', fontWeight: 700, color: '#B91C1C' }}
+        data-testid="cpr-chapter-guide">
+        ▶ ดูวิดีโอวิธีเรียนและรับใบประกาศ CPR (2 นาที)
+      </Link>
       <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {CPR_MODULES.map((m, i) => {
           const isDone = passed.has(m.id)

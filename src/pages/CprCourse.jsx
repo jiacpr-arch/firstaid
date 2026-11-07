@@ -239,8 +239,11 @@ function CprOverview({ passed, ctx }) {
 
       {complete && <CprCertificate />}
 
+      <Link to="/cpr/guide" className="btn btn-ghost btn-block" style={{ marginTop: 12, fontSize: 13 }} data-testid="cpr-guide-link">
+        ▶ วิดีโอ + คู่มือ: วิธีเรียนและรับใบประกาศ CPR
+      </Link>
       {!locked && (
-        <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 12, fontSize: 13 }} onClick={ctx.refresh} disabled={ctx.checking}>
+        <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 4, fontSize: 13 }} onClick={ctx.refresh} disabled={ctx.checking}>
           <RefreshCw size={13} /> {ctx.checking ? 'กำลังเช็ค…' : 'เช็คความคืบหน้าอีกครั้ง'}
         </button>
       )}
