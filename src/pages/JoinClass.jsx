@@ -175,6 +175,9 @@ export default function JoinClass() {
           <div className="text-caption" style={{ marginTop: 6 }}>
             เรียนในเว็บนี้ได้เลย ฟรีทุกบทสำหรับคนในคลาส — ไม่ต้องสมัครหรือกรอกโค้ดใหม่ ครูเห็นความคืบหน้าอัตโนมัติ
           </div>
+          <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 8, fontSize: 13 }} onClick={() => navigate('/cpr/guide')}>
+            ▶ ดูวิดีโอวิธีเรียน CPR (2 นาที)
+          </button>
         </div>
       </div>
     )

@@ -240,7 +240,7 @@ function CprOverview({ passed, ctx }) {
       {complete && <CprCertificate />}
 
       <Link to="/cpr/guide" className="btn btn-ghost btn-block" style={{ marginTop: 12, fontSize: 13 }} data-testid="cpr-guide-link">
-        วิธีเรียนและรับใบประกาศ CPR (คู่มือ)
+        ▶ วิดีโอ + คู่มือ: วิธีเรียนและรับใบประกาศ CPR
       </Link>
       {!locked && (
         <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 4, fontSize: 13 }} onClick={ctx.refresh} disabled={ctx.checking}>
