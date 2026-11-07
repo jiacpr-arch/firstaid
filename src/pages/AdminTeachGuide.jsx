@@ -383,6 +383,24 @@ export default function AdminTeachGuide() {
         CPR & AED ออนไลน์ (6 บท + ข้อสอบปลายภาค) เป็น <b>หมวดที่ {CPR_CHAPTER}</b> ของคอร์สใน firstaid ทุกคนเห็นในหน้าเรียน
         แต่ต้องปลดล็อกด้วยโค้ดเหมือนหมวด 2–4 — คนในคลาสรวม CPR ไม่ต้องใช้โค้ด
       </p>
+      <div className="card" style={{ marginTop: 8, padding: 12 }}>
+        <div className="text-body-strong">ดูวิดีโอก่อน (1 นาทีครึ่ง)</div>
+        <div className="text-caption">สร้างโค้ดหมวด CPR, ส่งให้ลูกค้า, คลาสรวม CPR · มีเสียงบรรยายและคำบรรยาย · หน้าจอในคลิปเป็นข้อมูลตัวอย่าง ·
+          วิดีโอสำหรับนักเรียนอยู่ที่ <Link to="/cpr/guide">/cpr/guide</Link></div>
+        <video
+          src="/guide-videos/cpr-admin-guide.mp4"
+          poster="/guide-videos/cpr-admin-guide.jpg"
+          controls
+          playsInline
+          preload="none"
+          style={{
+            display: 'block', width: '100%', maxWidth: 360, aspectRatio: '9 / 16', margin: '10px auto 0',
+            borderRadius: 12, background: '#163D3A',
+          }}
+        >
+          <track kind="captions" src="/guide-videos/cpr-admin-guide.vtt" srclang="th" label="ไทย" />
+        </video>
+      </div>
       <div className="card" style={{ marginTop: 8 }}>
         <div className="text-body-strong">ราคา</div>
         <ul style={list}>

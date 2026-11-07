@@ -34,6 +34,24 @@ export default function CprGuide() {
         หมวด {CPR_CHAPTER} ของคอร์สออนไลน์ที่ firstaid.morroo.com — วิดีโอสั้น 6 บท + ข้อสอบปลายภาค ผ่านแล้วได้ใบประกาศ CPR & AED ของ JIA (มี QR ตรวจสอบได้)
       </p>
 
+      <div className="card" style={{ marginTop: 12, padding: 12 }} data-testid="cpr-guide-video">
+        <div className="text-body-strong">ดูวิดีโอ (2 นาที)</div>
+        <div className="text-caption">ตั้งแต่เข้าเรียนจนรับใบประกาศ CPR · มีเสียงบรรยายและคำบรรยาย · หน้าจอในคลิปเป็นข้อมูลตัวอย่าง</div>
+        <video
+          src="/guide-videos/cpr-student-guide.mp4"
+          poster="/guide-videos/cpr-student-guide.jpg"
+          controls
+          playsInline
+          preload="none"
+          style={{
+            display: 'block', width: '100%', maxWidth: 360, aspectRatio: '9 / 16', margin: '10px auto 0',
+            borderRadius: 12, background: '#163D3A',
+          }}
+        >
+          <track kind="captions" src="/guide-videos/cpr-student-guide.vtt" srclang="th" label="ไทย" />
+        </video>
+      </div>
+
       <div className="card" style={{ marginTop: 12, background: 'var(--color-brand-soft, #ECFDF5)' }}>
         <div className="text-body-strong">สรุปใน 4 ขั้น</div>
         <ol style={{ ...list, listStyle: 'decimal' }}>
