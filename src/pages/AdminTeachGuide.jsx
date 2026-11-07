@@ -406,7 +406,7 @@ export default function AdminTeachGuide() {
         <ul style={list}>
           <li>หมวด {CPR_CHAPTER} อย่างเดียว <b>฿{CHAPTER_PRICES[CPR_CHAPTER]}</b></li>
           <li>ทั้งคอร์ส <b>฿{COURSE_BUNDLE_PRICE}</b> — ได้ทุกหมวด รวม CPR (โค้ดทั้งคอร์สที่ขายไปก่อนหน้าก็เรียน CPR ได้ด้วย)</li>
-          <li>คลาสที่ตั้ง “เปิดทุกบท” ให้คนในคลาส ได้หมวด CPR ไปด้วย</li>
+          <li><b>ฟรีเฉพาะคลาสรวม CPR + ปฐมพยาบาล</b> — คลาสที่ตั้ง “เปิดทุกบท” ได้หมวด 1–4 ฟรี แต่<b>ไม่รวมหมวด CPR</b> (ต้องซื้อเพิ่ม)</li>
         </ul>
       </div>
 

@@ -12,7 +12,8 @@
 **หมวด 5: CPR & AED ออนไลน์** (`/cpr`, ย้ายมาจาก cpr.morroo.com พ.ย. 2026 เพื่อให้คลาสรวม CPR + ปฐมพยาบาล
 เรียนเว็บเดียว): เนื้อหาอยู่ `src/courses/cpr/modules.js` (สำเนาจาก jia-online `COURSE.modules` — แก้คำถามที่
 jia-online แล้วต้องคัดลอกมาใหม่ ให้ตรงกับ `ANSWER_KEY` ใน edge function `grade-quiz`), ตรวจผ่าน `api/cpr/grade.js`
-→ `grade-quiz`, สิทธิ์ที่ `api/_lib/cprAccess.js` (คลาส `includes_cpr` ฟรี / chapter 5 หรือ 0), ความคืบหน้าเก็บใน
+→ `grade-quiz`, สิทธิ์ที่ `api/_lib/cprAccess.js` (ฟรีเฉพาะคลาส `includes_cpr` / ซื้อ chapter 5 หรือ 0 เอง — คลาส `unlock_lessons`
+ไม่ได้ CPR: `/api/entitlements` ส่ง `cpr` แยกจาก `chapters`), ความคืบหน้าเก็บใน
 `online_students` (แท็ก `firstaid-class:<promo>` หรือ `firstaid-learner:<id>`), ใบประกาศ = Hub courseId `cpr`
 คู่มือ: ครู/แอดมิน `/admin/guide` (#cpr-class, #cpr-chapter), นักเรียน `/cpr/guide`
 

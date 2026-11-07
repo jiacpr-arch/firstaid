@@ -1,10 +1,10 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { learnerIdFromToken } from '../_lib/authLearner.js'
-import { resolveChapters, cleanLocalLearnerId } from '../_lib/entitlements.js'
+import { resolveEntitlements, cleanLocalLearnerId } from '../_lib/entitlements.js'
 import { rateLimited } from '../_lib/rateLimit.js'
 
-// Returns which chapters (0 = whole-course bundle, 1-4 = single chapter) the
+// Returns which chapters (0 = whole-course bundle, 1-5 = single chapter) the
 // caller currently has access to. A row with a non-null expires_at in the past
 // is treated as no longer granted, so time-limited (e.g. 1-month class) codes
 // lapse without any cleanup job.
@@ -28,14 +28,15 @@ export default async function handler(req, res) {
 
   const tokenLearnerId = await learnerIdFromToken(admin, req)
   const localLearnerId = cleanLocalLearnerId(req.query?.learnerId, tokenLearnerId)
-  let chapters
+  let result
   try {
-    chapters = await resolveChapters(admin, { tokenLearnerId, localLearnerId })
+    result = await resolveEntitlements(admin, { tokenLearnerId, localLearnerId })
   } catch (err) {
     res.status(500).json({ error: err.message || 'entitlements failed' })
     return
   }
 
   res.setHeader('Cache-Control', 'no-store')
-  res.status(200).json({ chapters: [...chapters] })
+  // cpr: เปิดหมวด 5 ได้จากการซื้อ (chapter 0 ใน chapters อาจมาจากคลาสที่เปิดทุกบท ซึ่งไม่รวม CPR)
+  res.status(200).json({ chapters: result.chapters, cpr: result.cpr })
 }

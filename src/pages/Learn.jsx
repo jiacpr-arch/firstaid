@@ -40,6 +40,7 @@ export default function Learn() {
 
   useEnsureProgress(learner?.id)
   const unlockedChapters = useEntitlementStore((s) => s.chapters)
+  const cprPurchased = useEntitlementStore((s) => s.cpr)
   useEnsureEntitlements()
   const classCpr = useClassCpr()
 
@@ -267,7 +268,7 @@ export default function Learn() {
         )
       })}
 
-      <CprChapter learner={learner} classCpr={classCpr} unlockedChapters={unlockedChapters} />
+      <CprChapter learner={learner} classCpr={classCpr} cprPurchased={cprPurchased} />
 
       <div style={{ marginTop: 24, padding: 12, fontSize: 14, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
         เนื้อหาดัดแปลงจาก: คู่มือการปฐมพยาบาลเบื้องต้น ฉบับประชาชนทั่วไป<br />
@@ -281,13 +282,13 @@ export default function Learn() {
 
 // หมวด 5: CPR & AED (7 บท อยู่ที่หน้า /cpr — src/pages/CprCourse.jsx) — ทุกคนเห็นในหน้าเรียน
 // คลาสรวม CPR เรียนฟรี (หลัง Post-test ปฐมพยาบาล), คนทั่วไปปลดล็อกแบบหมวดอื่น (฿149 หรือทั้งคอร์ส)
-function CprChapter({ learner, classCpr, unlockedChapters }) {
+function CprChapter({ learner, classCpr, cprPurchased }) {
   const inClass = !!learner?.cohortCode && classCpr.status !== 'none'
   const scopeKey = inClass ? learner.cohortCode : 'paid'
   const local = learner?.cprScoresCode === scopeKey ? learner?.cprScores || {} : {}
   const passed = new Set([...Object.keys(local), ...Object.keys((inClass && classCpr.cpr?.scores) || {})].map(Number))
   if (inClass && classCpr.status === 'done') CPR_MODULES.forEach((m) => passed.add(m.id))
-  const paidLocked = !inClass && !isChapterUnlocked(CPR_CHAPTER, unlockedChapters)
+  const paidLocked = !inClass && !cprPurchased
   const chDone = CPR_MODULES.filter((m) => passed.has(m.id)).length
   const chComplete = chDone === CPR_MODULES.length
   const minutes = CPR_MODULES.reduce((sum, m) => sum + Math.ceil((m.dur || 300) / 60), 0)

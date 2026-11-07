@@ -12,7 +12,7 @@ import { authHeader } from '../utils/authHeader'
 import { fetchHubCourseCert, claimHubCourseCertificate, saveCardName, HUB_CPR_COURSE_ID } from '../utils/hubCertificate'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { useEntitlementStore, entitlementKey } from '../stores/entitlementStore'
-import { isChapterUnlocked, CPR_CHAPTER } from '../config/pricing'
+import { CPR_CHAPTER } from '../config/pricing'
 import ChapterUnlockCard from '../components/ChapterUnlockCard'
 import YouTubeLessonPlayer from '../components/YouTubeLessonPlayer'
 import LineLoginGate from '../components/LineLoginGate'
@@ -112,12 +112,13 @@ export default function CprCourse() {
   const postTestDone = useProgressStore((s) => s.postTestDone)
   const progressLoaded = useProgressStore((s) => s.loaded)
   const { session } = useAuthSession()
-  const unlockedChapters = useEntitlementStore((s) => s.chapters)
+  const cprPurchased = useEntitlementStore((s) => s.cpr)
   const entitlementStatus = useEntitlementStore((s) => s.status)
   const entitlementResultKey = useEntitlementStore((s) => s.key)
   const cpr = useClassCpr()
   const inClass = !!learner?.cohortCode && cpr.status !== 'none'
-  const paid = !inClass && isChapterUnlocked(CPR_CHAPTER, unlockedChapters)
+  // CPR ฟรีเฉพาะคลาสรวม CPR — คลาสที่ "เปิดทุกบท" ไม่ได้ CPR (ต้องซื้อหมวด 5/ทั้งคอร์สเอง)
+  const paid = !inClass && cprPurchased
   const paidProgress = usePaidProgress(paid, learner?.id)
   const ctx = inClass
     ? { mode: 'class', code: learner.cohortCode, scopeKey: learner.cohortCode, scores: cpr.cpr?.scores, completed: cpr.status === 'done', refresh: cpr.refresh, checking: cpr.checking }

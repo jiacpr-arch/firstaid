@@ -1,12 +1,11 @@
 import { cprCompanyTag } from './cprProgress.js'
 import { cprLearnerTag } from './cprCourse.js'
-import { resolveChapters, cleanLocalLearnerId } from './entitlements.js'
+import { purchasedChapters, hasPurchasedCpr } from './entitlements.js'
 
 // ใครเรียนคอร์ส CPR & AED ในเว็บนี้ได้ (หน้า /cpr) และผลไปบันทึกที่แถว online_students ไหน
 // 1) คลาสรวม CPR + ปฐมพยาบาล (cohorts.includes_cpr) — ฟรี ผลผูกกับเบอร์ในคลาส (ครูเห็นด้วย)
-// 2) มีสิทธิ์หมวด 5 (CPR) หรือทั้งคอร์ส (0) — ซื้อโค้ด/คลาสที่เปิดทุกบท ผลผูกกับ learnerId
+// 2) ซื้อหมวด 5 (CPR) หรือทั้งคอร์ส (0) เอง — ผลผูกกับ learnerId (คลาสที่ "เปิดทุกบท" ไม่ได้ CPR ฟรี)
 // คืน null = ยังไม่มีสิทธิ์ (ต้องซื้อหมวด CPR ก่อน)
-export const CPR_CHAPTER = 5
 
 export async function resolveCprAccess(admin, { code, learnerId, tokenLearnerId, name = '', phone = '' }) {
   if (code) {
@@ -32,11 +31,8 @@ export async function resolveCprAccess(admin, { code, learnerId, tokenLearnerId,
       }
     }
   }
-  const chapters = await resolveChapters(admin, {
-    tokenLearnerId: tokenLearnerId || null,
-    localLearnerId: cleanLocalLearnerId(learnerId, tokenLearnerId || null),
-  })
-  if (chapters.includes(0) || chapters.includes(CPR_CHAPTER)) {
+  const purchased = await purchasedChapters(admin, tokenLearnerId || null)
+  if (hasPurchasedCpr(purchased)) {
     return {
       kind: 'paid', tag: cprLearnerTag(learnerId), matchPhone: false, preCourse: false,
       name: String(name || '').slice(0, 120), phone: String(phone || '').replace(/\D/g, '').slice(0, 15),

@@ -20,11 +20,13 @@ async function fetchChapters(token, learnerId) {
   const res = await fetch(`/api/entitlements${qs}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
   if (!res.ok) throw new Error(`entitlements ${res.status}`)
   const data = await res.json()
-  return new Set(data.chapters || [])
+  // cpr: หมวด 5 เปิดจากการซื้อเท่านั้น (chapter 0 ใน chapters อาจมาจากคลาสที่เปิดทุกบท ซึ่งไม่รวม CPR)
+  return { chapters: new Set(data.chapters || []), cpr: data.cpr === true }
 }
 
 export const useEntitlementStore = create((set) => ({
   chapters: new Set(),
+  cpr: false, // ซื้อหมวด CPR (5) หรือทั้งคอร์สเองแล้ว — ใช้แทน isChapterUnlocked(5, chapters)
   loaded: false,
   loading: false,
   status: 'idle',
@@ -35,20 +37,20 @@ export const useEntitlementStore = create((set) => ({
     const learnerId = useLearnerStore.getState().learner?.id || null
     const key = entitlementKey(session, learnerId)
     if (!token && !learnerId) {
-      set({ chapters: new Set(), loaded: true, loading: false, status: 'ok', key })
+      set({ chapters: new Set(), cpr: false, loaded: true, loading: false, status: 'ok', key })
       return
     }
     set({ loading: true, status: 'loading' })
-    let chapters = null
-    for (let attempt = 0; attempt < 2 && !chapters; attempt += 1) {
+    let result = null
+    for (let attempt = 0; attempt < 2 && !result; attempt += 1) {
       try {
-        chapters = await fetchChapters(token, learnerId)
+        result = await fetchChapters(token, learnerId)
       } catch {
         if (attempt === 0) await new Promise((r) => setTimeout(r, 800))
       }
     }
     if (mine !== seq) return // มีการโหลดรอบใหม่กว่าแล้ว — ทิ้งผลรอบเก่า กันค่าเก่าทับค่าใหม่
-    if (chapters) set({ chapters, loaded: true, loading: false, status: 'ok', key })
+    if (result) set({ chapters: result.chapters, cpr: result.cpr, loaded: true, loading: false, status: 'ok', key })
     else set({ loaded: true, loading: false, status: 'error' }) // ออฟไลน์/เซิร์ฟเวอร์ล่ม — อย่าตัดสินว่าล็อก
   },
 }))
