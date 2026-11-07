@@ -239,6 +239,7 @@ function CprOverview({ passed, ctx }) {
       </div>
 
       {complete && <CprCertificate />}
+      {complete && ctx.mode === 'paid' && <CprCoupon />}
 
       <Link to="/cpr/guide" className="btn btn-ghost btn-block" style={{ marginTop: 12, fontSize: 13 }} data-testid="cpr-guide-link">
         ▶ วิดีโอ + คู่มือ: วิธีเรียนและรับใบประกาศ CPR
@@ -422,6 +423,84 @@ function CprModule({ mod, passed, ctx }) {
       )}
     </div>
   )
+}
+
+// คูปองส่วนลด ฿100 คอร์ส On-site (คนที่ซื้อหมวด CPR / ทั้งคอร์สเอง แล้วสอบปลายภาคผ่าน) — ออกที่ api/cpr/progress.js
+// (action 'reward') พร้อมเข้าคิวติดตามขายของทีม · ไม่มีเบอร์ในระบบ → ให้กรอกเบอร์ (ทีมขายใช้ติดต่อกลับ)
+// คลาสรวม CPR ไม่มีคูปอง (จ่ายค่าคลาสแล้ว) — ไม่แสดงการ์ดนี้
+function CprCoupon() {
+  const learner = useLearnerStore((s) => s.learner)
+  const [state, setState] = useState(null) // { coupon } | { needPhone } | { eligible:false } | { error }
+  const [phone, setPhone] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const request = useCallback(async (extra = {}) => {
+    const r = await fetch('/api/cpr/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+      body: JSON.stringify({ learnerId: learner?.id, action: 'reward', name: learner?.name || '', phone: learner?.phone || '', ...extra }),
+    })
+    const body = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(body.error || 'ขอรับคูปองไม่สำเร็จ')
+    return body
+  }, [learner?.id, learner?.name, learner?.phone])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      request().then((b) => {
+        setState(b)
+        if (b.coupon) phCapture('cpr_coupon_issued', { auto: true })
+      }).catch((e) => setState({ error: e.message }))
+    }, 0)
+    return () => clearTimeout(t)
+  }, [request])
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (phone.replace(/\D/g, '').length < 9) { setState((s) => ({ ...s, error: 'กรุณากรอกเบอร์โทรให้ครบ' })); return }
+    setBusy(true)
+    try {
+      const b = await request({ phone })
+      setState(b)
+      if (b.coupon) phCapture('cpr_coupon_issued', { auto: false })
+    } catch (err) {
+      setState((s) => ({ ...s, error: err.message }))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!state || state.eligible === false) return null
+  if (state.coupon) {
+    return (
+      <div className="card" style={{ marginTop: 12, borderColor: '#E3C27A', background: '#FBF3DF' }} data-testid="cpr-coupon">
+        <div className="text-body-strong" style={{ color: '#7A5A1F' }}>🎁 คูปองส่วนลด ฿100 คอร์ส On-site</div>
+        <div className="text-caption" style={{ marginTop: 4, color: '#7A5A1F' }}>
+          ใช้ลดค่าอบรม CPR & AED ภาคปฏิบัติ (On-site) ของ JIA — แจ้งโค้ดนี้ตอนจองคลาส ทีมงานจะติดต่อกลับทางเบอร์ที่ให้ไว้
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+          <code style={{ flex: 1, fontSize: 20, fontWeight: 800, letterSpacing: 1, padding: '8px 12px', background: '#fff', borderRadius: 8, textAlign: 'center' }}>{state.coupon}</code>
+          <button type="button" className="btn btn-secondary" onClick={async () => {
+            try { await navigator.clipboard.writeText(state.coupon); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* เลือกข้อความเองได้ */ }
+          }}>{copied ? 'คัดลอกแล้ว' : 'คัดลอก'}</button>
+        </div>
+      </div>
+    )
+  }
+  if (state.needPhone) {
+    return (
+      <form className="card" style={{ marginTop: 12, borderColor: '#E3C27A', background: '#FBF3DF' }} onSubmit={submit} data-testid="cpr-coupon-phone">
+        <div className="text-body-strong" style={{ color: '#7A5A1F' }}>🎁 รับคูปองส่วนลด ฿100 คอร์ส On-site</div>
+        <div className="text-caption" style={{ marginTop: 4, color: '#7A5A1F' }}>กรอกเบอร์โทรเพื่อรับคูปอง — ทีมงานจะติดต่อกลับเรื่องรอบอบรมภาคปฏิบัติ</div>
+        <input className="input" type="tel" inputMode="tel" autoComplete="tel" placeholder="เบอร์โทร เช่น 0812345678"
+          value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', marginTop: 10 }} />
+        <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={busy}>{busy ? 'กำลังออกคูปอง…' : 'รับคูปอง'}</button>
+        {state.error && <div className="text-caption" style={{ marginTop: 6, color: '#A0392F' }}>{state.error}</div>}
+      </form>
+    )
+  }
+  return state.error ? <div className="card text-caption" style={{ marginTop: 12 }}>{state.error}</div> : null
 }
 
 // ใบประกาศ CPR ของระบบกลาง JIA — มีสิทธิ์แล้ว (ผ่านปลายภาคขณะล็อกอิน) ขอรับให้อัตโนมัติครั้งเดียว
