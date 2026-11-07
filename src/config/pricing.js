@@ -11,7 +11,7 @@ export const CHAPTER_PRICES = {
   2: 99,
   3: 99,
   4: 99,
-  [CPR_CHAPTER]: 99,
+  [CPR_CHAPTER]: 149, // เท่ากับคอร์ส CPR เต็มที่ cpr.morroo.com (PRICING.full)
 }
 
 // ปลดล็อกทั้งคอร์สทีเดียว (ทุกหมวดที่เหลือ) — ถูกกว่าซื้อแยก

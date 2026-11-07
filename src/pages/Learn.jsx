@@ -280,7 +280,7 @@ export default function Learn() {
 }
 
 // หมวด 5: CPR & AED (7 บท อยู่ที่หน้า /cpr — src/pages/CprCourse.jsx) — ทุกคนเห็นในหน้าเรียน
-// คลาสรวม CPR เรียนฟรี (หลัง Post-test ปฐมพยาบาล), คนทั่วไปปลดล็อกแบบหมวดอื่น (฿99 หรือทั้งคอร์ส)
+// คลาสรวม CPR เรียนฟรี (หลัง Post-test ปฐมพยาบาล), คนทั่วไปปลดล็อกแบบหมวดอื่น (฿149 หรือทั้งคอร์ส)
 function CprChapter({ learner, classCpr, unlockedChapters }) {
   const inClass = !!learner?.cohortCode && classCpr.status !== 'none'
   const scopeKey = inClass ? learner.cohortCode : 'paid'
