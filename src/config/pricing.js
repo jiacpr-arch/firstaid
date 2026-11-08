@@ -23,3 +23,7 @@ export function isChapterUnlocked(chapter, unlockedChapters) {
   if (!unlockedChapters) return false
   return unlockedChapters.has(chapter) || unlockedChapters.has(COURSE_BUNDLE_CHAPTER)
 }
+
+// คอร์สอบรมภาคปฏิบัติปฐมพยาบาล (สอนสดที่ Jia Training Center) — ตรงกับ learning_hub.courses id 'firstaid'
+// ใน Hub (price 99900 สตางค์) ถ้าแก้ราคาที่ Hub ต้องแก้ตรงนี้ด้วย
+export const PRACTICAL_COURSE_PRICE = 999
