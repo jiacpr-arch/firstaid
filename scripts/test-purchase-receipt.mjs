@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { chromium } from 'playwright'
 import { RECEIPT_HTML, RECEIPT_CSP } from '../api/checkout/receipt-page.js'
-import { RECEIPT_KEY, RECEIPT_PATH, RECEIPT_URL, choiceKey } from '../public/purchase-receipt.js'
+import { RECEIPT_KEY, RECEIPT_PATH, RECEIPT_URL, choiceKey, GTM_ID, GOOGLE_PURCHASE_EVENT } from '../public/purchase-receipt.js'
 
 const ORIGIN = 'https://firstaid.morroo.com'
 const TOKEN = 'synthetic_signed.measurement_receipt'
@@ -15,13 +15,15 @@ let passed = 0
 
 async function fixture(options = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block' })
-  const requests = [], calls = [], googleCalls = [], observations = [], blocked = []
+  const requests = [], calls = [], googleCalls = [], observations = [], blocked = [], errors = []
+  let releaseGoogleResponse
+  const googleResponseGate = new Promise(resolve => { releaseGoogleResponse = resolve })
   await context.exposeBinding('__receiptRecord', (_source, kind, value) => {
     if (kind === 'call') calls.push(value)
     else if (kind === 'google') googleCalls.push(value)
     else observations.push(value)
   })
-  await context.routeWebSocket('**/*', socket => socket.close())
+  await context.routeWebSocket('**/*', socket => { blocked.push('websocket'); socket.close() })
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url())
     if (request.url() === 'https://connect.facebook.net/en_US/fbevents.js') {
@@ -29,16 +31,17 @@ async function fixture(options = {}) {
       const script = `(function(){function run(){window.__receiptRecord('observation',{href:location.href,referrer:document.referrer,token:sessionStorage.getItem('${RECEIPT_KEY}'),body:document.body.innerText}); const f=window.fbq; const q=f.queue.splice(0); f.callMethod=(...a)=>window.__receiptRecord('call',a); q.forEach(a=>f.callMethod(...a));} ${options.deferSdk ? 'window.__releaseMeta=run;' : 'run();'} })();`
       return route.fulfill({ contentType: 'text/javascript', body: script })
     }
-    if (url.hostname === 'www.googletagmanager.com') {
+    if (request.url() === `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`) {
+      if (options.holdGoogleResponse) await googleResponseGate
       requests.push('google'); assert.equal(request.headers().referer, undefined)
-      const script = `(function(){function run(){window.__receiptRecord('observation',{href:location.href,referrer:document.referrer,token:sessionStorage.getItem('${RECEIPT_KEY}'),body:document.body.innerText}); const q=window.dataLayer; const buffered=q.splice(0); const push=q.push.bind(q); q.push=(...items)=>{items.forEach(a=>window.__receiptRecord('google',Array.from(a)));return push(...items)};buffered.forEach(a=>window.__receiptRecord('google',Array.from(a)));} ${options.deferSdk ? 'window.__releaseGoogle=run;' : 'run();'} })();`
+      const script = `(function(){function run(){window.__receiptRecord('observation',{href:location.href,referrer:document.referrer,token:sessionStorage.getItem('${RECEIPT_KEY}'),body:document.body.innerText}); const q=window.dataLayer; const buffered=q.splice(0); const push=q.push.bind(q); q.push=(...items)=>{items.forEach(a=>window.__receiptRecord('google',a.event ? a : Array.from(a)));return push(...items)};buffered.forEach(a=>window.__receiptRecord('google',a.event ? a : Array.from(a)));} ${options.deferSdk ? 'window.__releaseGoogle=run;' : 'run();'} })();`
       return route.fulfill({ contentType: 'text/javascript', body: script })
     }
     if (url.origin === ORIGIN && url.pathname === '/api/checkout/receipt' && request.method() === 'POST') {
       assert.equal(request.headers().referer, undefined)
       assert.equal(request.headers().cookie, undefined)
       assert.deepEqual(request.postDataJSON(), { receipt: TOKEN })
-      return route.fulfill({ status: options.invalid ? 400 : 200, contentType: 'application/json', body: JSON.stringify(options.invalid ? { error: 'invalid_receipt' } : { eventId: EVENT, value: 249, currency: 'THB', expiresAt: Math.floor(Date.now() / 1000) + 600 }) })
+      return route.fulfill({ status: options.invalid ? 400 : 200, contentType: 'application/json', body: JSON.stringify(options.invalid ? { error: 'invalid_receipt' } : { eventId: EVENT, value: 249, currency: 'THB', expiresAt: Math.floor(Date.now() / 1000) + 600, ...options.payload }) })
     }
     if (url.origin === ORIGIN && request.method() === 'GET') {
       if (url.pathname === RECEIPT_PATH) return route.fulfill({ contentType: 'text/html', body: RECEIPT_HTML, headers: { 'Content-Security-Policy': RECEIPT_CSP, 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow' } })
@@ -52,6 +55,7 @@ async function fixture(options = {}) {
     blocked.push(request.url()); return route.abort('blockedbyclient')
   })
   await context.addInitScript(({ token, key, options }) => {
+    if (location.origin !== 'https://firstaid.morroo.com') return
     Object.defineProperty(navigator, 'webdriver', { get: () => false })
     // One seed per tab. Reload/back must not invent another checkout receipt.
     if (!sessionStorage.getItem('__receipt_seeded')) {
@@ -61,8 +65,11 @@ async function fixture(options = {}) {
         localStorage.setItem('firstaid_jia_training_meta_consent_v2', 'granted')
         localStorage.setItem('firstaid_jia_training_google_consent_v1', 'granted')
         localStorage.setItem('firstaid_purchase_meta_consent_v1', 'granted')
+        localStorage.setItem('firstaid_purchase_google_consent_v1', 'granted')
       }
     }
+    if (options.directGoogleAttempt) localStorage.setItem('firstaid_purchase_attempt_v1:google:fa_purchase_' + 'a'.repeat(64), 'attempted')
+    if (options.noLocks) Object.defineProperty(navigator, 'locks', { value: undefined })
     if (options.storageFailure) {
       const original = Storage.prototype.setItem
       Storage.prototype.setItem = function (name, value) {
@@ -76,6 +83,7 @@ async function fixture(options = {}) {
     }
   }, { token: TOKEN, key: RECEIPT_KEY, options })
   const page = await context.newPage()
+  page.on('pageerror', error => errors.push(error.message))
   await page.goto(options.handoff ? ORIGIN + '/buy?session_id=cs_synthetic_private_url_123456' : RECEIPT_URL + (options.query || ''))
   await page.waitForURL(RECEIPT_URL + (options.query || ''))
   await page.waitForFunction(() => !document.getElementById('status').textContent.includes('กำลังตรวจสอบ'))
@@ -83,18 +91,25 @@ async function fixture(options = {}) {
     const transmitted = JSON.stringify({ calls, googleCalls, observations, blocked })
     for (const sensitive of [TOKEN, 'cs_synthetic_private_url_123456', 'synthetic-private-learner']) assert.equal(transmitted.includes(sensitive), false, 'No sensitive payload may reach SDKs or unexpected requests')
     assert.deepEqual(blocked, [], 'Unexpected network requests must not be silently ignored')
+    assert.deepEqual(errors, [], 'Receipt must execute without page errors')
+    for (const observation of observations) {
+      assert.equal(observation.href, RECEIPT_URL); assert.equal(observation.referrer, ''); assert.equal(observation.token, null)
+    }
     await context.close()
   }
-  return { context, page, requests, calls, googleCalls, observations, blocked, close }
+  return { context, page, requests, calls, googleCalls, observations, blocked, releaseGoogleResponse, close }
 }
 const grant = page => page.locator('[data-vendor="meta"][data-choice="granted"]')
 const deny = page => page.locator('[data-vendor="meta"][data-choice="denied"]')
+const grantGoogle = page => page.locator('[data-vendor="google"][data-choice="granted"]')
+const denyGoogle = page => page.locator('[data-vendor="google"][data-choice="denied"]')
+const googlePurchases = f => f.googleCalls.filter(row => row.event === GOOGLE_PURCHASE_EVENT)
 const purchases = f => f.calls.filter(args => args[0] === 'trackSingle' && args[2] === 'Purchase')
 async function run(name, test) { await test(); passed++; console.log('PASS ' + name) }
 
 try {
   await run('no receipt, invalid receipt and unsafe query never offer tracking', async () => {
-    for (const options of [{ noToken: true }, { invalid: true }, { query: '?session_id=private' }]) {
+    for (const options of [{ noToken: true }, { invalid: true }, { payload: { expiresAt: 0 } }, { payload: { value: '249' } }, { payload: { learner: 'private' } }, { query: '?session_id=private' }]) {
       const f = await fixture(options)
       assert.equal(await f.page.locator('#choices').isVisible(), false); assert.equal(f.requests.length, 0)
       await f.close()
@@ -165,20 +180,107 @@ try {
     assert.equal(f.requests.filter(x => x === 'meta').length, 1)
     await f.close()
   })
-  await run('Google branch under production CSP sends one clean GA4 purchase after its own grant', async () => {
+  await run('Google branch under production CSP emits one typed custom GTM event after its own grant', async () => {
     const f = await fixture({ googleEnabled: true, handoff: true })
     assert.equal(f.requests.length, 0)
-    await f.page.locator('[data-vendor="google"][data-choice="granted"]').click()
-    await f.page.waitForFunction(() => !!window.gtag)
-    await f.page.waitForTimeout(50)
-    const events = f.googleCalls.filter(args => args[0] === 'event')
-    assert.equal(events.length, 1); assert.equal(events[0][1], 'purchase')
-    assert.equal(events[0][2].send_to, 'G-H10PHV2XNG'); assert.equal(events[0][2].transaction_id, EVENT)
-    assert.equal(events[0][2].page_location, RECEIPT_URL); assert.equal(events[0][2].page_referrer, ''); assert.equal(events[0][2].user_data, null)
+    await grantGoogle(f.page).click()
+    await f.page.waitForFunction(() => window.dataLayer?.some(row => row.event === 'firstaid_receipt_purchase'))
+    await f.page.waitForTimeout(30)
+    assert.deepEqual(googlePurchases(f), [{ event: GOOGLE_PURCHASE_EVENT, fa_receipt_transaction_id: EVENT, fa_receipt_value: 249, fa_receipt_false: false, fa_receipt_true: true, fa_receipt_null: null, fa_receipt_empty: '', fa_receipt_linker: { domains: [], accept_incoming: false, decorate_forms: false } }])
+    assert.equal(f.googleCalls.some(args => ['event', 'config', 'js'].includes(args[0])), false)
     assert.equal(f.googleCalls.some(args => JSON.stringify(args).includes('AW-')), false)
+    const global = f.googleCalls.find(args => args[0] === 'set' && typeof args[1] === 'object')[1]
+    assert.equal(global.page_location, RECEIPT_URL); assert.equal(global.page_referrer, '')
+    assert.equal(global.send_page_view, false); assert.equal(global.allow_enhanced_conversions, false)
+    assert.deepEqual(f.googleCalls[0], ['consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }])
     assert.deepEqual(f.requests, ['google'])
+    const bootstrap = f.googleCalls.filter(row => row.event === 'gtm.js')
+    assert.equal(bootstrap.length, 1); assert.equal(typeof bootstrap[0]['gtm.start'], 'number')
+    const grantIndex = f.googleCalls.findIndex(row => row[0] === 'consent' && row[1] === 'update' && row[2].analytics_storage === 'granted')
+    assert.ok(grantIndex < f.googleCalls.indexOf(bootstrap[0]))
+    assert.ok(f.googleCalls.indexOf(bootstrap[0]) < f.googleCalls.indexOf(googlePurchases(f)[0]))
+    await grantGoogle(f.page).click()
+    await f.page.evaluate(() => document.querySelector('script[src*="/gtm.js"]').onload())
+    await f.page.waitForTimeout(30); assert.equal(googlePurchases(f).length, 1)
     await f.page.locator('a[href="/learn"]').click(); await f.page.waitForURL(ORIGIN + '/learn')
     assert.equal(f.googleCalls.some(args => args[0] === 'consent' && args[1] === 'update' && args[2].analytics_storage === 'denied'), true)
+    await f.close()
+  })
+  for (const order of [['meta', 'google'], ['google', 'meta']]) {
+    await run(`independent vendor grants work once in ${order.join(' then ')} order`, async () => {
+      const f = await fixture()
+      for (const vendor of order) await (vendor === 'meta' ? grant(f.page) : grantGoogle(f.page)).click()
+      await f.page.waitForFunction(() => !!window.fbq?.callMethod && window.dataLayer?.some(row => row.event === 'firstaid_receipt_purchase'))
+      await f.page.waitForTimeout(30)
+      assert.deepEqual(f.requests, order); assert.equal(purchases(f).length, 1); assert.equal(googlePurchases(f).length, 1)
+      assert.equal(purchases(f)[0][4].eventID, googlePurchases(f)[0].fa_receipt_transaction_id)
+      await f.close()
+    })
+  }
+  await run('Meta-only, absent and declined Google consent never load GTM, including saved grants', async () => {
+    for (const declined of [false, true]) {
+      const f = await fixture({ oldGrants: true })
+      assert.equal(f.requests.length, 0)
+      if (declined) await denyGoogle(f.page).click()
+      await grant(f.page).click(); await f.page.waitForFunction(() => !!window.fbq?.callMethod)
+      await f.page.waitForTimeout(30)
+      assert.deepEqual(f.requests, ['meta']); assert.equal(googlePurchases(f).length, 0)
+      await f.close()
+    }
+  })
+  await run('existing direct-Google attempt marker prevents GTM replay without blocking Meta', async () => {
+    const f = await fixture({ directGoogleAttempt: true })
+    await grantGoogle(f.page).click(); await grant(f.page).click()
+    await f.page.waitForFunction(() => !!window.fbq?.callMethod)
+    await f.page.waitForTimeout(30)
+    assert.deepEqual(f.requests, ['meta']); assert.equal(googlePurchases(f).length, 0)
+    assert.equal(await f.page.evaluate(() => Object.keys(localStorage).some(key => key.startsWith('firstaid_purchase_attempt_v1:gtm:'))), false)
+    await f.close()
+  })
+  await run('Google concurrent tabs and repeated return enqueue only one custom event', async () => {
+    const f = await fixture(), second = await f.context.newPage()
+    await second.goto(RECEIPT_URL); await second.locator('#choices').waitFor({ state: 'visible' })
+    await Promise.all([grantGoogle(f.page).click(), grantGoogle(second).click()])
+    await f.page.waitForTimeout(70)
+    assert.deepEqual(f.requests, ['google']); assert.equal(googlePurchases(f).length, 1)
+    const third = await f.context.newPage(); await third.goto(RECEIPT_URL); await third.locator('#choices').waitFor({ state: 'visible' }); await grantGoogle(third).click()
+    await third.waitForTimeout(30); assert.equal(googlePurchases(f).length, 1); assert.deepEqual(f.requests, ['google'])
+    await f.close()
+  })
+  await run('withdrawal before GTM response cancels the eventual onload purchase callback', async () => {
+    const f = await fixture({ holdGoogleResponse: true })
+    await grantGoogle(f.page).click(); await f.page.waitForFunction(() => !!window.gtag)
+    await f.page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')))
+    f.releaseGoogleResponse()
+    await f.page.waitForTimeout(100)
+    assert.deepEqual(f.requests, ['google']); assert.equal(googlePurchases(f).length, 0)
+    assert.equal(await f.page.evaluate(() => window['ga-disable-G-H10PHV2XNG']), true)
+    assert.deepEqual(f.googleCalls, [['consent', 'update', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }]])
+    await f.close()
+  })
+  await run('receipt expiring before GTM response cancels the eventual callback', async () => {
+    const f = await fixture({ holdGoogleResponse: true })
+    await grantGoogle(f.page).click(); await f.page.waitForFunction(() => !!window.gtag)
+    await f.page.evaluate(() => { const now = Date.now(); Date.now = () => now + 901_000 })
+    f.releaseGoogleResponse()
+    await f.page.waitForTimeout(100)
+    assert.deepEqual(f.requests, ['google']); assert.equal(googlePurchases(f).length, 0)
+    await f.close()
+  })
+  await run('withdrawal after GTM callback denies all consent and blocks callback/captured-command replay', async () => {
+    const f = await fixture()
+    await grantGoogle(f.page).click()
+    await f.page.waitForFunction(() => window.dataLayer?.some(row => row.event === 'firstaid_receipt_purchase'))
+    await f.page.evaluate(() => {
+      const callback = document.querySelector('script[src*="/gtm.js"]').onload
+      const gtag = window.gtag
+      window.dispatchEvent(new PageTransitionEvent('pagehide'))
+      callback(); gtag('consent', 'update', { analytics_storage: 'granted' }); gtag('event', 'purchase', { value: 249 })
+    })
+    await f.page.waitForTimeout(30)
+    assert.equal(googlePurchases(f).length, 1)
+    assert.equal(await f.page.evaluate(() => window['ga-disable-G-H10PHV2XNG']), true)
+    assert.deepEqual(f.googleCalls.at(-1), ['consent', 'update', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }])
     await f.close()
   })
   await run('Google delayed SDK receives only revocation after pagehide', async () => {
@@ -191,7 +293,7 @@ try {
     await f.close()
   })
   await run('Google storage failure and denial while pending cannot initialize a tag', async () => {
-    for (const options of [{ storageFailure: true }, { holdLock: true }]) {
+    for (const options of [{ storageFailure: true }, { noLocks: true }, { holdLock: true }]) {
       const f = await fixture({ ...options, googleEnabled: true })
       await f.page.locator('[data-vendor="google"][data-choice="granted"]').click()
       if (options.holdLock) {

@@ -5,8 +5,11 @@ export const RECEIPT_PATH = '/api/checkout/receipt-page'
 export const RECEIPT_URL = 'https://firstaid.morroo.com' + RECEIPT_PATH
 export const PIXEL_ID = '1277103750989853'
 export const GA4_ID = 'G-H10PHV2XNG'
+export const GTM_ID = 'GTM-54LV8DZ5'
+export const GOOGLE_PURCHASE_EVENT = 'firstaid_receipt_purchase'
 // Verified Training GA4-only destination. Shared automatic detectors remain on;
 // the isolated page has no personal fields and requires its own fresh consent.
+// This dedicated container must be reviewed and published before deployment.
 // No Ads destination or shared GTM container is configured here.
 export const GOOGLE_PURCHASE_ENABLED = true
 export const choiceKey = vendor => `firstaid_purchase_${vendor}_consent_v1`
@@ -59,11 +62,12 @@ export async function claimAttempt(win, vendor, receipt) {
   } catch { return false }
 }
 
-function script(doc, src) {
+function script(doc, src, onload) {
   const node = doc.createElement('script')
   node.async = true
   node.referrerPolicy = 'no-referrer'
   node.src = src
+  if (onload) node.onload = onload
   doc.head.appendChild(node)
 }
 
@@ -85,6 +89,18 @@ export function startMeta(win, doc, receipt, isAllowed) {
 
 export function startGoogle(win, doc, receipt, isAllowed, { enabled = GOOGLE_PURCHASE_ENABLED } = {}) {
   if (!enabled || !isAllowed() || win.gtag || win.dataLayer || !validReceipt(receipt)) return false
+  // Contract for Version-1 native GTM data-layer variables: exact types.
+  // One flat custom event owns setup + purchase in the dedicated container.
+  const purchase = {
+    event: GOOGLE_PURCHASE_EVENT,
+    fa_receipt_transaction_id: receipt.eventId,
+    fa_receipt_value: receipt.value,
+    fa_receipt_false: false,
+    fa_receipt_true: true,
+    fa_receipt_null: null,
+    fa_receipt_empty: '',
+    fa_receipt_linker: { domains: [], accept_incoming: false, decorate_forms: false },
+  }
   win.dataLayer = []
   win.gtag = function () {
     if (!isAllowed() && !(arguments[0] === 'consent' && arguments[1] === 'update' && arguments[2] === DENIED)) return
@@ -96,13 +112,19 @@ export function startGoogle(win, doc, receipt, isAllowed, { enabled = GOOGLE_PUR
   gtag('set', 'url_passthrough', false)
   gtag('set', 'user_data', null)
   gtag('set', 'linker', { domains: [], accept_incoming: false, decorate_forms: false })
-  gtag('set', { ...PAGE, cookie_domain: 'firstaid.morroo.com', cookie_prefix: 'firstaid_purchase', allow_google_signals: false, allow_ad_personalization_signals: false })
+  gtag('set', { ...PAGE, cookie_domain: 'firstaid.morroo.com', cookie_prefix: 'firstaid_purchase', allow_google_signals: false, allow_ad_personalization_signals: false, allow_enhanced_conversions: false, send_page_view: false })
   gtag('consent', 'update', { ...DENIED, analytics_storage: 'granted' })
-  gtag('js', new Date())
-  gtag('config', GA4_ID, { ...PAGE, send_page_view: false, user_data: null, cookie_domain: 'firstaid.morroo.com', cookie_prefix: 'firstaid_purchase', allow_google_signals: false, allow_ad_personalization_signals: false, allow_enhanced_conversions: false })
-  // The existing Ads LINE action is NOT a Purchase destination.
-  gtag('event', 'purchase', { ...PAGE, send_to: GA4_ID, user_data: null, transaction_id: receipt.eventId, value: receipt.value, currency: receipt.currency })
-  script(doc, `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`)
+  // The native Google runtime requires this bootstrap for initialization. The
+  // dedicated container has no tags triggered by it; purchase still waits below.
+  win.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' })
+  let emitted = false
+  // Loading can finish after withdrawal, navigation or receipt expiry. Never
+  // retry a failed/uncertain attempt, and never let a repeated callback replay it.
+  script(doc, `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`, () => {
+    if (emitted || !isAllowed() || !validReceipt(receipt)) return
+    emitted = true
+    win.dataLayer.push(purchase)
+  })
   return true
 }
 
