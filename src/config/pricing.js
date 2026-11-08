@@ -23,3 +23,8 @@ export function isChapterUnlocked(chapter, unlockedChapters) {
   if (!unlockedChapters) return false
   return unlockedChapters.has(chapter) || unlockedChapters.has(COURSE_BUNDLE_CHAPTER)
 }
+
+// คอร์สอบรมภาคปฏิบัติ B-CPR (สอนสดที่ Jia Training Center) — ตรงกับ courses.price ของ key 'B-CPR'
+// ในระบบจองกลาง (class.morroo.com) ถ้าแก้ราคาที่ระบบจอง ต้องแก้ตรงนี้ด้วย
+export const PRACTICAL_COURSE_PRICE = 600
+export const PRACTICAL_COURSE_HOURS = 3

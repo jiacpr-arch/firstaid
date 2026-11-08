@@ -4,6 +4,7 @@ import PracticalInterestForm from './PracticalInterestForm'
 import UpcomingClassBanner from './UpcomingClassBanner'
 import { lineInterestUrl, LINE_OA_ID as LINE_DISPLAY } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
+import { PRACTICAL_COURSE_PRICE, PRACTICAL_COURSE_HOURS } from '../config/pricing'
 
 const PHONE_NUMBER = '0909791212'
 const PHONE_DISPLAY = '090-979-1212'
@@ -93,6 +94,13 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
             รับใบรับรองผ่านการอบรมภาคปฏิบัติ
           </li>
         </ul>
+        <div style={{
+          display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginTop: 14,
+          padding: '10px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.35)',
+        }}>
+          <span style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, color: '#fff' }}>฿{PRACTICAL_COURSE_PRICE.toLocaleString()}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.95)' }}>/ ท่าน · {PRACTICAL_COURSE_HOURS} ชม. · CPR, AED, ช่วยผู้สำลัก</span>
+        </div>
 
         {/* รอบที่เปิดจองจริงจากระบบจองกลาง — จองพร้อมจ่ายได้เลย ไม่ต้องรอติดต่อกลับ
             (ดึงข้อมูลไม่ได้/ไม่มีรอบว่าง = ไม่แสดง แล้วเหลือช่องทาง โทร/LINE/ฝากชื่อ ตามเดิม) */}
