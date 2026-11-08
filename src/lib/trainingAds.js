@@ -9,14 +9,20 @@ export const CONSENT_KEY = 'firstaid_jia_training_meta_consent_v2'
 export function safeMarketingQuery(search) {
   const params = new URLSearchParams(search)
   const seen = new Set()
-  if (params.size > 5) return false
+  if (params.size > 10) return false
   for (const [key, value] of params) {
     if (seen.has(key)) return false
     seen.add(key)
     if (['utm_source', 'utm_medium', 'utm_campaign'].includes(key)) {
       if (!/^[A-Za-z0-9_-]{1,80}$/.test(value) || /^[0-9]{9,}$/.test(value)) return false
-    } else if (['fbclid', 'gclid'].includes(key)) {
-      if (!/^[A-Za-z0-9_-]{8,256}$/.test(value)) return false
+    } else if (['fbclid', 'gclid', 'gbraid', 'wbraid'].includes(key)) {
+      if (!/^[A-Za-z0-9_-]{8,256}$/.test(value) || /^[0-9]+$/.test(value)) return false
+    } else if (key === 'gclsrc') {
+      if (!['aw.ds', 'aw', 'ds'].includes(value)) return false
+    } else if (key === 'gad_source') {
+      if (!/^[1-9]$/.test(value)) return false
+    } else if (key === 'gad_campaignid') {
+      if (!/^[0-9]{1,20}$/.test(value)) return false
     } else return false
   }
   return true

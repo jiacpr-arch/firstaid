@@ -19,7 +19,7 @@ const META = 'https://connect.facebook.net/en_US/fbevents.js'
 const GOOGLE = 'https://www.googletagmanager.com/gtag/js?id=G-H10PHV2XNG'
 const CONSENT = {
   meta: 'firstaid_jia_training_meta_consent_v2',
-  google: 'firstaid_jia_training_google_consent_v1',
+  google: 'firstaid_jia_training_google_consent_v2',
   openai: 'firstaid_jia_training_openai_consent_v1',
 }
 const EMPTY = { chapters: [], cpr: false }
@@ -152,7 +152,7 @@ async function fixture(options = {}) {
     if (!sessionStorage.getItem('__entitlementSeeded')) {
       sessionStorage.setItem('__entitlementSeeded', '1')
       localStorage.setItem('firstaid.learner', JSON.stringify({ state: { learner: { id: 'synthetic-learner-a', name: '' } }, version: 0 }))
-      if (savedGrants) for (const key of Object.values(consent)) localStorage.setItem(key, 'granted')
+      if (savedGrants) for (const key of Object.values(consent)) localStorage.setItem(key, key.includes('_google_') ? JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000}) : 'granted')
     }
     const report = (kind, extra = {}) => window.__recordEntitlementBoundary(kind, {
       documentId: window.__entitlementDocumentId,
@@ -200,7 +200,7 @@ async function fixture(options = {}) {
     await open.click()
   }
   const grant = async vendor => {
-    const choice = page.getByRole('button', { name: vendor === 'Meta' ? 'อนุญาต' : 'อนุญาต Google', exact: true })
+    const choice = page.getByRole('button', { name: vendor === 'Meta' ? 'อนุญาต' : 'Google สถิติและวัดผลโฆษณา', exact: true })
     if (!await choice.isVisible()) await showSeparateChoices()
     await choice.click()
     await page.waitForFunction(name => window['__entitlementStub' + name] === true, vendor)
@@ -345,7 +345,7 @@ try {
   await run('failure retry gap blocks stale consent handlers until resolved empty', { hold: true }, async f => {
     await f.release({}, 503)
     await f.page.evaluate(keys => {
-      for (const key of Object.values(keys)) localStorage.setItem(key, 'granted')
+      for (const key of Object.values(keys)) localStorage.setItem(key, key.includes('_google_') ? JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000}) : 'granted')
       window.__entitlementTest.staleLoaders()
     }, CONSENT)
     f.noAds()
@@ -436,7 +436,7 @@ try {
     assert.equal((await f.state()).currentKey, true)
     assert.equal(await f.page.getByRole('dialog').count(), 0, 'Older pending fetch must still suppress consent UI')
     await f.page.evaluate(keys => {
-      for (const key of Object.values(keys)) localStorage.setItem(key, 'granted')
+      for (const key of Object.values(keys)) localStorage.setItem(key, key.includes('_google_') ? JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000}) : 'granted')
       window.__entitlementTest.staleLoaders()
     }, CONSENT)
     f.noAds()

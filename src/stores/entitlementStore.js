@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { useLearnerStore } from './learnerStore'
 import { beginEntitlementLookup, finishEntitlementLookup, setEntitlementLookupReady } from '../lib/entitlementMarketingBoundary.js'
-import { revokeTrainingMarketing } from '../lib/trainingMarketing.js'
+import { retireTrainingMarketing } from '../lib/trainingMarketing.js'
 
 // Which chapters (0 = whole-course bundle, 1-4 = single chapter) the learner can open.
 // Never read from local Dexie — entitlements only exist server-side (api/entitlements):
@@ -55,7 +55,7 @@ export const useEntitlementStore = create((set) => ({
     for (let attempt = 0; attempt < 2 && !result; attempt += 1) {
       if (mine !== seq) { set({}); return }
       if (!beginEntitlementLookup(window, () => {
-        revokeTrainingMarketing(window, document)
+        retireTrainingMarketing(window, document)
         window.location.replace(window.location.href)
       })) return
       try {

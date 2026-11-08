@@ -11,7 +11,7 @@ function storage() {
 function fixture() {
   const images = [], listeners = {}
   const win = { performance: { clearResourceTimings() {}, getEntriesByType: () => [] }, location: { hostname: 'firstaid.morroo.com', pathname: '/', search: '', hash: '', href: 'https://firstaid.morroo.com/', origin: 'https://firstaid.morroo.com', reload() { win.reloads++ }, assign(href) { win.assigned=href }, replace(href) { win.assigned=href } }, reloads: 0, localStorage: storage(), sessionStorage: storage(), navigator: {}, history: { pushState() {}, replaceState() {} }, addEventListener: (k,fn) => { (listeners[k] ||= []).push(fn) }, removeEventListener() {} }
-  const doc = { referrer: '', cookie: '', body: { appendChild: x => images.push(x) }, addEventListener() {}, createElement(tag) { assert.equal(tag,'img'); return { style:{}, removeAttribute(k) { delete this[k] }, remove() { this.removed=true } } } }
+  const doc = { referrer: '', get cookie() { return '' }, set cookie(value) { void value }, body: { appendChild: x => images.push(x) }, addEventListener() {}, createElement(tag) { assert.equal(tag,'img'); return { style:{}, removeAttribute(k) { delete this[k] }, remove() { this.removed=true } } } }
   return {win,doc,images,dispatch: (key,event={}) => listeners[key]?.forEach(fn=>fn(event))}
 }
 const load = f => loadTrainingOpenAI(f.win,f.doc,{publicLanding:true})
@@ -68,7 +68,7 @@ for (const order of ['google-first', 'openai-first']) {
     f.doc.head={appendChild() {}}
     let assigns=0
     f.win.location.assign=href=>{assigns++;f.win.assigned=href}
-    saveOpenAIConsent(f.win,'granted');saveGoogleConsent(f.win,'granted')
+    saveOpenAIConsent(f.win,'granted');saveGoogleConsent(f.win,'ads',f.doc)
     const google=()=>loadTrainingGoogle(f.win,f.doc,{publicLanding:true})
     if (order==='google-first') { assert.equal(google(),true);assert.equal(load(f),true) }
     else { assert.equal(load(f),true);assert.equal(google(),true) }

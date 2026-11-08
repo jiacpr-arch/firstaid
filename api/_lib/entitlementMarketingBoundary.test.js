@@ -45,7 +45,7 @@ function fixture({ learner = { id: 'synthetic-id' }, response = { chapters: [], 
     create: factory => { state = factory(patch => { state = { ...state, ...patch }; notifications++ }); return { getState: () => state } },
     useLearnerStore: { getState: () => ({ learner: currentLearner }) },
     beginEntitlementLookup, finishEntitlementLookup, setEntitlementLookupReady,
-    revokeTrainingMarketing: () => calls.push('revoke'),
+    retireTrainingMarketing: () => calls.push('revoke'),
     fetch: async (url, options) => {
       assert.equal(url, '/api/entitlements'); assert.equal(options.method, 'POST'); assert.equal(options.cache, 'no-store')
       assert.equal(JSON.parse(options.body).learnerId, currentLearner?.id)

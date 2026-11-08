@@ -13,7 +13,7 @@ import { isAutomated } from './lib/isAutomated'
 import OfflineIndicator from './components/OfflineIndicator'
 import InAppBrowserNotice from './components/InAppBrowserNotice'
 import TrainingMarketingConsent from './components/TrainingMarketingConsent'
-import { revokeTrainingMarketing } from './lib/trainingMarketing'
+import { retireTrainingMarketing } from './lib/trainingMarketing'
 import { anonymousLanding, eligibleLanding, canUseMarketingDocument } from './lib/trainingAds'
 import BottomTabBar from './components/BottomTabBar'
 import { HouseAdStrip } from './components/HouseAdBanner'
@@ -151,7 +151,7 @@ export default function App() {
     && (!publicLanding || !eligibleLanding(window.location, document.referrer))
   useLayoutEffect(() => {
     if (!leaveMarketingDocument) return
-    revokeTrainingMarketing(window, document)
+    retireTrainingMarketing(window, document)
     // Tear down the SDK before a learning/admin/identity screen can mount.
     window.location.replace(window.__firstaidMarketingNavigationTarget || window.location.href)
   }, [leaveMarketingDocument])

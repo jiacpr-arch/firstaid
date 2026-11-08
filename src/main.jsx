@@ -1,3 +1,5 @@
+import { installGoogleExpiryGuard } from '../public/google-attribution.js'
+import { revokeTrainingGoogle } from './lib/trainingGoogleAds.js'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -15,6 +17,13 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 // HTML ที่ prerender ไว้ฝังแท็ก meta/JSON-LD ของ <Seo> มาด้วย ([data-seo]) —
 // กวาดทิ้งก่อน mount ไม่งั้นจะซ้ำกับชุดใหม่ที่ React 19 hoist ขึ้น <head>
 document.querySelectorAll('[data-seo]').forEach((el) => el.remove())
+
+installGoogleExpiryGuard(window, document, () => {
+  if (window.__firstaidGoogleLoaded && !window.__firstaidGoogleRevoked) {
+    revokeTrainingGoogle(window, document)
+    window.location.reload()
+  }
+})
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

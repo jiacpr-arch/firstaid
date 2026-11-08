@@ -8,7 +8,7 @@ import { GOOGLE_SDK_STUB, META_SDK_STUB } from '../../scripts/ad-boundary-fixtur
 // Only local synthetic SDK code is executed. Prepared script elements are never
 // fetched, and navigation is deliberately held so the retiring document lives.
 function fixture() {
-  const values = new Map([[CONSENT_KEY, 'granted'], [GOOGLE_CONSENT_KEY, 'granted']])
+  const values = new Map([[CONSENT_KEY, 'granted'], [GOOGLE_CONSENT_KEY, JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000})]])
   const session = new Map(), scripts = [], records = [], navigation = []
   const storage = map => ({ getItem: key => map.get(key) || null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key) })
   const win = {
@@ -23,7 +23,7 @@ function fixture() {
     __recordAdBoundary: (kind, value) => records.push({ kind, value: JSON.parse(JSON.stringify(value)) }),
   }
   const doc = win.document = {
-    referrer: '', cookie: '', createElement: () => ({}), head: { appendChild: script => scripts.push(script) },
+    referrer: '', get cookie() { return '' }, set cookie(value) { void value }, createElement: () => ({}), head: { appendChild: script => scripts.push(script) },
     addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, getElementById: () => ({}),
   }
   win.window = win
