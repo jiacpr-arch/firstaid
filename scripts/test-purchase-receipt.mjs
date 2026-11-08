@@ -42,9 +42,9 @@ async function fixture(options = {}) {
     }
     if (url.origin === ORIGIN && request.method() === 'GET') {
       if (url.pathname === RECEIPT_PATH) return route.fulfill({ contentType: 'text/html', body: RECEIPT_HTML, headers: { 'Content-Security-Policy': RECEIPT_CSP, 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow' } })
-      // Exercise the staged enabled branch with synthetic SDKs only. The source
-      // constant remains false; this fixture is not an activation mechanism.
-      if (url.pathname === '/purchase-receipt.js') return route.fulfill({ contentType: 'text/javascript', body: options.googleEnabled ? JS.replace('export const GOOGLE_PURCHASE_ENABLED = false', 'export const GOOGLE_PURCHASE_ENABLED = true') : JS })
+      // Shipping Google path is exercised unchanged. One synthetic fixture
+      // disables it to retain emergency kill-switch coverage.
+      if (url.pathname === '/purchase-receipt.js') return route.fulfill({ contentType: 'text/javascript', body: options.googleEnabled === false ? JS.replace('export const GOOGLE_PURCHASE_ENABLED = true', 'export const GOOGLE_PURCHASE_ENABLED = false') : JS })
       if (url.pathname === '/fixture-handoff.js') return route.fulfill({ contentType: 'text/javascript', body: HANDOFF })
       if (url.pathname === '/buy') return route.fulfill({ contentType: 'text/html', body: `<html><head></head><body><script type="module">import {openPurchaseReceipt} from '/fixture-handoff.js';openPurchaseReceipt(window,document,'${TOKEN}');</script></body></html>` })
       if (url.pathname === '/learn') return route.fulfill({ contentType: 'text/html', body: '<h1>Synthetic learning page</h1>' })
@@ -100,8 +100,8 @@ try {
       await f.close()
     }
   })
-  await run('fresh receipt ignores all stored grants and Google remains gated', async () => {
-    const f = await fixture({ oldGrants: true })
+  await run('fresh receipt ignores all stored grants and Google kill switch fails closed', async () => {
+    const f = await fixture({ oldGrants: true, googleEnabled: false })
     assert.equal(await f.page.locator('#choices').isVisible(), true); assert.equal(f.requests.length, 0)
     await f.page.locator('[data-vendor="google"][data-choice="granted"]').click()
     await f.page.waitForTimeout(30); assert.equal(f.requests.length, 0)
@@ -165,7 +165,7 @@ try {
     assert.equal(f.requests.filter(x => x === 'meta').length, 1)
     await f.close()
   })
-  await run('staged Google branch under production CSP sends one clean GA4 purchase after its own grant', async () => {
+  await run('Google branch under production CSP sends one clean GA4 purchase after its own grant', async () => {
     const f = await fixture({ googleEnabled: true, handoff: true })
     assert.equal(f.requests.length, 0)
     await f.page.locator('[data-vendor="google"][data-choice="granted"]').click()
@@ -181,7 +181,7 @@ try {
     assert.equal(f.googleCalls.some(args => args[0] === 'consent' && args[1] === 'update' && args[2].analytics_storage === 'denied'), true)
     await f.close()
   })
-  await run('staged Google delayed SDK receives only revocation after pagehide', async () => {
+  await run('Google delayed SDK receives only revocation after pagehide', async () => {
     const f = await fixture({ googleEnabled: true, deferSdk: true })
     await f.page.locator('[data-vendor="google"][data-choice="granted"]').click()
     await f.page.waitForFunction(() => !!window.__releaseGoogle)
@@ -190,7 +190,7 @@ try {
     assert.equal(f.googleCalls.length, 1); assert.equal(f.googleCalls[0][0], 'consent'); assert.equal(f.googleCalls[0][2].analytics_storage, 'denied')
     await f.close()
   })
-  await run('staged Google storage failure and denial while pending cannot initialize a tag', async () => {
+  await run('Google storage failure and denial while pending cannot initialize a tag', async () => {
     for (const options of [{ storageFailure: true }, { holdLock: true }]) {
       const f = await fixture({ ...options, googleEnabled: true })
       await f.page.locator('[data-vendor="google"][data-choice="granted"]').click()
@@ -203,7 +203,7 @@ try {
       await f.close()
     }
   })
-  await run('staged Google cross-tab denial and reload discard the tag and consumed receipt', async () => {
+  await run('Google cross-tab denial and reload discard the tag and consumed receipt', async () => {
     const f = await fixture({ googleEnabled: true })
     await f.page.locator('[data-vendor="google"][data-choice="granted"]').click(); await f.page.waitForFunction(() => !!window.gtag)
     const second = await f.context.newPage(); await second.goto(ORIGIN + '/learn')

@@ -52,3 +52,6 @@ jobs:
       - name: Test network-blocked purchase receipt boundary
         run: node scripts/test-purchase-receipt.mjs
 
+      - name: Test network-blocked entitlement integration
+        run: node scripts/test-entitlement-boundary.mjs
+

@@ -16,6 +16,7 @@ export function initPostHog() {
     capture_pageview: false,
     capture_pageleave: false,
     autocapture: false,
+    capture_performance: false,
     disable_session_recording: true,
     before_send: event => filterCheckoutAnalyticsEvent(event, window.location, document.referrer),
   })

@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
 import { useProgressStore } from './stores/progressStore'
+import { useEntitlementStore, entitlementKey } from './stores/entitlementStore'
+import { entitlementAllowsMarketing } from './lib/entitlementMarketingBoundary.js'
 import { useEnsureLearner } from './hooks/useLearner'
 import { initAuthListener, useAuthStore } from './stores/authStore'
 import { startBackgroundSync } from './db/sync'
@@ -83,6 +85,7 @@ export default function App() {
   useEnsureLearner()
   const learner = useLearnerStore((s) => s.learner)
   const learningProgress = useProgressStore()
+  const entitlements = useEntitlementStore()
   const authLoading = useAuthStore((s) => s.loading)
   const authSession = useAuthStore((s) => s.session)
 
@@ -138,10 +141,12 @@ export default function App() {
   const onboarding = !isAdmin && (!learner || (!learner.lineAdded && !learner.lineSkippedAt))
   const auth = { loading: authLoading, session: authSession }
   const anonymous = location.pathname === '/' && anonymousLanding(learner, learningProgress, onboarding, auth)
-  const publicLanding = canUseMarketingDocument(window, {
+  const anonymousDocument = canUseMarketingDocument(window, {
     urlEligible: eligibleLanding(window.location, document.referrer),
     anonymous, auth, progress: learningProgress,
   })
+  const entitlementPublic = entitlementAllowsMarketing(window, entitlements, entitlementKey(authSession, learner?.id))
+  const publicLanding = anonymousDocument && entitlementPublic
   const leaveMarketingDocument = !!window.__firstaidMarketingLoaded
     && (!publicLanding || !eligibleLanding(window.location, document.referrer))
   useLayoutEffect(() => {

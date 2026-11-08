@@ -20,7 +20,7 @@ test('identity and any learning progress block advertising', () => {
 })
 
 test('one SDK, explicit consent, no automatic collection or user fields', () => {
-  const scripts = [], win = {}, doc = { createElement: () => ({}), head: { appendChild: script => scripts.push(script) } }
+  const scripts = [], win = { performance: { clearResourceTimings() {}, getEntriesByType: () => [] } }, doc = { createElement: () => ({}), head: { appendChild: script => scripts.push(script) } }
   loadTrainingPixel(win, doc, TRAINING_PIXEL_ID)
   loadTrainingPixel(win, doc, TRAINING_PIXEL_ID)
   assert.equal(scripts.length, 1)

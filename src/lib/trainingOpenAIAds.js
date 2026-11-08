@@ -2,6 +2,7 @@ import { denialFallbackUrl, eligibleLanding } from './trainingAds.js'
 import { readVendorConsent, saveVendorConsent } from './trainingConsent.js'
 import { installMarketingNavigationBoundary } from './trainingNavigation.js'
 import { revokeTrainingMarketing } from './trainingMarketing.js'
+import { entitlementLookupPending, prepareMarketingResourceTimings } from './entitlementMarketingBoundary.js'
 
 export const OPENAI_PIXEL_ID = 'QGaBG3DEsN1QQ4mvnw3Jdu'
 // Fresh vendor-specific choice. Never migrate a Meta or Google grant.
@@ -12,7 +13,7 @@ export const saveOpenAIConsent = (win, value) => saveVendorConsent(win, OPENAI_C
 
 export function eligibleOpenAIDocument(win, doc, publicLanding = false) {
   try {
-    if (!publicLanding || win.location.origin !== 'https://firstaid.morroo.com'
+    if (entitlementLookupPending(win) || !publicLanding || win.location.origin !== 'https://firstaid.morroo.com'
       || win.oaiq || win.navigator?.webdriver === true || win.__firstaidPrivateDocument
       || win.__firstaidMarketingRevoked || win.__firstaidOpenAIRevoked
       || !eligibleLanding(win.location, doc.referrer)) return false
@@ -32,6 +33,7 @@ export function loadTrainingOpenAI(win, doc, { publicLanding = false } = {}) {
   try {
     if (win.__firstaidOpenAILoaded || !eligibleOpenAIDocument(win, doc, publicLanding)
       || readOpenAIConsent(win) !== 'granted' || !doc.body) return false
+    if (!prepareMarketingResourceTimings(win)) return false
     installMarketingNavigationBoundary(win, doc, revokeTrainingMarketing)
     const image = doc.createElement('img')
     image.id = 'firstaid-training-openai'

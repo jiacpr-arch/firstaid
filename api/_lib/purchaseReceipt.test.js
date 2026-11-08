@@ -131,12 +131,12 @@ test('Meta sends only minimal Purchase with stable eventID, no PageView, advance
   granted = false; f.win.fbq('track', 'Purchase', { bad: true }); assert.equal(f.win.fbq.queue.length, 4)
 })
 
-test('Google activation is gated; staged payload targets GA4 only with transaction_id and no contact/Ads conversion', () => {
+test('Google targets verified GA4 only; kill switch works and no contact/Ads conversion is sent', () => {
   const f = fixture(), p = fresh()
-  assert.equal(GOOGLE_PURCHASE_ENABLED, false)
-  assert.equal(startGoogle(f.win, f.doc, p, () => true), false)
+  assert.equal(GOOGLE_PURCHASE_ENABLED, true)
+  assert.equal(startGoogle(f.win, f.doc, p, () => true, { enabled: false }), false)
   assert.equal(f.scripts.length, 0)
-  assert.equal(startGoogle(f.win, f.doc, p, () => true, { enabled: true }), true)
+  assert.equal(startGoogle(f.win, f.doc, p, () => true), true)
   const calls = f.win.dataLayer.map(args => Array.from(args)), events = calls.filter(args => args[0] === 'event')
   assert.equal(events.length, 1); assert.equal(events[0][1], 'purchase'); assert.equal(events[0][2].transaction_id, p.eventId)
   assert.equal(events[0][2].send_to, 'G-H10PHV2XNG'); assert.equal(events[0][2].page_referrer, '')
@@ -157,6 +157,7 @@ test('PostHog blocks payment initialization/identification/capture and delayed U
   assert.equal((source.match(/checkoutAnalyticsBlocked\(window.location, document.referrer\)/g) || []).length, 3)
   assert.match(source, /before_send: event => filterCheckoutAnalyticsEvent/)
   assert.match(source, /disable_session_recording: true/)
+  assert.match(source, /capture_performance: false/)
 })
 
 test('receipt page is not the learner app; Buy retains no direct Purchase fanout and confirm issues receipt after entitlement grant', () => {

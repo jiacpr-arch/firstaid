@@ -10,7 +10,7 @@ function storage() {
 }
 function fixture() {
   const images = [], listeners = {}
-  const win = { location: { hostname: 'firstaid.morroo.com', pathname: '/', search: '', hash: '', href: 'https://firstaid.morroo.com/', origin: 'https://firstaid.morroo.com', reload() { win.reloads++ }, assign(href) { win.assigned=href }, replace(href) { win.assigned=href } }, reloads: 0, localStorage: storage(), sessionStorage: storage(), navigator: {}, history: { pushState() {}, replaceState() {} }, addEventListener: (k,fn) => { (listeners[k] ||= []).push(fn) }, removeEventListener() {} }
+  const win = { performance: { clearResourceTimings() {}, getEntriesByType: () => [] }, location: { hostname: 'firstaid.morroo.com', pathname: '/', search: '', hash: '', href: 'https://firstaid.morroo.com/', origin: 'https://firstaid.morroo.com', reload() { win.reloads++ }, assign(href) { win.assigned=href }, replace(href) { win.assigned=href } }, reloads: 0, localStorage: storage(), sessionStorage: storage(), navigator: {}, history: { pushState() {}, replaceState() {} }, addEventListener: (k,fn) => { (listeners[k] ||= []).push(fn) }, removeEventListener() {} }
   const doc = { referrer: '', cookie: '', body: { appendChild: x => images.push(x) }, addEventListener() {}, createElement(tag) { assert.equal(tag,'img'); return { style:{}, removeAttribute(k) { delete this[k] }, remove() { this.removed=true } } } }
   return {win,doc,images,dispatch: (key,event={}) => listeners[key]?.forEach(fn=>fn(event))}
 }

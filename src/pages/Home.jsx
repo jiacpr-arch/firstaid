@@ -1,6 +1,6 @@
 import { CLASSROOM_ART } from '../config/courseArtwork'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, UserRound } from 'lucide-react'
 import CallEmergencyButton from '../components/CallEmergencyButton'
 import JiaAedNewsFeed from '../components/JiaAedNewsFeed'
 import LearningPathCard from '../components/LearningPathCard'
@@ -61,7 +61,16 @@ export default function Home() {
       <header style={{ marginTop: 8, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 32 }}>
           <span className="text-eyebrow">My learning</span>
-          <StreakBadge />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <StreakBadge />
+            {/* บัญชี / ออกจากระบบ — เดิมอยู่แค่หน้าบทเรียน ผู้ใช้หาไม่เจอ */}
+            <Link to="/settings" aria-label="บัญชีของฉัน" title="บัญชีของฉัน" style={{
+              width: 34, height: 34, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--color-brand-soft)', color: 'var(--color-brand-dark)',
+            }}>
+              <UserRound size={18} />
+            </Link>
+          </span>
         </div>
         <h1 className="text-display" style={{ margin: '2px 0 0' }}>ปฐมพยาบาลเบื้องต้น</h1>
         <div className="text-body" style={{ color: 'var(--color-text-muted)' }}>

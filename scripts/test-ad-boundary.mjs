@@ -68,6 +68,12 @@ async function fixture(options = {}) {
       sdkRequests.push(request.url())
       return route.fulfill({ contentType: 'text/javascript', body: sdkBody(META_SDK_STUB, 'Meta') })
     }
+    // Synthetic empty entitlement result only. The application must resolve
+    // this before public SDK startup; no real learner or backend is contacted.
+    if (url.origin === ORIGIN && url.pathname === '/api/entitlements' && request.method() === 'POST') {
+      assert.equal(url.search, '', 'Entitlement identifiers must not enter resource URLs')
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ chapters: [], cpr: false }) })
+    }
     // Only static GET files at the production origin are fulfilled from disk.
     // Everything else is aborted, including same-origin APIs and analytics.
     if (url.origin !== ORIGIN || request.method() !== 'GET' || /^\/(api|_vercel)\//.test(url.pathname)) {
@@ -160,6 +166,12 @@ async function fixture(options = {}) {
   async function open(path = '/', referer) {
     await page.goto(ORIGIN + path, { waitUntil: 'load', ...(referer ? { referer } : {}) })
     await page.waitForTimeout(700)
+    await showSeparateChoices()
+  }
+  // The consent card leads with combined "อนุญาตทั้งหมด / ไม่อนุญาตทั้งหมด"; per-vendor cases open "เลือกแยก" first.
+  async function showSeparateChoices() {
+    const toggle = page.getByRole('button', { name: 'รายละเอียด / เลือกแยก', exact: true })
+    if (await toggle.count()) await toggle.click()
   }
   async function grant() {
     await page.getByRole('button', { name: 'อนุญาต', exact: true }).click()
@@ -170,6 +182,12 @@ async function fixture(options = {}) {
     await page.getByRole('button', { name: 'อนุญาต Google', exact: true }).click()
     await waitForSdk('__stubGoogleLoaded')
     await page.waitForTimeout(100)
+  }
+  // Decided vendors collapse into the "ตั้งค่าการวัดผล" chip; open it before using a withdraw/re-grant toggle.
+  async function consentToggle(name) {
+    const chip = page.getByRole('button', { name: 'ตั้งค่าการวัดผล', exact: true })
+    if (await chip.count()) await chip.click()
+    return page.getByRole('button', { name, exact: true })
   }
   function noAds() {
     assert.equal(openaiRequests.length, 0, 'No OpenAI image may be requested')
@@ -182,7 +200,7 @@ async function fixture(options = {}) {
     assert.ok(googleObservations.every(item => item.forms === 0 && item.privateNodes === 0 && !item.insertedPrivateNodes), 'Google-bearing document never contains even transient lesson, auth or form DOM')
     assert.ok(googleObservations.every(item => item.canonical === null || item.canonical === ORIGIN + '/'), 'Google-bearing document never exposes private SEO metadata')
   }
-  return { context, page, openaiRequests, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, noAds, googleStayedPublic, releaseAuth, pauseNavigation, releaseNavigation, authRequests: () => authRequests }
+  return { context, page, openaiRequests, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, consentToggle, showSeparateChoices, noAds, googleStayedPublic, releaseAuth, pauseNavigation, releaseNavigation, authRequests: () => authRequests }
 }
 async function test(name, options, fn) {
   const f = await fixture(options)
@@ -192,6 +210,36 @@ async function test(name, options, fn) {
 }
 try {
 
+  await test('combined allow-all grants each vendor separately, then the card leaves the content', {}, async f => {
+    await f.page.goto(ORIGIN + '/', { waitUntil: 'load' }); await f.page.waitForTimeout(700); f.noAds()
+    await f.page.getByRole('button', { name: 'อนุญาตทั้งหมด', exact: true }).click()
+    await f.page.waitForFunction(() => window.__stubSdkLoaded === true && window.__stubGoogleLoaded === true && window.__firstaidOpenAILoaded === true)
+    assert.deepEqual(await f.page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['granted', 'granted', 'granted'])
+    assert.equal(await f.page.getByRole('dialog').count(), 0)
+    assert.equal(await f.page.getByTestId('marketing-consent').isVisible(), false, 'Decided consent must not cover page content')
+    const chip = f.page.getByRole('button', { name: 'ตั้งค่าการวัดผล', exact: true })
+    assert.equal(await chip.evaluate(el => getComputedStyle(el).position), 'static')
+  })
+  await test('combined deny-all loads nothing and survives reload', {}, async f => {
+    await f.page.goto(ORIGIN + '/', { waitUntil: 'load' }); await f.page.waitForTimeout(700)
+    await f.page.getByRole('button', { name: 'ไม่อนุญาตทั้งหมด', exact: true }).click()
+    await f.page.waitForTimeout(300); f.noAds()
+    assert.deepEqual(await f.page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['denied', 'denied', 'denied'])
+    await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500); f.noAds()
+    assert.equal(await f.page.getByRole('button', { name: 'อนุญาตทั้งหมด', exact: true }).count(), 0)
+  })
+  await test('deny-all also revokes a previously granted vendor when other choices remain pending', { consent: 'granted' }, async f => {
+    await f.open()
+    await f.page.waitForFunction(() => window.__stubSdkLoaded === true)
+    const oldDocument = await f.page.evaluate(() => window.__documentId)
+    await f.page.getByRole('button', { name: 'ไม่อนุญาตทั้งหมด', exact: true }).click()
+    await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
+    await f.page.waitForTimeout(500)
+    assert.deepEqual(await f.page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['denied', 'denied', 'denied'])
+    assert.equal(f.sdkRequests.length, 1, 'The previous Meta SDK must not reload')
+    assert.equal(f.googleRequests.length, 0); assert.equal(f.openaiRequests.length, 0)
+    assert.ok(f.calls.some(call => call.documentId === oldDocument && call.args[0] === 'consent' && call.args[1] === 'revoke'))
+  })
   await test('OpenAI own grant renders exactly one fixed image; withdrawal persists', {}, async f => {
     await f.open(); f.noAds()
     await f.page.getByRole('button', { name: 'อนุญาต OpenAI', exact: true }).click()
@@ -203,7 +251,7 @@ try {
     const old = await f.page.evaluate(() => window.__documentId)
     await Promise.all([
       f.page.waitForEvent('domcontentloaded'),
-      f.page.getByRole('button', { name: 'ถอนความยินยอม OpenAI', exact: true }).click(),
+      (await f.consentToggle('ถอนความยินยอม OpenAI')).click(),
     ])
     assert.notEqual(await f.page.evaluate(() => window.__documentId), old)
     await f.page.waitForTimeout(300)
@@ -278,7 +326,7 @@ try {
     await f.page.waitForTimeout(500)
     assert.equal(f.calls.filter(c => c.args[0] === 'trackSingle').length, 1)
     const oldDocument = await f.page.evaluate(() => window.__documentId)
-    await f.page.getByRole('button', { name: 'ถอนความยินยอมวัดผลโฆษณา', exact: true }).click()
+    await (await f.consentToggle('ถอนความยินยอมวัดผลโฆษณา')).click()
     await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
     await f.page.waitForTimeout(500)
     assert.equal(f.sdkRequests.length, 1, 'Withdrawal must not re-load SDK')
@@ -330,7 +378,7 @@ try {
     await f.page.getByRole('button', { name: 'ไม่อนุญาต', exact: true }).click()
     await f.page.waitForTimeout(300); f.noAds()
     assert.equal(await f.page.evaluate(() => window.__documentId), documentId)
-    await f.page.getByRole('button', { name: 'อนุญาตวัดผลโฆษณา', exact: true }).click()
+    await (await f.consentToggle('อนุญาตวัดผลโฆษณา')).click()
     await f.page.waitForFunction(() => window.__stubSdkLoaded === true)
     await f.page.waitForTimeout(100)
     assert.equal(f.sdkRequests.length, 1)
@@ -342,7 +390,7 @@ try {
   await test('withdrawal with both stores unwritable uses no-ads fallback', {}, async f => {
     await f.open(); await f.grant()
     const oldDocument = await f.page.evaluate(() => { window.__storageFailures = ['local:set', 'session:set']; return window.__documentId })
-    await f.page.getByRole('button', { name: 'ถอนความยินยอมวัดผลโฆษณา', exact: true }).click()
+    await (await f.consentToggle('ถอนความยินยอมวัดผลโฆษณา')).click()
     await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
     await f.page.waitForTimeout(500)
     assert.equal(new URL(f.page.url()).searchParams.get('marketing_consent'), 'denied')
@@ -509,7 +557,7 @@ try {
     await test(`Google withdrawal survives stale local grant and ${storageFailures.join(',') || 'working storage'}`, {}, async f => {
       await f.open(); await f.grantGoogle()
       const oldDocument = await f.page.evaluate(failures => { window.__storageFailures = failures; return window.__documentId }, storageFailures)
-      await f.page.getByRole('button', { name: 'ถอนความยินยอม Google', exact: true }).click()
+      await (await f.consentToggle('ถอนความยินยอม Google')).click()
       await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
       await f.page.waitForTimeout(500)
       assert.equal(f.googleRequests.length, 1)
@@ -603,7 +651,7 @@ try {
       f.pauseNavigation()
       const target = retirement === 'private-navigation'
         ? f.page.locator('.course-desktop-nav a[href="/learn"]')
-        : f.page.getByRole('button', { name: retirement === 'google-withdrawal' ? 'ถอนความยินยอม Google' : 'ถอนความยินยอมวัดผลโฆษณา', exact: true })
+        : await f.consentToggle(retirement === 'google-withdrawal' ? 'ถอนความยินยอม Google' : 'ถอนความยินยอมวัดผลโฆษณา')
       // A pending reload can suspend later Playwright frame evaluations even
       // while its response is held. Observe the real synchronous click handler
       // and release the synthetic SDK in one evaluation, before it can commit.

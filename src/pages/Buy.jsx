@@ -15,6 +15,7 @@ import { confirmCheckout, startCheckout } from '../utils/checkout'
 import { openPurchaseReceipt } from '../utils/purchaseReceipt'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
+import AccountCard from '../components/AccountCard'
 
 // หน้าซื้อคอร์สออนไลน์ (/buy) — ราคาทั้งหมดในหน้าเดียว กดแล้วไปจ่าย Stripe (บัตร / PromptPay) ปลดล็อกทันที
 // กลับจาก Stripe: /buy?session_id=cs_… → ยืนยันกับเซิร์ฟเวอร์แล้วโชว์ "ชำระเงินสำเร็จ"
@@ -206,6 +207,9 @@ export default function Buy() {
       {cancelled && <div className="callout callout-info" style={{ marginBottom: 12 }}>ยกเลิกการชำระเงินแล้ว — เลือกซื้อใหม่ได้ทุกเมื่อ</div>}
       {lineOnly && <div className="callout callout-info" style={{ marginBottom: 12 }}>ตอนนี้รับชำระผ่าน LINE — แจ้งโอน PromptPay แล้วรับโค้ดปลดล็อกจากทีมงาน</div>}
       {error && <div className="callout callout-warning" style={{ marginBottom: 12 }}>{error}</div>}
+
+      {/* บัญชีที่จะผูกสิทธิ์ — เห็นชัดว่าซื้อให้บัญชีไหน และมีปุ่มออกจากระบบ/สลับบัญชี */}
+      <AccountCard style={{ marginBottom: 12 }} />
 
       {/* ทั้งคอร์ส — ตัวเลือกแนะนำ */}
       <section className="card" style={{

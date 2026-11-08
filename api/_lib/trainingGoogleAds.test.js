@@ -13,6 +13,7 @@ function fixture(storage = {}) {
   location.replace = href => navigation.push(['replace', href])
   location.reload = () => navigation.push(['reload'])
   const win = {
+    performance: { clearResourceTimings() {}, getEntriesByType: () => [] },
     location, localStorage: store(local), sessionStorage: store(session),
     history: { pushState: (...args) => nativeHistory.push(['push', ...args]), replaceState: (...args) => nativeHistory.push(['replace', ...args]) },
     addEventListener: (name, fn) => { handlers[name] = fn }, removeEventListener: name => { delete handlers[name] },

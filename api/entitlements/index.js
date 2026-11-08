@@ -10,6 +10,8 @@ import { rateLimited } from '../_lib/rateLimit.js'
 // lapse without any cleanup job.
 //
 // GET /api/entitlements?learnerId=<local learner id>  (Authorization: Bearer optional)
+// POST /api/entitlements with JSON { learnerId } is an equivalent read-only
+// transport for browser clients. It keeps identifiers out of resource URLs.
 // - Purchased chapters (lesson_entitlements) need a login: they're keyed on the durable learner_id
 //   the token resolves to.
 // - Class unlock (คลาสรวม CPR, cohorts.unlock_lessons) also checks the device's local learnerId when
@@ -19,15 +21,16 @@ import { rateLimited } from '../_lib/rateLimit.js'
 //   learnerId ที่ผูกบัญชีแล้วต้องมาพร้อม token ของบัญชีนั้น (กันสวมรอย) — ให้แค่สิทธิ์จากคลาส
 //   ซึ่งเข้าได้ด้วยรหัสคลาสอยู่แล้ว ไม่รวมหมวดที่ซื้อ
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store')
   if (applyCors(req, res)) return
-  if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return }
+  if (req.method !== 'GET' && req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
   if (rateLimited(req, res, { key: 'entitlements-list', limit: 60, windowMs: 60_000 })) return
 
   const admin = getSupabaseAdmin()
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
   const tokenLearnerId = await learnerIdFromToken(admin, req)
-  const localLearnerId = cleanLocalLearnerId(req.query?.learnerId, tokenLearnerId)
+  const localLearnerId = cleanLocalLearnerId(req.method === 'POST' ? req.body?.learnerId : req.query?.learnerId, tokenLearnerId)
   let result
   try {
     result = await resolveEntitlements(admin, { tokenLearnerId, localLearnerId })

@@ -16,6 +16,11 @@
 .course-hero p { font-size: 17px; line-height: 1.85; color: #53645b; max-width: 460px; }
 .course-hero-actions { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; margin-top: 26px; }
 .course-text-link { display: inline-flex; align-items: center; gap: 8px; color: #23736a; font-size: 15px; font-weight: 700; }
+.course-price { margin-top: 22px; padding: 14px 16px; border: 2px solid #23736a; border-radius: 14px; background: #eef6f1; }
+.course-price-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.course-price-main strong { font-size: 34px; line-height: 1; color: #163d3a; }
+.course-price-main span { font-size: 15px; font-weight: 700; color: #23736a; }
+.course-price small { display: block; margin-top: 6px; font-size: 13px; color: #5b6d67; }
 .course-checks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: #5b6d67; margin-top: 20px; }
 .course-checks span { display: flex; align-items: center; gap: 5px; }
 .course-checks svg { color: #23736a; }

@@ -5,9 +5,10 @@ export const RECEIPT_PATH = '/api/checkout/receipt-page'
 export const RECEIPT_URL = 'https://firstaid.morroo.com' + RECEIPT_PATH
 export const PIXEL_ID = '1277103750989853'
 export const GA4_ID = 'G-H10PHV2XNG'
-// Account-side Enhanced Measurement/automatic user-data detection has not been
-// verified off for this shared stream. Do not activate Google until reviewed.
-export const GOOGLE_PURCHASE_ENABLED = false
+// Verified Training GA4-only destination. Shared automatic detectors remain on;
+// the isolated page has no personal fields and requires its own fresh consent.
+// No Ads destination or shared GTM container is configured here.
+export const GOOGLE_PURCHASE_ENABLED = true
 export const choiceKey = vendor => `firstaid_purchase_${vendor}_consent_v1`
 export const attemptKey = (vendor, eventId) => `firstaid_purchase_attempt_v1:${vendor}:${eventId}`
 const PAGE = { page_location: RECEIPT_URL, page_referrer: '', page_title: 'Purchase | JiaCPR Training' }
