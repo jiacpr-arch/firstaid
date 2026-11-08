@@ -9,6 +9,7 @@ import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { useEntitlementStore } from '../stores/entitlementStore'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
+import BuyCourseBanner from '../components/BuyCourseBanner'
 import { isChapterUnlocked, CHAPTER_PRICES, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
 import { CPR_MODULES } from '../courses/cpr/modules'
 import { useClassCpr } from '../hooks/useClassCpr'
@@ -93,6 +94,8 @@ export default function Learn() {
       <CprTopBar source="learn_top" style={{ marginTop: 12 }} />
       <AccountCard style={{ marginTop: 12 }} />
       {session && needsRealName(learner) && <RealNameCard source="learn_page" style={{ marginTop: 12 }} />}
+
+      <BuyCourseBanner source="learn_top" style={{ marginTop: 12 }} />
 
       <div className="card" style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -208,7 +211,7 @@ export default function Learn() {
                   {chComplete ? `เรียนครบ ${chTotal} บทแล้ว` : `${chDone} / ${chTotal} บท · ${chMinutes} นาที`}
                 </div>
               </div>
-              {chapterPaidLocked && <span className="badge badge-brand">฿{CHAPTER_PRICES[ch.id]} ทั้งหมวด</span>}
+              {chapterPaidLocked && <Link to={`/buy?chapter=${ch.id}`} className="badge badge-brand">ซื้อ ฿{CHAPTER_PRICES[ch.id]}</Link>}
             </div>
             <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {ch.lessons.map((l, i) => {
@@ -311,7 +314,7 @@ function CprChapter({ learner, classCpr, cprPurchased }) {
             {inClass && !chComplete ? ' · คลาสของคุณเรียนฟรี' : ''}
           </div>
         </div>
-        {paidLocked && <span className="badge badge-brand">฿{CHAPTER_PRICES[CPR_CHAPTER]} ทั้งหมวด</span>}
+        {paidLocked && <Link to={`/buy?chapter=${CPR_CHAPTER}`} className="badge badge-brand">ซื้อ ฿{CHAPTER_PRICES[CPR_CHAPTER]}</Link>}
       </div>
       <Link to="/cpr/guide" className="text-caption" style={{ display: 'block', padding: '10px 18px', borderBottom: '1px solid #EDF1EC', fontWeight: 700, color: '#B91C1C' }}
         data-testid="cpr-chapter-guide">

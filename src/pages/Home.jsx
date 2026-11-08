@@ -7,6 +7,7 @@ import LearningPathCard from '../components/LearningPathCard'
 import GamePromoCard from '../components/GamePromoCard'
 import QuickMenu from '../components/QuickMenu'
 import ClassBanner from '../components/ClassBanner'
+import BuyCourseBanner from '../components/BuyCourseBanner'
 import StreakBadge from '../components/StreakBadge'
 import DailyQuiz from '../components/DailyQuiz'
 import { useEnsureLearner } from '../hooks/useLearner'
@@ -70,6 +71,7 @@ export default function Home() {
 
       <CprTopBar source="home_top" />
       <ClassBanner />
+      <BuyCourseBanner source="home_top" style={{ marginBottom: 16 }} />
 
       <figure className="course-home-art"><img src={CLASSROOM_ART} alt="ภาพประกอบห้องเรียนปฐมพยาบาล" width="1536" height="1024" /><figcaption>ค่อย ๆ เรียนรู้ แล้วฝึกให้มั่นใจ</figcaption></figure>
 

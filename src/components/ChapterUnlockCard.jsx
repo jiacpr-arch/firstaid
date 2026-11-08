@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Lock, MessageCircle, KeyRound, CheckCircle2 } from 'lucide-react'
+import { Lock, MessageCircle, KeyRound, CheckCircle2, CreditCard, Loader2, ShieldCheck } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { chapters } from '../courses/firstaid/lessons'
-import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
+import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, COURSE_BUNDLE_CHAPTER, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
+import { startCheckout } from '../utils/checkout'
 import { useAuthStore } from '../stores/authStore'
 import { useLearnerStore } from '../stores/learnerStore'
 import { useEntitlementStore } from '../stores/entitlementStore'
@@ -12,8 +14,8 @@ import { authHeader } from '../utils/authHeader'
 import { track } from '../utils/analytics'
 
 // Paywall shown in place of locked lesson content — rendered by LessonReader's
-// chapter-entitlement guard. Phase 1: no in-app checkout yet, so the buyer pays
-// via PromptPay/LINE off-app and redeems the voucher code they're given here.
+// chapter-entitlement guard. Primary path: Stripe Checkout (card / PromptPay) → unlocks
+// instantly (api/checkout/*, return page /buy). Fallback: pay via LINE and redeem a voucher code.
 export default function ChapterUnlockCard({ chapter }) {
   const session = useAuthStore((s) => s.session)
   const learner = useLearnerStore((s) => s.learner)
@@ -23,6 +25,20 @@ export default function ChapterUnlockCard({ chapter }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [paying, setPaying] = useState(null) // chapter ที่กำลังเปิดหน้าจ่าย Stripe
+  const [lineOnly, setLineOnly] = useState(false) // เซิร์ฟเวอร์ยังไม่ได้ตั้ง Stripe → ใช้ LINE
+  const [payError, setPayError] = useState('')
+
+  const pay = async (target) => {
+    if (paying != null) return
+    setPayError('')
+    setPaying(target)
+    const r = await startCheckout(target, 'chapter_unlock')
+    if (r.ok) return
+    setPaying(null)
+    if (r.error === 'stripe_not_configured') setLineOnly(true)
+    else setPayError('เปิดหน้าชำระเงินไม่สำเร็จ กรุณาลองใหม่ หรือซื้อผ่าน LINE')
+  }
 
   const chapterInfo = chapter === CPR_CHAPTER ? { id: CPR_CHAPTER, title: CPR_CHAPTER_TITLE } : chapters.find((c) => c.id === chapter)
   const price = CHAPTER_PRICES[chapter]
@@ -92,14 +108,14 @@ export default function ChapterUnlockCard({ chapter }) {
 
       {!session ? (
         <div className="card" style={{ marginTop: 12 }}>
-          <div className="text-body-strong">เข้าสู่ระบบด้วย LINE ก่อน</div>
+          <div className="text-body-strong">เข้าสู่ระบบด้วย LINE แล้วจ่ายได้ทันที</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
             สิทธิ์ปลดล็อกผูกกับบัญชี LINE ของคุณ — ล็อกอินเครื่องไหนก็เรียนต่อได้
           </div>
           {isLineLoginConfigured ? (
             <button
               type="button"
-              onClick={() => startHubLogin(learner?.id, undefined, { line: true })}
+              onClick={() => startHubLogin(learner?.id, `/buy?chapter=${chapter}`, { line: true })}
               className="btn btn-block"
               style={{ marginTop: 12, padding: '14px', borderRadius: 12, background: '#06C755', color: '#fff', fontWeight: 800, border: 'none' }}
             >
@@ -113,8 +129,31 @@ export default function ChapterUnlockCard({ chapter }) {
         </div>
       ) : (
         <>
+          {!lineOnly && (
+            <div className="card" style={{ marginTop: 12 }}>
+              <div className="text-body-strong">ชำระเงินออนไลน์ — ปลดล็อกทันที</div>
+              <div className="text-caption" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ShieldCheck size={14} /> บัตรเครดิต/เดบิต หรือ PromptPay ผ่าน Stripe
+              </div>
+              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12, fontWeight: 800 }}
+                disabled={paying != null} onClick={() => pay(COURSE_BUNDLE_CHAPTER)}>
+                {paying === COURSE_BUNDLE_CHAPTER ? <Loader2 size={16} className="spin" /> : <CreditCard size={16} />}
+                ซื้อทั้งคอร์ส ฿{COURSE_BUNDLE_PRICE} (คุ้มกว่า)
+              </button>
+              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }}
+                disabled={paying != null} onClick={() => pay(chapter)}>
+                {paying === chapter && <Loader2 size={16} className="spin" />}
+                ซื้อเฉพาะหมวดนี้ ฿{price}
+              </button>
+              {payError && <div className="callout callout-warning" style={{ marginTop: 10 }}>{payError}</div>}
+              <Link to={`/buy?chapter=${chapter}`} className="text-caption" style={{ display: 'block', textAlign: 'center', marginTop: 10 }}>
+                ดูราคาทุกหมวด
+              </Link>
+            </div>
+          )}
+
           <div className="card" style={{ marginTop: 12 }}>
-            <div className="text-body-strong">ซื้อผ่าน LINE</div>
+            <div className="text-body-strong">{lineOnly ? 'ซื้อผ่าน LINE' : 'หรือซื้อผ่าน LINE'}</div>
             <div className="text-caption" style={{ marginTop: 4 }}>
               แจ้งชำระเงิน (PromptPay) แล้วรับโค้ดปลดล็อกจากทีมงาน
             </div>

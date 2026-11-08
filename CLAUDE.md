@@ -18,6 +18,11 @@ jia-online แล้วต้องคัดลอกมาใหม่ ให�
 คนที่ซื้อเอง (โค้ดราคา > 0) ผ่านปลายภาค → คูปอง ฿100 (`promo_codes`) + คิวขาย `sales_tracking` (`api/cpr/progress.js` action `reward`)
 คู่มือ: ครู/แอดมิน `/admin/guide` (#cpr-class, #cpr-chapter), นักเรียน `/cpr/guide`
 
+**ซื้อคอร์สออนไลน์ (Stripe)**: หน้า `/buy` (บัตร + PromptPay, ปลดล็อกทันที) — `api/checkout/create.js` → Stripe Checkout,
+ให้สิทธิ์ที่ `api/checkout/webhook.js` + `api/checkout/confirm.js` (upsert `lesson_entitlements` source `stripe`),
+ราคามาจาก `src/config/pricing.js` เท่านั้น · env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (ไม่ตั้ง = ปุ่มกลับไปใช้ LINE + โค้ด)
+· SQL: `supabase/stripe-checkout.sql`
+
 คำสั่งหลัก: `npm run dev` (รัน local), `npm run build` (build + ตรวจว่าโค้ดพัง), `npx eslint src/`
 
 มี Meta Pixel ติดอยู่ที่ `src/components/MetaPixel.jsx` (pixel ID ตั้งผ่าน `VITE_META_PIXEL_ID`,

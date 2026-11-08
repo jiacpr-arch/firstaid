@@ -369,3 +369,7 @@ body.has-house-strip .page-container { padding-bottom: 152px; }
   padding: 4px;
   z-index: 60;
 }
+
+/* ไอคอนหมุนตอนรอ (หน้า /buy) */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
