@@ -7,7 +7,7 @@ import { createPurchaseReceipt, verifyPurchaseReceipt, RECEIPT_TTL_SECONDS } fro
 import { paidGrant } from './stripeCheckout.js'
 import { checkoutAnalyticsBlocked, filterCheckoutAnalyticsEvent } from '../../src/lib/checkoutAnalyticsBoundary.js'
 import { openPurchaseReceipt } from '../../src/utils/purchaseReceipt.js'
-import { claimAttempt, consumeReceipt, eligibleReceiptDocument, validReceipt, startMeta, startGoogle, RECEIPT_URL, RECEIPT_KEY, choiceKey, attemptKey, GOOGLE_PURCHASE_ENABLED } from '../../public/purchase-receipt.js'
+import { claimAttempt, consumeReceipt, eligibleReceiptDocument, validReceipt, startMeta, startGoogle, RECEIPT_URL, RECEIPT_KEY, choiceKey, attemptKey, GOOGLE_PURCHASE_ENABLED, GTM_ID, GOOGLE_PURCHASE_EVENT } from '../../public/purchase-receipt.js'
 import { RECEIPT_HTML } from '../checkout/receipt-page.js'
 
 const secret = 'synthetic-unit-test-only-not-a-live-secret'
@@ -131,16 +131,74 @@ test('Meta sends only minimal Purchase with stable eventID, no PageView, advance
   granted = false; f.win.fbq('track', 'Purchase', { bad: true }); assert.equal(f.win.fbq.queue.length, 4)
 })
 
-test('Google targets verified GA4 only; kill switch works and no contact/Ads conversion is sent', () => {
+test('Google uses only the dedicated GTM loader and preserves typed privacy commands before load', () => {
   const f = fixture(), p = fresh()
   assert.equal(GOOGLE_PURCHASE_ENABLED, true)
   assert.equal(startGoogle(f.win, f.doc, p, () => true, { enabled: false }), false)
   assert.equal(f.scripts.length, 0)
   assert.equal(startGoogle(f.win, f.doc, p, () => true), true)
-  const calls = f.win.dataLayer.map(args => Array.from(args)), events = calls.filter(args => args[0] === 'event')
-  assert.equal(events.length, 1); assert.equal(events[0][1], 'purchase'); assert.equal(events[0][2].transaction_id, p.eventId)
-  assert.equal(events[0][2].send_to, 'G-H10PHV2XNG'); assert.equal(events[0][2].page_referrer, '')
-  assert.equal(JSON.stringify(calls).includes('AW-'), false)
+  assert.equal(f.scripts.length, 1)
+  assert.equal(f.scripts[0].src, `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`)
+  assert.equal(f.scripts[0].referrerPolicy, 'no-referrer')
+  const commands = f.win.dataLayer.filter(row => !row.event).map(args => Array.from(args))
+  const denied = { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }
+  assert.deepEqual(commands, [
+    ['consent', 'default', denied],
+    ['set', 'ads_data_redaction', true],
+    ['set', 'url_passthrough', false],
+    ['set', 'user_data', null],
+    ['set', 'linker', { domains: [], accept_incoming: false, decorate_forms: false }],
+    ['set', { page_location: RECEIPT_URL, page_referrer: '', page_title: 'Purchase | JiaCPR Training', cookie_domain: 'firstaid.morroo.com', cookie_prefix: 'firstaid_purchase', allow_google_signals: false, allow_ad_personalization_signals: false, allow_enhanced_conversions: false, send_page_view: false }],
+    ['consent', 'update', { ...denied, analytics_storage: 'granted' }],
+  ])
+  assert.equal(f.win.dataLayer.some(row => row.event === GOOGLE_PURCHASE_EVENT), false)
+  assert.equal(f.win.dataLayer.at(-1).event, 'gtm.js')
+  assert.equal(Number.isFinite(f.win.dataLayer.at(-1)['gtm.start']), true)
+  assert.deepEqual(Object.keys(f.win.dataLayer.at(-1)).sort(), ['event', 'gtm.start'])
+  f.scripts[0].onload()
+  const events = f.win.dataLayer.filter(row => row.event === GOOGLE_PURCHASE_EVENT)
+  assert.deepEqual(events, [{ event: GOOGLE_PURCHASE_EVENT, fa_receipt_transaction_id: p.eventId, fa_receipt_value: 249, fa_receipt_false: false, fa_receipt_true: true, fa_receipt_null: null, fa_receipt_empty: '', fa_receipt_linker: { domains: [], accept_incoming: false, decorate_forms: false } }])
+  assert.equal(JSON.stringify(f.win.dataLayer).includes('AW-'), false)
+  // The callback may run more than once, but the app must enqueue only once.
+  f.scripts[0].onload()
+  assert.equal(f.win.dataLayer.filter(row => row.event === GOOGLE_PURCHASE_EVENT).length, 1)
+  assert.equal(startGoogle(f.win, f.doc, p, () => true), false)
+  const source = readFileSync(new URL('../../public/purchase-receipt.js', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /gtag\(['"](?:js|config|event)['"]|\/gtag\/js|GTM-5CSJ74R4|<noscript/)
+})
+
+test('Google rejects invalid/expired/wrongly typed receipts and fails closed after withdrawal or expiry before load callback', () => {
+  for (const p of [null, { ...fresh(), value: '249' }, { ...fresh(), currency: 'USD' }, { ...fresh(), eventId: 'cs_synthetic_raw' }, { ...fresh(), expiresAt: 0 }, { ...fresh(), email: 'private@example.test' }]) {
+    const f = fixture()
+    assert.equal(startGoogle(f.win, f.doc, p, () => true), false)
+    assert.equal(f.scripts.length, 0); assert.equal(f.win.dataLayer, undefined)
+  }
+  for (const reason of ['withdrawal', 'expiry']) {
+    const f = fixture(), p = fresh(); let granted = true
+    assert.equal(startGoogle(f.win, f.doc, p, () => granted), true)
+    if (reason === 'withdrawal') granted = false
+    else p.expiresAt = 0
+    f.scripts[0].onload()
+    assert.equal(f.win.dataLayer.some(row => row.event === GOOGLE_PURCHASE_EVENT), false)
+    if (reason === 'withdrawal') {
+      const before = f.win.dataLayer.length
+      f.win.gtag('consent', 'update', { analytics_storage: 'granted' })
+      f.win.gtag('event', 'purchase', { value: 249 })
+      assert.equal(f.win.dataLayer.length, before)
+    }
+  }
+})
+
+test('direct-to-GTM migration shares the existing Google attempt namespace and lock', async () => {
+  const f = fixture(), p = fresh(), lockNames = []
+  const directKey = `firstaid_purchase_attempt_v1:google:${p.eventId}`
+  f.win.localStorage.setItem(choiceKey('google'), 'granted')
+  f.win.localStorage.setItem(directKey, 'attempted')
+  f.win.navigator.locks.request = async (key, options, callback) => { lockNames.push(key); assert.equal(options.mode, 'exclusive'); return callback() }
+  assert.equal(await claimAttempt(f.win, 'google', p), false)
+  assert.deepEqual(lockNames, [directKey])
+  assert.equal(attemptKey('google', p.eventId), directKey)
+  assert.equal(await claimAttempt(f.win, 'gtm', p), false)
 })
 
 test('PostHog blocks payment initialization/identification/capture and delayed URL props without changing public events', () => {
@@ -163,6 +221,9 @@ test('PostHog blocks payment initialization/identification/capture and delayed U
 test('receipt page is not the learner app; Buy retains no direct Purchase fanout and confirm issues receipt after entitlement grant', () => {
   assert.equal(RECEIPT_HTML.includes('src/main'), false); assert.equal(RECEIPT_HTML.includes('posthog'), false)
   assert.match(RECEIPT_HTML, /name="referrer" content="no-referrer"/)
+  assert.match(RECEIPT_HTML, /Google Analytics ของ JiaCPR Training ผ่าน Google Tag Manager/)
+  assert.match(RECEIPT_HTML, /แอปไม่ส่งชื่อ อีเมล หรือเบอร์โทรเพื่อจับคู่ผู้ใช้/)
+  assert.match(RECEIPT_HTML, /IP ข้อมูลเบราว์เซอร์ และรหัสคุกกี้/)
   const buy = readFileSync(new URL('../../src/pages/Buy.jsx', import.meta.url), 'utf8')
   assert.equal(buy.includes('purchase_complete'), false); assert.equal(buy.includes('window.fbq'), false)
   const confirm = readFileSync(new URL('../checkout/confirm.js', import.meta.url), 'utf8')
