@@ -12,6 +12,7 @@ function fixture() {
   const session = new Map(), scripts = [], records = [], navigation = []
   const storage = map => ({ getItem: key => map.get(key) || null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key) })
   const win = {
+    performance: { clearResourceTimings() {}, getEntriesByType: () => [] },
     __documentId: 'retiring-synthetic-document',
     location: Object.assign(new URL('https://firstaid.morroo.com/'), {
       assign: target => navigation.push(target), replace: target => navigation.push(target),

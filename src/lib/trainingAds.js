@@ -1,4 +1,5 @@
 import { readVendorConsent, saveVendorConsent } from './trainingConsent.js'
+import { entitlementLookupPending, prepareMarketingResourceTimings } from './entitlementMarketingBoundary.js'
 
 // Verified JiaCPR Training dataset, owned by the JIA training business.
 export const TRAINING_PIXEL_ID = '1277103750989853'
@@ -55,7 +56,8 @@ export function canUseMarketingDocument(win, { urlEligible, anonymous, auth, pro
 
 // The caller must check both public-page eligibility and explicit consent.
 export function loadTrainingPixel(win, doc, pixelId) {
-  if (pixelId !== TRAINING_PIXEL_ID || win.__firstaidMetaLoaded || win.__firstaidMetaRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument || win.fbq) return
+  if (entitlementLookupPending(win) || pixelId !== TRAINING_PIXEL_ID || win.__firstaidMetaLoaded || win.__firstaidMetaRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument || win.fbq) return
+  if (!prepareMarketingResourceTimings(win)) return
   const fbq = win.fbq = function (...args) {
     const revoked = win.__firstaidMetaRevoked || win.__firstaidMarketingRevoked || win.__firstaidPrivateDocument
     if (revoked && !(args.length === 2 && args[0] === 'consent' && args[1] === 'revoke')) return

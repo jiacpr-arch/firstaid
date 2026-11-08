@@ -68,6 +68,12 @@ async function fixture(options = {}) {
       sdkRequests.push(request.url())
       return route.fulfill({ contentType: 'text/javascript', body: sdkBody(META_SDK_STUB, 'Meta') })
     }
+    // Synthetic empty entitlement result only. The application must resolve
+    // this before public SDK startup; no real learner or backend is contacted.
+    if (url.origin === ORIGIN && url.pathname === '/api/entitlements' && request.method() === 'POST') {
+      assert.equal(url.search, '', 'Entitlement identifiers must not enter resource URLs')
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ chapters: [], cpr: false }) })
+    }
     // Only static GET files at the production origin are fulfilled from disk.
     // Everything else is aborted, including same-origin APIs and analytics.
     if (url.origin !== ORIGIN || request.method() !== 'GET' || /^\/(api|_vercel)\//.test(url.pathname)) {
@@ -221,6 +227,18 @@ try {
     assert.deepEqual(await f.page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['denied', 'denied', 'denied'])
     await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500); f.noAds()
     assert.equal(await f.page.getByRole('button', { name: 'อนุญาตทั้งหมด', exact: true }).count(), 0)
+  })
+  await test('deny-all also revokes a previously granted vendor when other choices remain pending', { consent: 'granted' }, async f => {
+    await f.open()
+    await f.page.waitForFunction(() => window.__stubSdkLoaded === true)
+    const oldDocument = await f.page.evaluate(() => window.__documentId)
+    await f.page.getByRole('button', { name: 'ไม่อนุญาตทั้งหมด', exact: true }).click()
+    await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
+    await f.page.waitForTimeout(500)
+    assert.deepEqual(await f.page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['denied', 'denied', 'denied'])
+    assert.equal(f.sdkRequests.length, 1, 'The previous Meta SDK must not reload')
+    assert.equal(f.googleRequests.length, 0); assert.equal(f.openaiRequests.length, 0)
+    assert.ok(f.calls.some(call => call.documentId === oldDocument && call.args[0] === 'consent' && call.args[1] === 'revoke'))
   })
   await test('OpenAI own grant renders exactly one fixed image; withdrawal persists', {}, async f => {
     await f.open(); f.noAds()

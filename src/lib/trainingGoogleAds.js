@@ -1,6 +1,7 @@
 import { eligibleLanding, revokeTrainingPixel } from './trainingAds.js'
 import { installMarketingNavigationBoundary } from './trainingNavigation.js'
 import { readVendorConsent, saveVendorConsent } from './trainingConsent.js'
+import { entitlementLookupPending, prepareMarketingResourceTimings } from './entitlementMarketingBoundary.js'
 
 // The owner confirmed this existing JIA training stream for FirstAid and CPR.
 // Google tag settings in Admin are not changed by this integration.
@@ -27,10 +28,11 @@ export const saveGoogleConsent = (win, value) => saveVendorConsent(win, GOOGLE_C
 export function loadTrainingGoogle(win, doc, { enabled = GOOGLE_TRAINING_ENABLED, publicLanding = false } = {}) {
   // No Google script, consent ping, iframe, preload or dataLayer before consent.
   // Never attach our tags to an unknown pre-existing Google queue.
-  if (!enabled || !publicLanding || !eligibleLanding(win.location, doc.referrer)
+  if (entitlementLookupPending(win) || !enabled || !publicLanding || !eligibleLanding(win.location, doc.referrer)
     || readGoogleConsent(win) !== 'granted' || win.__firstaidPrivateDocument
     || win.__firstaidMarketingRevoked || win.__firstaidGoogleRevoked
     || win.__firstaidGoogleLoaded || win.gtag || win.dataLayer) return false
+  if (!prepareMarketingResourceTimings(win)) return false
   installMarketingNavigationBoundary(win, doc, (currentWindow, currentDocument) => {
     currentWindow.__firstaidMarketingRevoked = true
     revokeTrainingPixel(currentWindow, currentDocument)

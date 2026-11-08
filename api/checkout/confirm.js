@@ -3,6 +3,7 @@ import { applyCors } from '../_lib/cors.js'
 import { learnerIdFromToken } from '../_lib/authLearner.js'
 import { rateLimited } from '../_lib/rateLimit.js'
 import { grantPaidSession, isStripeConfigured, paidGrant, stripeApi } from '../_lib/stripeCheckout.js'
+import { createPurchaseReceipt } from '../_lib/purchaseReceipt.js'
 
 // GET /api/checkout/confirm?session_id=cs_… — หน้า /buy เรียกตอนลูกค้ากลับจาก Stripe
 // ถาม Stripe ตรง ๆ แล้วให้สิทธิ์ทันที ไม่ต้องรอ webhook (ซ้ำกับ webhook ได้ เพราะ upsert)
@@ -30,7 +31,9 @@ export default async function handler(req, res) {
     if (!paidGrant(session)) { res.setHeader('Cache-Control', 'no-store'); res.status(200).json({ status: 'pending', chapter }); return }
     await grantPaidSession(admin, session)
     res.setHeader('Cache-Control', 'no-store')
-    res.status(200).json({ status: 'paid', chapter })
+    // Optional and disabled without its own production-only key. Never reuse
+    // Stripe, webhook, Supabase or any public VITE_* credential for measurement.
+    res.status(200).json({ status: 'paid', chapter, receipt: createPurchaseReceipt(session, process.env.FIRSTAID_PURCHASE_RECEIPT_SECRET) })
   } catch (err) {
     res.status(502).json({ error: err.message || 'stripe_error' })
   }

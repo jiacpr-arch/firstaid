@@ -63,7 +63,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
           ไม่ส่งชื่อ เบอร์โทร คำตอบ หรือผลการเรียน · เรียนได้ตามปกติแม้ไม่อนุญาต
         </p>
         <div style={consentButtons}>
-          <button type="button" style={consentBtn(false)} onClick={() => chooseAll('denied', true)}>ไม่อนุญาตทั้งหมด</button>
+          <button type="button" style={consentBtn(false)} onClick={() => chooseAll('denied', false)}>ไม่อนุญาตทั้งหมด</button>
           <button type="button" style={consentBtn(true)} onClick={() => chooseAll('granted', true)}>อนุญาตทั้งหมด</button>
           <button type="button" style={link} aria-expanded={separate} onClick={() => setSeparate(v => !v)}>
             {separate ? 'ซ่อนรายละเอียด' : 'รายละเอียด / เลือกแยก'}
