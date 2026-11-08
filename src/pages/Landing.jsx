@@ -14,6 +14,7 @@ import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
 import Seo from '../components/Seo'
 import HubCertSample from '../components/HubCertSample'
+import BuyCourseBanner from '../components/BuyCourseBanner'
 import { courseJsonLd } from '../lib/seo'
 import { trackLandingContact } from '../lib/trainingAds'
 import { trackGoogleLandingContact } from '../lib/trainingGoogleAds'
@@ -85,6 +86,8 @@ export default function Landing() {
         <section className="course-stats" aria-label="รายละเอียดคอร์ส">
           <div><strong>{lessons.length}</strong><span>บทเรียนสั้น ๆ</span></div><div><strong>{chapters.length}</strong><span>หมวดการเรียนรู้</span></div><div><strong>{scenarios.length}</strong><span>สถานการณ์ให้ฝึก</span></div><div><Award size={29} /><span>สอบผ่าน รับใบประกาศ<br /><b>ภาคทฤษฎีฟรี</b></span></div>
         </section>
+        {/* คนใหม่เห็นปุ่มซื้อตั้งแต่หน้าแรก — เดิมต้องเรียนจบบท 1 (พ้น onboarding) ถึงเจอแถบซื้อที่ Home */}
+        <BuyCourseBanner source="landing" style={{ marginTop: 16 }} />
         <section className="course-section">
           <div className="course-section-heading"><div><span className="course-kicker">เลือกเรื่องที่อยากเรียนรู้</span><h2>พร้อมรับมือเรื่องใกล้ตัว</h2></div><Link to="/learn" className="course-text-link">ดูครบ {lessons.length} บท <ArrowRight size={17} /></Link></div>
           <div className="course-chapters">{chapters.map(ch => {
