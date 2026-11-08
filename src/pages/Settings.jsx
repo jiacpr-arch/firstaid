@@ -12,7 +12,7 @@ export default function Settings() {
       <Seo title="ตั้งค่า | Jia Training Center" noindex path="/settings" />
       <div style={{ marginTop: 8 }}>
         <div className="text-caption">ตั้งค่า</div>
-        <div className="text-title">บัญชี</div>
+        <h1 className="text-title" style={{ margin: 0 }}>บัญชีของฉัน</h1>
       </div>
       <AccountCard showSignedOut style={{ marginTop: 12 }} />
 
