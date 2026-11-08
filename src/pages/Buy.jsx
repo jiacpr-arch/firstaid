@@ -12,6 +12,7 @@ import { isLineLoginConfigured } from '../utils/lineAuth'
 import { startHubLogin } from '../utils/hubAuth'
 import { lineInterestUrl } from '../utils/lineLinks'
 import { confirmCheckout, startCheckout } from '../utils/checkout'
+import { openPurchaseReceipt } from '../utils/purchaseReceipt'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 
@@ -100,9 +101,8 @@ export default function Buy() {
           if (stop) return
           setResult(r)
           if (r.status === 'paid') {
-            track('purchase_complete', { chapter: r.chapter, value: r.chapter === 0 ? COURSE_BUNDLE_PRICE : CHAPTER_PRICES[r.chapter], currency: 'THB' })
-            try { window.fbq?.('track', 'Purchase', { value: r.chapter === 0 ? COURSE_BUNDLE_PRICE : CHAPTER_PRICES[r.chapter], currency: 'THB' }) } catch { /* ignore */ }
             await refreshEntitlements(session)
+            if (!stop && r.receipt) openPurchaseReceipt(window, document, r.receipt)
             return
           }
         } catch {

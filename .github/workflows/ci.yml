@@ -49,3 +49,6 @@ jobs:
       - name: Test network-blocked advertising privacy boundary
         run: node scripts/test-ad-boundary.mjs
 
+      - name: Test network-blocked purchase receipt boundary
+        run: node scripts/test-purchase-receipt.mjs
+
