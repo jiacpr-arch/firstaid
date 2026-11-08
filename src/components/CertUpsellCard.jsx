@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Phone, MessageCircle, Sparkles, Users, Award, ClipboardList } from 'lucide-react'
 import PracticalInterestForm from './PracticalInterestForm'
-import UpcomingClassBanner from './UpcomingClassBanner'
 import { lineInterestUrl, LINE_OA_ID as LINE_DISPLAY } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
-import { PRACTICAL_COURSE_PRICE, PRACTICAL_COURSE_HOURS } from '../config/pricing'
+import { PRACTICAL_COURSE_PRICE } from '../config/pricing'
 
 const PHONE_NUMBER = '0909791212'
 const PHONE_DISPLAY = '090-979-1212'
@@ -76,10 +75,10 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
               ยินดีด้วย! คุณได้ใบเซอร์แล้ว
             </div>
             <div className="text-title" style={{ color: '#fff', marginTop: 6 }}>
-              ต่อยอดด้วยการอบรม CPR &amp; AED
+              ต่อยอดด้วยการอบรมภาคปฏิบัติปฐมพยาบาล
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
-              เรียนกับหุ่นจริง · ฝึกมือจริง · กับ {ORG_NAME}
+              ฝึกมือจริงกับครู · กับ {ORG_NAME}
             </div>
           </div>
         </div>
@@ -87,7 +86,7 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
         <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'grid', gap: 8 }}>
           <li style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.92)' }}>
             <Users size={14} style={{ flexShrink: 0 }} />
-            สอนสด กลุ่มเล็ก ครูดูแลใกล้ชิด ฝึกกับหุ่น CPR และเครื่อง AED
+            สอนสด กลุ่มเล็ก ครูดูแลใกล้ชิด ฝึกห้ามเลือด ทำแผล ช่วยผู้สำลัก และสถานการณ์จำลอง
           </li>
           <li style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.92)' }}>
             <Award size={14} style={{ flexShrink: 0 }} />
@@ -99,12 +98,11 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
           padding: '10px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.35)',
         }}>
           <span style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, color: '#fff' }}>฿{PRACTICAL_COURSE_PRICE.toLocaleString()}</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.95)' }}>/ ท่าน · {PRACTICAL_COURSE_HOURS} ชม. · CPR, AED, ช่วยผู้สำลัก</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.95)' }}>/ ท่าน · อบรมภาคปฏิบัติปฐมพยาบาล</span>
         </div>
 
-        {/* รอบที่เปิดจองจริงจากระบบจองกลาง — จองพร้อมจ่ายได้เลย ไม่ต้องรอติดต่อกลับ
-            (ดึงข้อมูลไม่ได้/ไม่มีรอบว่าง = ไม่แสดง แล้วเหลือช่องทาง โทร/LINE/ฝากชื่อ ตามเดิม) */}
-        <UpcomingClassBanner source={source} />
+        {/* ยังไม่มีรอบภาคปฏิบัติปฐมพยาบาลให้จองบน Hub (คอร์ส firstaid ยังเป็น draft) — ใช้ LINE/โทร/ฝากชื่อไปก่อน
+            เมื่อ Hub เปิดรอบแล้ว เพิ่มปุ่ม "ซื้อ/จองรอบ" ที่นี่ */}
 
         <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginTop: 14 }}>
           สนใจสอบถาม / จัดอบรมโดย {ORG_NAME}

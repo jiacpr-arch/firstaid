@@ -24,7 +24,6 @@ export function isChapterUnlocked(chapter, unlockedChapters) {
   return unlockedChapters.has(chapter) || unlockedChapters.has(COURSE_BUNDLE_CHAPTER)
 }
 
-// คอร์สอบรมภาคปฏิบัติ B-CPR (สอนสดที่ Jia Training Center) — ตรงกับ courses.price ของ key 'B-CPR'
-// ในระบบจองกลาง (class.morroo.com) ถ้าแก้ราคาที่ระบบจอง ต้องแก้ตรงนี้ด้วย
-export const PRACTICAL_COURSE_PRICE = 600
-export const PRACTICAL_COURSE_HOURS = 3
+// คอร์สอบรมภาคปฏิบัติปฐมพยาบาล (สอนสดที่ Jia Training Center) — ตรงกับ learning_hub.courses id 'firstaid'
+// ใน Hub (price 99900 สตางค์) ถ้าแก้ราคาที่ Hub ต้องแก้ตรงนี้ด้วย
+export const PRACTICAL_COURSE_PRICE = 999
