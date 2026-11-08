@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { isAutomated } from '../lib/isAutomated'
+import { consentRow, consentButtons, consentBtn, consentToggle } from './consentStyles'
 import { eligibleLanding, loadTrainingPixel, revokeTrainingPixel, readConsent, saveConsent, denialFallbackUrl, TRAINING_PIXEL_ID } from '../lib/trainingAds'
 
 // The owner selected the verified JIA training dataset for FirstAid.
@@ -7,7 +8,7 @@ import { eligibleLanding, loadTrainingPixel, revokeTrainingPixel, readConsent, s
 const PIXEL_ID = TRAINING_PIXEL_ID
 const readChoice = () => readConsent(window)
 
-export default function MetaPixel({ publicLanding = false }) {
+export default function MetaPixel({ publicLanding = false, onStatus, onRegister, showToggle = true, showDialog = true }) {
   const [choice, setChoice] = useState(readChoice)
   const eligible = !isAutomated && publicLanding && !!PIXEL_ID
     && eligibleLanding(window.location, document.referrer)
@@ -21,7 +22,12 @@ export default function MetaPixel({ publicLanding = false }) {
     }
   }, [eligible, choice])
 
-  if (!eligible) return null
+  const status = !eligible ? null : choice ? 'decided' : 'pending'
+  useEffect(() => { onStatus?.('meta', status) }, [onStatus, status])
+  // ปุ่มรวม "อนุญาตทั้งหมด/ไม่อนุญาตทั้งหมด" เรียก choose ของแต่ละเจ้า (ref = ฟังก์ชันล่าสุดเสมอ)
+  const chooseRef = useRef(null)
+  useEffect(() => { onRegister?.('meta', value => chooseRef.current?.(value)); return () => onRegister?.('meta', null) }, [onRegister])
+
   const choose = value => {
     const saved = saveConsent(window, value)
     if (value === 'granted' && !saved) {
@@ -46,10 +52,21 @@ export default function MetaPixel({ publicLanding = false }) {
       else if (window.__firstaidMetaLoaded) window.location.reload()
     }
   }
-  if (choice) return <button type="button" onClick={() => choose(choice === 'granted' ? 'denied' : 'granted')} style={{ padding: 8, color: '#17212b', background: 'white', border: '1px solid #bbb', borderRadius: 8 }}>{choice === 'granted' ? 'ถอนความยินยอมวัดผลโฆษณา' : 'อนุญาตวัดผลโฆษณา'}</button>
-  return <aside role="dialog" aria-label="การวัดผลโฆษณา" style={{ padding: 16, color: '#17212b', background: 'white', border: '1px solid #bbb', borderRadius: 12, boxShadow: '0 4px 20px #0002' }}>
-    <p>อนุญาตให้ Meta Pixel ของ JiaCPR Training วัดการเข้าชมและการกดติดต่อในหน้าแนะนำคอร์สนี้หรือไม่? Meta จะได้รับข้อมูลการเข้าชมและรหัสคุกกี้เพื่อวัดผลโฆษณา ไม่ส่งชื่อ เบอร์โทร คำตอบ หรือผลการเรียน คุณเรียนได้ตามปกติแม้ไม่อนุญาต</p>
-    <button type="button" onClick={() => choose('denied')}>ไม่อนุญาต</button>{' · '}
-    <button type="button" onClick={() => choose('granted')}>อนุญาต</button>
+  useEffect(() => { chooseRef.current = choose })
+  if (!eligible) return null
+  if (choice) {
+    if (!showToggle) return null
+    return <button type="button" onClick={() => choose(choice === 'granted' ? 'denied' : 'granted')} style={consentToggle}>{choice === 'granted' ? 'ถอนความยินยอมวัดผลโฆษณา' : 'อนุญาตวัดผลโฆษณา'}</button>
+  }
+  if (!showDialog) return null
+  return <aside role="dialog" aria-label="การวัดผลโฆษณา" style={consentRow}>
+    <details style={{ flex: '1 1 200px', minWidth: 0 }}>
+      <summary style={{ cursor: 'pointer' }}><b>Meta</b> — วัดการเข้าชมหน้านี้เพื่อดูผลโฆษณา</summary>
+      <p style={{ margin: '6px 0 0' }}>อนุญาตให้ Meta Pixel ของ JiaCPR Training วัดการเข้าชมและการกดติดต่อในหน้าแนะนำคอร์สนี้หรือไม่? Meta จะได้รับข้อมูลการเข้าชมและรหัสคุกกี้เพื่อวัดผลโฆษณา ไม่ส่งชื่อ เบอร์โทร คำตอบ หรือผลการเรียน คุณเรียนได้ตามปกติแม้ไม่อนุญาต</p>
+    </details>
+    <div style={consentButtons}>
+      <button type="button" style={consentBtn(false)} onClick={() => choose('denied')}>ไม่อนุญาต</button>
+      <button type="button" style={consentBtn(true)} onClick={() => choose('granted')}>อนุญาต</button>
+    </div>
   </aside>
 }
