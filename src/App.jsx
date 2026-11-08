@@ -49,6 +49,8 @@ const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
 // คอร์ส CPR & AED ของคลาสรวม (เดิมอยู่ cpr.morroo.com) — lazy เพราะใช้เฉพาะนักเรียนคลาสรวม
 const CprCourse = lazy(() => import('./pages/CprCourse'))
 const CprGuide = lazy(() => import('./pages/CprGuide'))
+// หน้าซื้อคอร์สออนไลน์ (Stripe: บัตร / PromptPay)
+const Buy = lazy(() => import('./pages/Buy'))
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -213,7 +215,9 @@ export default function App() {
         } />
         <Route path="/join" element={<JoinClass />} />
         <Route path="/join/:code" element={<JoinClass />} />
+        <Route path="/redeem" element={<RedeemVoucher />} />
         <Route path="/redeem/:code" element={<RedeemVoucher />} />
+        <Route path="/buy" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><Buy /></Suspense>} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/news" element={<News />} />
         <Route path="/schedule" element={<Schedule />} />

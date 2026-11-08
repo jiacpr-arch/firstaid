@@ -207,7 +207,7 @@ alter table course_interest enable row level security;
 create table if not exists lesson_entitlements (
   learner_id  uuid not null,
   chapter     int  not null default 0 check (chapter between 0 and 5),
-  source      text not null check (source in ('voucher', 'admin_grant')),
+  source      text not null check (source in ('voucher', 'admin_grant', 'stripe')),
   order_ref   text,
   granted_at  timestamptz not null default now(),
   primary key (learner_id, chapter)
