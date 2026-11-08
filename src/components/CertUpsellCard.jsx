@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Phone, MessageCircle, Sparkles, Users, Award, ClipboardList } from 'lucide-react'
+import { Phone, MessageCircle, Sparkles, Users, Award, ClipboardList, ArrowRight } from 'lucide-react'
 import PracticalInterestForm from './PracticalInterestForm'
 import { lineInterestUrl, LINE_OA_ID as LINE_DISPLAY } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
@@ -8,6 +8,9 @@ import { PRACTICAL_COURSE_PRICE } from '../config/pricing'
 const PHONE_NUMBER = '0909791212'
 const PHONE_DISPLAY = '090-979-1212'
 const ORG_NAME = 'Jia Training Center'
+// หน้าคอร์สปฐมพยาบาลบน Hub — เลือกรอบ + จ่ายเงิน (PromptPay/บัตร) ที่นั่น
+// ยังไม่มีรอบเปิด = หน้า Hub ชวนทัก LINE แทน; เปิดรอบใน Hub แล้วใช้ได้ทันทีไม่ต้องแก้แอป
+const HUB_COURSE_URL = 'https://class.jiacpr.com/courses/firstaid?utm_source=firstaid&utm_medium=app&utm_campaign=practical_upsell'
 
 // ยิง event อย่างปลอดภัย — fbq อาจยังไม่โหลด/ถูก ad blocker ปิด ห้ามพังแอป
 function fbqTrack(...args) {
@@ -103,6 +106,20 @@ export default function CertUpsellCard({ source = 'cert_page' }) {
 
         {/* ยังไม่มีรอบภาคปฏิบัติปฐมพยาบาลให้จองบน Hub (คอร์ส firstaid ยังเป็น draft) — ใช้ LINE/โทร/ฝากชื่อไปก่อน
             เมื่อ Hub เปิดรอบแล้ว เพิ่มปุ่ม "ซื้อ/จองรอบ" ที่นี่ */}
+
+        <a
+          href={`${HUB_COURSE_URL}&utm_content=${encodeURIComponent(source)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => onCtaClick('hub_booking')}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12,
+            padding: '13px 14px', borderRadius: 12, background: '#fff', color: '#1B5D54',
+            fontWeight: 800, fontSize: 15, textDecoration: 'none',
+          }}
+        >
+          ซื้อ / จองรอบ ฿{PRACTICAL_COURSE_PRICE.toLocaleString()} <ArrowRight size={17} />
+        </a>
 
         <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginTop: 14 }}>
           สนใจสอบถาม / จัดอบรมโดย {ORG_NAME}
