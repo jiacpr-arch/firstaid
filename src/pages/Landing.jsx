@@ -12,8 +12,12 @@ import { algorithms } from '../courses/firstaid/algorithms'
 import { scenarios } from '../courses/firstaid/scenarios'
 import { lineInterestUrl, LINE_OA_ID as LINE_ID } from '../utils/lineLinks'
 import { phCapture } from '../lib/posthog'
+import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 import HubCertSample from '../components/HubCertSample'
+import { COURSE_BUNDLE_PRICE, CHAPTER_PRICES, CPR_CHAPTER, FREE_CHAPTER } from '../config/pricing'
+import { useEntitlementStore } from '../stores/entitlementStore'
+import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { courseJsonLd } from '../lib/seo'
 import { trackLandingContact } from '../lib/trainingAds'
 import { trackGoogleLandingContact } from '../lib/trainingGoogleAds'
@@ -45,13 +49,20 @@ export default function Landing() {
   const readLessonIds = useProgressStore((s) => s.readLessonIds)
   const passedScenarioIds = useProgressStore((s) => s.passedScenarioIds)
   useEnsureProgress(learner?.id)
+  useEnsureEntitlements()
+  const entStatus = useEntitlementStore((s) => s.status)
+  const ownsCourse = useEntitlementStore((s) => s.chapters.has(0))
+  // ราคาขึ้นก่อนเสมอ (คนเข้าครั้งแรกต้องเห็นว่าคอร์สราคาเท่าไร) — ปุ่มหลักเป็นปุ่มซื้อ
+  // ยกเว้นคนที่ปลดล็อกทั้งคอร์สแล้ว ให้ปุ่มหลักเป็นเริ่ม/เรียนต่อแทน
+  const showBuy = !(entStatus === 'ok' && ownsCourse)
+  const chapterPrice = Math.min(...Object.entries(CHAPTER_PRICES).filter(([c]) => Number(c) !== CPR_CHAPTER).map(([, p]) => p))
 
   // เคยเริ่มเรียนไปแล้วแต่ยังไม่พ้น onboarding (ยังไม่แอด/ข้าม LINE) — ชวน "เรียนต่อ" แทน "เริ่มเรียน"
   const hasStarted = readLessonIds.size > 0
   // ขั้นถัดไปเคารพด่านฝึกท้ายหมวด — จบหมวดแล้วยังไม่ฝึก ให้ปุ่มพาไปฝึกก่อน ไม่ใช่บทที่ล็อกอยู่
   const step = hasStarted ? nextLearningStep(lessons, readLessonIds, passedScenarioIds) : null
   const nextLesson = step?.lesson ?? lessons[0]
-  const ctaLabel = !hasStarted ? 'เริ่มบทที่ 1 ฟรี'
+  const ctaLabel = !hasStarted ? (showBuy ? `ลองเรียนบทที่ 1 ฟรี` : 'เริ่มบทที่ 1')
     : step?.kind === 'practice' ? `ฝึกท้ายหมวด ${step.chapter} ก่อนเรียนต่อ`
       : `เรียนต่อ — บทที่ ${nextLesson.order}`
   const ctaTo = !hasStarted ? FIRST_LESSON_PATH : (step?.to ?? `/learn/${nextLesson.id}`)
@@ -71,11 +82,21 @@ export default function Landing() {
       <main className="course-width">
         <section className="course-hero">
           <div className="course-hero-copy">
-            <span className="course-kicker"><span /> คอร์สออนไลน์ฟรี · สำหรับประชาชนทั่วไป</span>
+            <span className="course-kicker"><span /> คอร์สออนไลน์ · สำหรับประชาชนทั่วไป</span>
             <h1>เรียนปฐมพยาบาล<br /><em>เริ่มช่วยเป็น</em><br />ตั้งแต่วันนี้</h1>
             <p>ค่อย ๆ เรียนรู้วิธีรับมือเหตุฉุกเฉิน ตั้งแต่การประเมินความปลอดภัย ไปจนถึง CPR และการใช้ AED</p>
-            <div className="course-hero-actions"><StartButton to={ctaTo} label={ctaLabel} position="hero" /><Link to="/learn" className="course-text-link">ดูบทเรียนทั้งหมด <ArrowRight size={17} /></Link></div>
-            <div className="course-checks"><span><Check size={16} /> ไม่ต้องสมัครก่อน</span><span><Check size={16} /> บทสั้น เรียนตามเวลาที่สะดวก</span></div>
+            {showBuy && (
+              <div className="course-price" aria-label="ราคาคอร์ส">
+                <div className="course-price-main"><strong>฿{COURSE_BUNDLE_PRICE}</strong><span>ทั้งคอร์ส · ทุกหมวด + CPR &amp; AED</span></div>
+                <small>หรือซื้อแยกหมวดละ ฿{chapterPrice} · CPR &amp; AED ฿{CHAPTER_PRICES[CPR_CHAPTER]} · จ่ายบัตร/PromptPay เรียนได้ทันที</small>
+              </div>
+            )}
+            <div className="course-hero-actions">
+              {showBuy
+                ? <><Link to="/buy" onClick={() => { trackStartClick('hero_buy'); track('cta_click', { source: 'landing_hero' }) }} className="btn btn-primary btn-lg">ซื้อคอร์ส ฿{COURSE_BUNDLE_PRICE}<ArrowRight size={20} /></Link><Link to={ctaTo} onClick={() => trackStartClick('hero')} className="course-text-link">{ctaLabel} <ArrowRight size={17} /></Link></>
+                : <><StartButton to={ctaTo} label={ctaLabel} position="hero" /><Link to="/learn" className="course-text-link">ดูบทเรียนทั้งหมด <ArrowRight size={17} /></Link></>}
+            </div>
+            <div className="course-checks">{showBuy && <span><Check size={16} /> หมวด {FREE_CHAPTER} ทดลองเรียนฟรี ไม่ต้องสมัคร</span>}<span><Check size={16} /> บทสั้น เรียนตามเวลาที่สะดวก</span></div>
           </div>
           <figure className="course-hero-art">
             <img src={CLASSROOM_ART} alt="ภาพประกอบครูและนักเรียนเรียนรู้เรื่องปฐมพยาบาลในห้องฝึก" width="1536" height="1024" fetchPriority="high" />
@@ -83,7 +104,7 @@ export default function Landing() {
           </figure>
         </section>
         <section className="course-stats" aria-label="รายละเอียดคอร์ส">
-          <div><strong>{lessons.length}</strong><span>บทเรียนสั้น ๆ</span></div><div><strong>{chapters.length}</strong><span>หมวดการเรียนรู้</span></div><div><strong>{scenarios.length}</strong><span>สถานการณ์ให้ฝึก</span></div><div><Award size={29} /><span>สอบผ่าน รับใบประกาศ<br /><b>ภาคทฤษฎีฟรี</b></span></div>
+          <div><strong>{lessons.length}</strong><span>บทเรียนสั้น ๆ</span></div><div><strong>{chapters.length}</strong><span>หมวดการเรียนรู้</span></div><div><strong>{scenarios.length}</strong><span>สถานการณ์ให้ฝึก</span></div><div><Award size={29} /><span>สอบผ่าน รับใบประกาศ<br /><b>ภาคทฤษฎี</b></span></div>
         </section>
         <section className="course-section">
           <div className="course-section-heading"><div><span className="course-kicker">เลือกเรื่องที่อยากเรียนรู้</span><h2>พร้อมรับมือเรื่องใกล้ตัว</h2></div><Link to="/learn" className="course-text-link">ดูครบ {lessons.length} บท <ArrowRight size={17} /></Link></div>
