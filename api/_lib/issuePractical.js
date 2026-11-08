@@ -21,14 +21,10 @@ export async function issuePracticalCertificate(admin, attendanceId) {
     .eq('id', att.session_id)
     .single()
 
-  // Require theory cert first
-  const { data: theory } = await admin
-    .from('certificates')
-    .select('id')
-    .eq('learner_id', att.learner_id)
-    .eq('kind', 'theory')
-    .maybeSingle()
-  if (!theory) {
+  // ต้องผ่านทฤษฎีก่อน: ใบทฤษฎีของแอป หรือ Post-test ที่เซิร์ฟเวอร์ตรวจแล้วว่าผ่าน
+  // (ใบทฤษฎีของแอปออกเมื่อนักเรียนกรอกฟอร์มรับใบเอง — คนที่ผ่าน Post-test แต่ไม่ได้กรอกฟอร์ม
+  // ได้ใบออนไลน์จากระบบกลางแล้ว แต่ใบปฏิบัติค้างตลอด: ซีเอ็มเอ รุ่นที่ 2/2569, 8 พ.ย. 2569)
+  if (!await theoryPassed(admin, att.learner_id)) {
     // Defer — api/certificates/issue-theory.js retries (retryPracticalForLearner) once it is issued.
     return { status: 202, body: { ok: false, reason: 'Theory cert not yet issued — will retry' } }
   }
@@ -108,6 +104,25 @@ export async function retryPracticalForLearner(admin, learnerId) {
     }
   }
   return null
+}
+
+async function theoryPassed(admin, learnerId) {
+  const { data: theory } = await admin
+    .from('certificates')
+    .select('id')
+    .eq('learner_id', learnerId)
+    .eq('kind', 'theory')
+    .maybeSingle()
+  if (theory) return true
+  // exam_attempts เขียนโดยเซิร์ฟเวอร์เท่านั้น (api/exams/submit.js ตรวจกับเฉลยจริง) — passed เชื่อได้
+  const { data: post } = await admin
+    .from('exam_attempts')
+    .select('passed')
+    .eq('learner_id', learnerId)
+    .eq('kind', 'post')
+    .eq('passed', true)
+    .limit(1)
+  return !!post?.length
 }
 
 async function practicalExamSatisfied(admin, sessionId, learnerId) {
