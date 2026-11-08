@@ -44,10 +44,12 @@ export async function grantPractical(admin, cohortId, learnerIds, actor, { issue
       const exam = pickExamStation(stations)
       if (!exam) { out.skipped.push({ name, reason: 'รอบอบรมนี้ไม่มีฐานสอบ' }); continue }
       const result = { passed: true, note }
-      const { data: existing, error: xErr } = await admin.from('station_checkins').select('id')
+      const { data: existing, error: xErr } = await admin.from('station_checkins').select('id, passed')
         .eq('station_id', exam.id).eq('learner_id', r.learnerId).maybeSingle()
       if (xErr) throw xErr
-      const { error } = existing
+      // สอบผ่านในวันอบรมแล้ว: เก็บผลเดิมไว้ (ไม่ทับคะแนน/หมายเหตุจริงด้วยหมายเหตุย้อนหลัง) แค่ออกใบ
+      const { error } = existing?.passed === true ? { error: null }
+        : existing
         ? await admin.from('station_checkins').update(result).eq('id', existing.id)
         : await admin.from('station_checkins').insert({
           session_id: sessionId, station_id: exam.id, learner_id: r.learnerId,

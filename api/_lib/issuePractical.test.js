@@ -46,3 +46,15 @@ test('learner without approved attendance gets nothing', async () => {
   db.tables.attendance[0].status = 'pending'
   assert.equal(await retryPracticalForLearner(db, L), null)
 })
+
+test('a server-scored passed post-test counts as theory even without the app theory cert form', async () => {
+  const db = seed({ theory: false })
+  db.tables.exam_attempts = [{ learner_id: L, kind: 'post', passed: false }]
+  const waiting = await retryPracticalForLearner(db, L)
+  assert.equal(waiting.status, 202)
+  assert.equal(practical(db).length, 0)
+  db.tables.exam_attempts.push({ learner_id: L, kind: 'post', passed: true })
+  const r = await retryPracticalForLearner(db, L)
+  assert.equal(r.status, 200)
+  assert.equal(practical(db).length, 1)
+})
