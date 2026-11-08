@@ -1,7 +1,7 @@
 import { denialFallbackUrl, eligibleLanding } from './trainingAds.js'
 import { readVendorConsent, saveVendorConsent } from './trainingConsent.js'
 import { installMarketingNavigationBoundary } from './trainingNavigation.js'
-import { revokeTrainingMarketing } from './trainingMarketing.js'
+import { retireTrainingMarketing } from './trainingMarketing.js'
 import { entitlementLookupPending, prepareMarketingResourceTimings } from './entitlementMarketingBoundary.js'
 
 export const OPENAI_PIXEL_ID = 'QGaBG3DEsN1QQ4mvnw3Jdu'
@@ -34,7 +34,7 @@ export function loadTrainingOpenAI(win, doc, { publicLanding = false } = {}) {
     if (win.__firstaidOpenAILoaded || !eligibleOpenAIDocument(win, doc, publicLanding)
       || readOpenAIConsent(win) !== 'granted' || !doc.body) return false
     if (!prepareMarketingResourceTimings(win)) return false
-    installMarketingNavigationBoundary(win, doc, revokeTrainingMarketing)
+    installMarketingNavigationBoundary(win, doc, retireTrainingMarketing)
     const image = doc.createElement('img')
     image.id = 'firstaid-training-openai'
     image.width = 1

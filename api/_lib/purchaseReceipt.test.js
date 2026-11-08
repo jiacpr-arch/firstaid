@@ -7,8 +7,10 @@ import { createPurchaseReceipt, verifyPurchaseReceipt, RECEIPT_TTL_SECONDS } fro
 import { paidGrant } from './stripeCheckout.js'
 import { checkoutAnalyticsBlocked, filterCheckoutAnalyticsEvent } from '../../src/lib/checkoutAnalyticsBoundary.js'
 import { openPurchaseReceipt } from '../../src/utils/purchaseReceipt.js'
-import { claimAttempt, consumeReceipt, eligibleReceiptDocument, validReceipt, startMeta, startGoogle, RECEIPT_URL, RECEIPT_KEY, choiceKey, attemptKey, GOOGLE_PURCHASE_ENABLED, GTM_ID, GOOGLE_PURCHASE_EVENT } from '../../public/purchase-receipt.js'
+import { claimAttempt, consumeReceipt, eligibleReceiptDocument, validReceipt, startMeta, startGoogle, RECEIPT_URL, RECEIPT_KEY, choiceKey, attemptKey, GOOGLE_PURCHASE_ENABLED, GTM_ID, GOOGLE_PURCHASE_EVENT, GOOGLE_ADS_PURCHASE_EVENT } from '../../public/purchase-receipt.js'
 import { RECEIPT_HTML } from '../checkout/receipt-page.js'
+
+import { GOOGLE_CONSENT_KEY, ATTRIBUTION_TTL, googleCookieFlags } from '../../public/google-attribution.js'
 
 const secret = 'synthetic-unit-test-only-not-a-live-secret'
 const now = 1_800_000_000
@@ -21,14 +23,14 @@ function storage(values = new Map()) {
   return { values, getItem: key => values.has(key) ? values.get(key) : null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) }
 }
 function fixture(shared = new Map()) {
-  const scripts = [], navigations = []
+  const scripts = [], navigations = [], cookieWrites = []
   const win = {
     location: Object.assign(new URL(RECEIPT_URL), { replace: value => navigations.push(value) }),
     navigator: { webdriver: false, locks: { request: async (_key, _options, callback) => callback() } },
     sessionStorage: storage(), localStorage: storage(shared),
   }
-  const doc = { referrer: '', createElement: () => ({}), head: { appendChild: value => scripts.push(value) } }
-  return { win, doc, scripts, navigations }
+  const doc = { get cookie() { return '' }, set cookie(value) { cookieWrites.push(value) }, referrer: '', createElement: () => ({}), head: { appendChild: value => scripts.push(value) } }
+  return { win, doc, scripts, navigations, cookieWrites }
 }
 
 test('paid receipt has stable opaque ID, actual amount, strict minimal response and 15 minute TTL', () => {
@@ -113,7 +115,7 @@ test('per-vendor at-most-once attempt survives reload and shared-tab races; abse
   const results = await Promise.all([claimAttempt(a.win, 'meta', p), claimAttempt(b.win, 'meta', p)])
   assert.equal(results.filter(Boolean).length, 1)
   assert.equal(await claimAttempt(fixture(shared).win, 'meta', p), false)
-  shared.set(choiceKey('google'), 'granted')
+  shared.set(choiceKey('google'), 'analytics')
   assert.equal(await claimAttempt(a.win, 'google', p), true)
   assert.equal(shared.get(attemptKey('meta', p.eventId)), 'attempted')
   const c = fixture(); c.win.localStorage.setItem(choiceKey('meta'), 'granted'); c.win.navigator.locks = undefined
@@ -142,13 +144,15 @@ test('Google uses only the dedicated GTM loader and preserves typed privacy comm
   assert.equal(f.scripts[0].referrerPolicy, 'no-referrer')
   const commands = f.win.dataLayer.filter(row => !row.event).map(args => Array.from(args))
   const denied = { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }
+  const ttl = commands.find(row => row[0] === 'set' && typeof row[1] === 'object')[1].cookie_expires
+  assert.ok(Number.isInteger(ttl) && ttl > 0 && ttl <= 600)
   assert.deepEqual(commands, [
     ['consent', 'default', denied],
     ['set', 'ads_data_redaction', true],
     ['set', 'url_passthrough', false],
     ['set', 'user_data', null],
     ['set', 'linker', { domains: [], accept_incoming: false, decorate_forms: false }],
-    ['set', { page_location: RECEIPT_URL, page_referrer: '', page_title: 'Purchase | JiaCPR Training', cookie_domain: 'firstaid.morroo.com', cookie_prefix: 'firstaid_purchase', allow_google_signals: false, allow_ad_personalization_signals: false, allow_enhanced_conversions: false, send_page_view: false }],
+    ['set', { page_location: RECEIPT_URL, page_referrer: '', page_title: 'Purchase | JiaCPR Training', cookie_domain: 'firstaid.morroo.com', cookie_prefix: 'firstaid_purchase', cookie_expires: ttl, cookie_flags: googleCookieFlags(p.expiresAt * 1000), cookie_update: false, allow_google_signals: false, allow_ad_personalization_signals: false, allow_enhanced_conversions: false, send_page_view: false }],
     ['consent', 'update', { ...denied, analytics_storage: 'granted' }],
   ])
   assert.equal(f.win.dataLayer.some(row => row.event === GOOGLE_PURCHASE_EVENT), false)
@@ -157,7 +161,7 @@ test('Google uses only the dedicated GTM loader and preserves typed privacy comm
   assert.deepEqual(Object.keys(f.win.dataLayer.at(-1)).sort(), ['event', 'gtm.start'])
   f.scripts[0].onload()
   const events = f.win.dataLayer.filter(row => row.event === GOOGLE_PURCHASE_EVENT)
-  assert.deepEqual(events, [{ event: GOOGLE_PURCHASE_EVENT, fa_receipt_transaction_id: p.eventId, fa_receipt_value: 249, fa_receipt_false: false, fa_receipt_true: true, fa_receipt_null: null, fa_receipt_empty: '', fa_receipt_linker: { domains: [], accept_incoming: false, decorate_forms: false } }])
+  assert.deepEqual(events, [{ event: GOOGLE_PURCHASE_EVENT, fa_receipt_transaction_id: p.eventId, fa_receipt_value: 249, fa_receipt_cookie_prefix: 'firstaid_purchase', fa_receipt_ads_measurement: 'denied', fa_receipt_cookie_expires: ttl, fa_receipt_cookie_flags: googleCookieFlags(p.expiresAt * 1000), fa_receipt_false: false, fa_receipt_true: true, fa_receipt_null: null, fa_receipt_empty: '', fa_receipt_linker: { domains: [], accept_incoming: false, decorate_forms: false } }])
   assert.equal(JSON.stringify(f.win.dataLayer).includes('AW-'), false)
   // The callback may run more than once, but the app must enqueue only once.
   f.scripts[0].onload()
@@ -192,7 +196,7 @@ test('Google rejects invalid/expired/wrongly typed receipts and fails closed aft
 test('direct-to-GTM migration shares the existing Google attempt namespace and lock', async () => {
   const f = fixture(), p = fresh(), lockNames = []
   const directKey = `firstaid_purchase_attempt_v1:google:${p.eventId}`
-  f.win.localStorage.setItem(choiceKey('google'), 'granted')
+  f.win.localStorage.setItem(choiceKey('google'), 'analytics')
   f.win.localStorage.setItem(directKey, 'attempted')
   f.win.navigator.locks.request = async (key, options, callback) => { lockNames.push(key); assert.equal(options.mode, 'exclusive'); return callback() }
   assert.equal(await claimAttempt(f.win, 'google', p), false)
@@ -268,4 +272,71 @@ test('actual confirm handler: unauthenticated, wrong owner, unpaid PromptPay and
     assert.equal(f.response.body.receipt, undefined); assert.equal(f.actions.some(a => a[0] === 'receipt'), false)
     if (options.session) { assert.equal(f.response.body.status, 'pending'); assert.equal(f.actions.some(a => a[0] === 'grant'), false) }
   }
+})
+
+
+test('ads receipt requires unexpired v2 landing consent and emits bounded native contract', () => {
+  const f = fixture(), p = fresh(), now = Date.now()
+  assert.equal(startGoogle(f.win, f.doc, p, () => true, { mode: 'ads' }), false)
+  f.win.localStorage.setItem(GOOGLE_CONSENT_KEY, 'granted')
+  assert.equal(startGoogle(f.win, f.doc, p, () => true, { mode: 'ads' }), false)
+  f.win.localStorage.setItem(GOOGLE_CONSENT_KEY, JSON.stringify({ version: 2, mode: 'ads', issuedAt: now - 1000, expiresAt: now - 1000 + ATTRIBUTION_TTL }))
+  assert.equal(startGoogle(f.win, f.doc, p, () => true, { mode: 'ads' }), true)
+  const commands = f.win.dataLayer.filter(row => !row.event).map(args => Array.from(args))
+  assert.deepEqual(commands.find(row => row[0] === 'consent' && row[1] === 'update')[2], { analytics_storage: 'granted', ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'denied' })
+  f.scripts[0].onload()
+  const purchase = f.win.dataLayer.find(row => row.event === GOOGLE_ADS_PURCHASE_EVENT)
+  assert.equal(f.win.dataLayer.some(row => row.event === GOOGLE_PURCHASE_EVENT), false)
+  assert.equal(purchase.fa_receipt_cookie_prefix, 'firstaid_attribution_v2')
+  assert.equal(purchase.fa_receipt_ads_measurement, 'granted')
+  assert.equal(purchase.fa_receipt_cookie_flags, googleCookieFlags(now - 1000 + ATTRIBUTION_TTL))
+  assert.ok(Number.isInteger(purchase.fa_receipt_cookie_expires) && purchase.fa_receipt_cookie_expires <= 86399 && purchase.fa_receipt_cookie_expires > 0)
+  assert.equal(purchase.fa_receipt_transaction_id, p.eventId)
+  assert.equal(purchase.fa_receipt_value, 249)
+})
+
+test('ads grant withdrawn or expired while GTM is delayed cannot emit purchase', () => {
+  for (const mode of ['denied', 'expired', 'analytics', 'replacement']) {
+    const f = fixture(), now = Date.now(), grant = { version: 2, mode: 'ads', issuedAt: now - 1000, expiresAt: now - 1000 + ATTRIBUTION_TTL }
+    f.win.localStorage.setItem(GOOGLE_CONSENT_KEY, JSON.stringify(grant))
+    assert.equal(startGoogle(f.win, f.doc, fresh(), () => true, { mode: 'ads' }), true)
+    if (mode === 'denied') f.win.localStorage.setItem(GOOGLE_CONSENT_KEY, 'denied')
+    else f.win.localStorage.setItem(GOOGLE_CONSENT_KEY, JSON.stringify(mode === 'expired' ? { ...grant, issuedAt: now - ATTRIBUTION_TTL - 1000, expiresAt: now - 1000 } : mode === 'replacement' ? { ...grant, issuedAt: now, expiresAt: now + ATTRIBUTION_TTL } : { ...grant, mode }))
+    f.scripts[0].onload()
+    assert.equal(f.win.dataLayer.some(row => [GOOGLE_PURCHASE_EVENT, GOOGLE_ADS_PURCHASE_EVENT].includes(row.event)), false)
+  }
+})
+
+
+test('receipt rejects expired/invalid absolute cookie flags before Google starts', () => {
+  for (const expiry of [null, NaN, Infinity, 0, Date.now() - 1, Date.now() + 0.5]) assert.equal(googleCookieFlags(expiry), null)
+  const f = fixture()
+  assert.equal(startGoogle(f.win, f.doc, { ...fresh(), expiresAt: 0 }, () => true), false)
+  assert.equal(f.win.gtag, undefined); assert.equal(f.win.dataLayer, undefined); assert.equal(f.scripts.length, 0)
+})
+
+test('receipt carries the same absolute expiry in global config and native payload without cookie wrapping', () => {
+  const f = fixture(), p = fresh(), descriptor = Object.getOwnPropertyDescriptor(f.doc, 'cookie')
+  assert.equal(startGoogle(f.win, f.doc, p, () => true), true)
+  f.scripts[0].onload()
+  const config = f.win.dataLayer.find(row => row[0] === 'set' && typeof row[1] === 'object')[1]
+  const purchase = f.win.dataLayer.find(row => row.event === GOOGLE_PURCHASE_EVENT)
+  const expected = 'SameSite=Lax;Secure;Expires=' + new Date(p.expiresAt * 1000).toUTCString()
+  assert.equal(config.cookie_flags, expected)
+  assert.equal(purchase.fa_receipt_cookie_flags, expected)
+  assert.deepEqual(Object.getOwnPropertyDescriptor(f.doc, 'cookie'), descriptor)
+})
+
+test('receipt clears only broad-domain owned cookies before Google starts and fails closed on cleanup error', () => {
+  const f = fixture()
+  assert.equal(startGoogle(f.win, f.doc, fresh(), () => true), true)
+  assert.ok(f.cookieWrites.length > 0)
+  for (const write of f.cookieWrites) {
+    assert.match(write, /^firstaid_purchase_/)
+    assert.match(write, /Max-Age=0; Path=\/; Domain=\.morroo\.com$/)
+  }
+  const denied = fixture()
+  Object.defineProperty(denied.doc, 'cookie', { get() { return '' }, set() { throw Error('denied') }, configurable: true })
+  assert.equal(startGoogle(denied.win, denied.doc, fresh(), () => true), false)
+  assert.equal(denied.scripts.length, 0); assert.equal(denied.win.gtag, undefined)
 })

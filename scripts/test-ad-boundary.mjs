@@ -17,7 +17,7 @@ const DIST = resolve(new URL('../dist', import.meta.url).pathname)
 const AUTH_HOST = 'ad-boundary-test.supabase.co'
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' }
 await stat(resolve(DIST, 'index.html'))
-const browser = await chromium.launch()
+const browser = await chromium.launch(process.env.CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, args: ['--no-sandbox'] } : {})
 let passed = 0
 
 async function fixture(options = {}) {
@@ -96,7 +96,7 @@ async function fixture(options = {}) {
     if (!sessionStorage.getItem('__boundarySeeded')) {
       for (const [name, value] of Object.entries(options.storage || {})) localStorage.setItem(name, value)
       if (options.consent) localStorage.setItem(key, options.consent)
-      if (options.googleConsent) localStorage.setItem(googleKey, options.googleConsent)
+      if (options.googleConsent) localStorage.setItem(googleKey, options.googleConsent === 'granted' ? JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000}) : options.googleConsent)
       if (options.openaiConsent) localStorage.setItem(openaiKey, options.openaiConsent)
       sessionStorage.setItem('__boundarySeeded', '1')
     }
@@ -115,7 +115,7 @@ async function fixture(options = {}) {
       // A single local grant succeeds, then denial rollback cannot write either
       // store. This must not be treated as consent merely because it persisted.
       if (partialGrantKey && partialGrantWritten) throw new DOMException('Synthetic post-grant write failure', 'SecurityError')
-      if (partialGrantKey && this === localStorage && name === partialGrantKey && value === 'granted') {
+      if (partialGrantKey && this === localStorage && name === partialGrantKey && (value === 'granted' || String(value).includes('\"mode\":\"ads\"'))) {
         const result = originalSet.call(this, name, value)
         partialGrantWritten = true
         return result
@@ -144,7 +144,7 @@ async function fixture(options = {}) {
         const consent = (store, key) => {
           try {
             const value = window[store].getItem(key)
-            return value === 'granted' || value === 'denied' ? value : value === '1' ? 'denied' : 'unset'
+            return (value === 'granted' || String(value).includes('\"mode\":\"ads\"')) || value === 'denied' ? value : value === '1' ? 'denied' : 'unset'
           } catch { return 'unreadable' }
         }
         return {
@@ -179,7 +179,7 @@ async function fixture(options = {}) {
     await page.waitForTimeout(100)
   }
   async function grantGoogle() {
-    await page.getByRole('button', { name: 'อนุญาต Google', exact: true }).click()
+    await page.getByRole('button', { name: 'Google สถิติและวัดผลโฆษณา', exact: true }).click()
     await waitForSdk('__stubGoogleLoaded')
     await page.waitForTimeout(100)
   }
@@ -203,6 +203,7 @@ async function fixture(options = {}) {
   return { context, page, openaiRequests, sdkRequests, calls, mounts, blocked, googleRequests, googleCalls, googleObservations, googleHistoryArguments, open, grant, grantGoogle, consentToggle, showSeparateChoices, noAds, googleStayedPublic, releaseAuth, pauseNavigation, releaseNavigation, authRequests: () => authRequests }
 }
 async function test(name, options, fn) {
+  if (process.env.TEST_FILTER && !name.includes(process.env.TEST_FILTER)) return
   const f = await fixture(options)
   try { await fn(f); passed++; console.log(`PASS ${name}`) }
   catch (error) { error.message = `${name}: ${error.message}`; throw error }
@@ -212,9 +213,11 @@ try {
 
   await test('combined allow-all grants each vendor separately, then the card leaves the content', {}, async f => {
     await f.page.goto(ORIGIN + '/', { waitUntil: 'load' }); await f.page.waitForTimeout(700); f.noAds()
-    await f.page.getByRole('button', { name: 'อนุญาตทั้งหมด', exact: true }).click()
+    await f.page.getByRole('button', { name: 'อนุญาต Meta และ OpenAI', exact: true }).click()
+    assert.equal(f.googleRequests.length, 0, 'Combined grant cannot authorize Google purpose')
+    await f.grantGoogle()
     await f.page.waitForFunction(() => window.__stubSdkLoaded === true && window.__stubGoogleLoaded === true && window.__firstaidOpenAILoaded === true)
-    assert.deepEqual(await f.page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['granted', 'granted', 'granted'])
+    assert.deepEqual(await f.page.evaluate(keys => keys.map(k => { const v = localStorage.getItem(k); return v?.startsWith('{') ? JSON.parse(v).mode : v }), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['granted', 'ads', 'granted'])
     assert.equal(await f.page.getByRole('dialog').count(), 0)
     assert.equal(await f.page.getByTestId('marketing-consent').isVisible(), false, 'Decided consent must not cover page content')
     const chip = f.page.getByRole('button', { name: 'ตั้งค่าการวัดผล', exact: true })
@@ -226,7 +229,7 @@ try {
     await f.page.waitForTimeout(300); f.noAds()
     assert.deepEqual(await f.page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [CONSENT_KEY, GOOGLE_CONSENT_KEY, OPENAI_CONSENT_KEY]), ['denied', 'denied', 'denied'])
     await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500); f.noAds()
-    assert.equal(await f.page.getByRole('button', { name: 'อนุญาตทั้งหมด', exact: true }).count(), 0)
+    assert.equal(await f.page.getByRole('button', { name: 'อนุญาต Meta และ OpenAI', exact: true }).count(), 0)
   })
   await test('deny-all also revokes a previously granted vendor when other choices remain pending', { consent: 'granted' }, async f => {
     await f.open()
@@ -269,7 +272,7 @@ try {
         if (this === localStorage && name === key) {
           if (wroteGrant) throw new DOMException('Synthetic rollback write failure', 'SecurityError')
           const result = set.call(this, name, value)
-          if (value === 'granted') wroteGrant = true
+          if ((value === 'granted' || String(value).includes('\"mode\":\"ads\"'))) wroteGrant = true
           return result
         }
         if (this === sessionStorage && name === key + '_denied') throw new DOMException('Synthetic session denial write failure', 'SecurityError')
@@ -448,6 +451,7 @@ try {
   })
   for (const [path, referer] of [
     ['/?email=test%40example.invalid'], ['/#learner'], ['/?utm_source=one&utm_source=two'],
+    ...['gclid','gbraid','wbraid','fbclid'].map(key => ['/?'+key+'=0812345678']),
     ['/?utm_campaign=1234567890123'], ['/', 'https://firstaid.morroo.com/learn/1'],
     ['/', 'https://firstaid.morroo.com/?email=test'],
   ]) await test(`unsafe context ${path} ${referer || ''}`, { consent: 'granted', googleConsent: 'granted', openaiConsent: 'granted' }, async f => { await f.open(path, referer); f.noAds() })
@@ -476,7 +480,7 @@ try {
     assert.deepEqual(events(), [['event', 'page_view', { ...GOOGLE_PUBLIC_PAGE, user_data: null, send_to: TRAINING_GA4_ID }]])
     const configs = f.googleCalls.filter(c => c.args[0] === 'config').map(c => c.args)
     assert.deepEqual(configs.map(c => c[1]), [TRAINING_GA4_ID, TRAINING_GOOGLE_ADS_ID])
-    assert.ok(configs.every(c => c[2].send_page_view === false && c[2].user_data === null && c[2].cookie_domain === 'firstaid.morroo.com' && c[2].cookie_prefix === 'firstaid_training'))
+    assert.ok(configs.every(c => c[2].send_page_view === false && c[2].user_data === null && c[2].cookie_domain === 'firstaid.morroo.com' && c[2].cookie_prefix === 'firstaid_attribution_v2'))
     await f.page.evaluate(() => document.addEventListener('click', event => {
       const link = event.target.closest?.('a')
       if (link && (link.href.startsWith('https://line.me/') || link.href.startsWith('tel:'))) event.preventDefault()
@@ -492,9 +496,26 @@ try {
     assert.equal(f.context.pages().length, 1)
     f.googleStayedPublic()
   })
+  await test('Google purpose changes discard loaded document and repeated choice does not renew', {}, async f => {
+    await f.open(); await f.grantGoogle()
+    const snapshot = await f.page.evaluate(key => ({grant:localStorage.getItem(key),doc:window.__documentId}), GOOGLE_CONSENT_KEY)
+    await f.page.getByRole('button', {name:'Google สถิติและวัดผลโฆษณา',exact:true}).click()
+    assert.deepEqual(await f.page.evaluate(key => ({grant:localStorage.getItem(key),doc:window.__documentId}), GOOGLE_CONSENT_KEY),snapshot)
+    await f.page.getByRole('button', {name:'Google สถิติอย่างเดียว',exact:true}).click()
+    await f.page.waitForFunction(id=>window.__documentId!==id,snapshot.doc)
+    await f.page.waitForFunction(()=>window.__stubGoogleLoaded===true)
+    const analytics = await f.page.evaluate(key => ({grant:JSON.parse(localStorage.getItem(key)),doc:window.__documentId}),GOOGLE_CONSENT_KEY)
+    assert.equal(analytics.grant.mode,'analytics')
+    const configs=f.googleCalls.filter(c=>c.documentId===analytics.doc && c.args[0]==='config')
+    assert.equal(configs.length,1);assert.equal(configs[0].args[2].cookie_prefix,'firstaid_analytics')
+    await f.showSeparateChoices();await f.grantGoogle()
+    await f.page.waitForFunction(id=>window.__documentId!==id,analytics.doc)
+    await f.page.waitForFunction(()=>window.__stubGoogleLoaded===true)
+    assert.equal(await f.page.evaluate(key=>JSON.parse(localStorage.getItem(key)).mode,GOOGLE_CONSENT_KEY),'ads')
+  })
   await test('declining Google does not deny Meta and may be explicitly changed later', {}, async f => {
     await f.open()
-    await f.page.getByRole('button', { name: 'ไม่อนุญาต Google', exact: true }).click()
+    await f.page.getByRole('button', { name: 'ไม่อนุญาต / ถอนความยินยอม Google', exact: true }).click()
     await f.grant()
     assert.equal(f.sdkRequests.length, 1)
     assert.equal(f.googleRequests.length, 0)
@@ -557,7 +578,7 @@ try {
     await test(`Google withdrawal survives stale local grant and ${storageFailures.join(',') || 'working storage'}`, {}, async f => {
       await f.open(); await f.grantGoogle()
       const oldDocument = await f.page.evaluate(failures => { window.__storageFailures = failures; return window.__documentId }, storageFailures)
-      await (await f.consentToggle('ถอนความยินยอม Google')).click()
+      await (await f.consentToggle('ไม่อนุญาต / ถอนความยินยอม Google')).click()
       await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
       await f.page.waitForTimeout(500)
       assert.equal(f.googleRequests.length, 1)
@@ -571,7 +592,7 @@ try {
   for (const storageFailures of [['local:set'], ['session:remove'], ['local:set', 'session:set']]) {
     await test(`Google explicit grant fails closed on ${storageFailures.join(',')}`, { storageFailures }, async f => {
       await f.open()
-      const button = f.page.getByRole('button', { name: 'อนุญาต Google', exact: true })
+      const button = f.page.getByRole('button', { name: 'Google สถิติและวัดผลโฆษณา', exact: true })
       if (await button.count()) await button.click()
       await f.page.waitForTimeout(300); f.noAds()
       await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500); f.noAds()
@@ -606,13 +627,13 @@ try {
     await test(`${vendor} partial grant with failed rollback uses a no-ads document`, { partialGrantFailure: vendor }, async f => {
       await f.open(); f.noAds()
       const oldDocument = await f.page.evaluate(() => window.__documentId)
-      const button = vendor === 'google' ? 'อนุญาต Google' : 'อนุญาต'
+      const button = vendor === 'google' ? 'Google สถิติและวัดผลโฆษณา' : 'อนุญาต'
       await f.page.getByRole('button', { name: button, exact: true }).click()
       await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
       await f.page.waitForTimeout(500)
       assert.equal(new URL(f.page.url()).searchParams.get('marketing_consent'), 'denied')
       const key = vendor === 'google' ? GOOGLE_CONSENT_KEY : CONSENT_KEY
-      assert.equal(await f.page.evaluate(key => localStorage.getItem(key), key), 'granted', 'Verify the surviving partial grant, not an accidentally successful rollback')
+      assert.equal(await f.page.evaluate(key => localStorage.getItem(key)?.startsWith('{') ? JSON.parse(localStorage.getItem(key)).mode : localStorage.getItem(key), key), vendor === 'google' ? 'ads' : 'granted', 'Verify the surviving partial grant, not an accidentally successful rollback')
       f.noAds()
       assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
       await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500)
@@ -625,7 +646,7 @@ try {
       const meta = retirement !== 'google-withdrawal'
       await f.open()
       if (google) {
-        await f.page.getByRole('button', { name: 'อนุญาต Google', exact: true }).click()
+        await f.page.getByRole('button', { name: 'Google สถิติและวัดผลโฆษณา', exact: true }).click()
         await f.page.waitForFunction(() => typeof window.__releaseGoogleSdk === 'function')
       }
       if (meta) {
@@ -651,7 +672,7 @@ try {
       f.pauseNavigation()
       const target = retirement === 'private-navigation'
         ? f.page.locator('.course-desktop-nav a[href="/learn"]')
-        : await f.consentToggle(retirement === 'google-withdrawal' ? 'ถอนความยินยอม Google' : 'ถอนความยินยอมวัดผลโฆษณา')
+        : await f.consentToggle(retirement === 'google-withdrawal' ? 'ไม่อนุญาต / ถอนความยินยอม Google' : 'ถอนความยินยอมวัดผลโฆษณา')
       // A pending reload can suspend later Playwright frame evaluations even
       // while its response is held. Observe the real synchronous click handler
       // and release the synthetic SDK in one evaluation, before it can commit.

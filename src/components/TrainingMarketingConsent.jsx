@@ -5,7 +5,7 @@ import MetaPixel from './MetaPixel'
 import GoogleTrainingConsent from './GoogleTrainingConsent'
 import { consentButtons, consentBtn } from './consentStyles'
 import { installMarketingLifecycleGuard } from '../lib/trainingAds'
-import { installMarketingConsentStorageGuard, revokeTrainingMarketing } from '../lib/trainingMarketing'
+import { installMarketingConsentStorageGuard, retireTrainingMarketing } from '../lib/trainingMarketing'
 
 // กล่องเดียวรวมทุกเจ้า (Meta / Google / OpenAI): ปุ่ม "อนุญาตทั้งหมด / ไม่อนุญาตทั้งหมด" กดครั้งเดียวจบ
 // ("รายละเอียด / เลือกแยก" ยังเลือกทีละเจ้าได้) · เลือกแล้ว: กล่องหายไป เหลือลิงก์ "ตั้งค่าการวัดผล" ท้ายหน้าไว้ถอน/เปลี่ยนใจ
@@ -16,7 +16,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
   const [separate, setSeparate] = useState(false)
   const choosers = useRef({})
   useEffect(() => {
-    const lifecycle = installMarketingLifecycleGuard(window, document, revokeTrainingMarketing)
+    const lifecycle = installMarketingLifecycleGuard(window, document, retireTrainingMarketing)
     const storage = installMarketingConsentStorageGuard(window, document)
     return () => { lifecycle(); storage() }
   }, [])
@@ -31,6 +31,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
   // แต่ละเจ้ายังบันทึกแยก key ของตัวเอง — การอนุญาตเจ้าหนึ่งไม่เคยลามไปอีกเจ้า
   const chooseAll = (value, onlyPending) => {
     for (const vendor of ['meta', 'google', 'openai']) {
+      if (vendor === 'google' && value === 'granted') continue // Google purpose must be chosen explicitly.
       if (onlyPending && statuses[vendor] !== 'pending') continue
       if (!statuses[vendor]) continue
       choosers.current[vendor]?.(value)
@@ -42,7 +43,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
   const vendorProps = { publicLanding, onStatus: report, onRegister: register, showToggle: pending ? separate : manageOpen, showDialog: separate }
   const vendors = <>
     <MetaPixel {...vendorProps} />
-    <GoogleTrainingConsent {...vendorProps} />
+    <GoogleTrainingConsent {...vendorProps} showDialog={true} />
     <OpenAITrainingConsent {...vendorProps} />
   </>
 
@@ -64,7 +65,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
         </p>
         <div style={consentButtons}>
           <button type="button" style={consentBtn(false)} onClick={() => chooseAll('denied', false)}>ไม่อนุญาตทั้งหมด</button>
-          <button type="button" style={consentBtn(true)} onClick={() => chooseAll('granted', true)}>อนุญาตทั้งหมด</button>
+          <button type="button" style={consentBtn(true)} onClick={() => chooseAll('granted', true)}>อนุญาต Meta และ OpenAI</button>
           <button type="button" style={link} aria-expanded={separate} onClick={() => setSeparate(v => !v)}>
             {separate ? 'ซ่อนรายละเอียด' : 'รายละเอียด / เลือกแยก'}
           </button>
@@ -78,7 +79,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
         </div>
         <div style={consentButtons}>
           <button type="button" style={consentBtn(false)} onClick={() => chooseAll('denied', false)}>ถอนความยินยอมทั้งหมด</button>
-          <button type="button" style={consentBtn(true)} onClick={() => chooseAll('granted', false)}>อนุญาตทั้งหมด</button>
+          <button type="button" style={consentBtn(true)} onClick={() => chooseAll('granted', false)}>อนุญาต Meta และ OpenAI</button>
         </div>
         <small style={{ color: '#6b7280' }}>หรือเปลี่ยนทีละเจ้า:</small>
       </>}

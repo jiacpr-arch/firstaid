@@ -22,7 +22,7 @@ function componentChoice(path, dependencies, { rollbackBlocked }) {
       setItem(key, value) {
         if (rollbackBlocked && grantWritten) throw Error('Synthetic denial write failure')
         values.set(key, value)
-        if (value === 'granted') grantWritten = true
+        if (value === 'granted' || value.includes('"version":2')) grantWritten = true
       },
     },
     sessionStorage: {
@@ -34,7 +34,7 @@ function componentChoice(path, dependencies, { rollbackBlocked }) {
       },
     },
   }
-  const context = createContext({ window: win, document: { cookie: '' }, setChoice: value => choices.push(value), denialFallbackUrl, ...dependencies })
+  const context = createContext({ choice: null, window: win, document: { cookie: '' }, setChoice: value => choices.push(value), denialFallbackUrl, ...dependencies })
   const choose = runInContext(`(value => {${match[1]}\n})`, context)
   return { win, choose, choices, navigations, values }
 }
@@ -45,10 +45,10 @@ for (const [vendor, path, key, read, dependencies, revoked] of [
 ]) {
   test(`${vendor} failed grant uses no-ads fallback when partial local grant cannot be rolled back`, () => {
     const f = componentChoice(path, dependencies, { rollbackBlocked: true })
-    f.choose('granted')
+    f.choose(vendor === 'Google' ? 'ads' : 'granted')
     assert.deepEqual(f.choices, ['denied'])
-    assert.equal(f.values.get(key), 'granted', 'Exercise the surviving partial write, not a clean rollback')
-    assert.equal(read(f.win), 'granted', 'Stored consent alone is unsafe after this failed save')
+    assert.ok(f.values.get(key)?.includes(vendor === 'Google' ? '"mode":"ads"' : 'granted'), 'Exercise the surviving partial write, not a clean rollback')
+    assert.equal(read(f.win), vendor === 'Google' ? 'ads' : 'granted', 'Stored consent alone is unsafe after this failed save')
     assert.equal(f.win[revoked], true)
     assert.equal(f.win.gtag, undefined)
     assert.equal(f.win.fbq, undefined)
@@ -61,7 +61,7 @@ for (const [vendor, path, key, read, dependencies, revoked] of [
 
   test(`${vendor} failed grant can retain the document only after verifying a successful denial rollback`, () => {
     const f = componentChoice(path, dependencies, { rollbackBlocked: false })
-    f.choose('granted')
+    f.choose(vendor === 'Google' ? 'ads' : 'granted')
     assert.deepEqual(f.choices, ['denied'])
     assert.equal(read(f.win), 'denied')
     assert.equal(f.win[revoked], true)
