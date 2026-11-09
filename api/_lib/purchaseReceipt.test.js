@@ -7,8 +7,8 @@ import { createPurchaseReceipt, verifyPurchaseReceipt, RECEIPT_TTL_SECONDS } fro
 import { paidGrant } from './stripeCheckout.js'
 import { checkoutAnalyticsBlocked, filterCheckoutAnalyticsEvent } from '../../src/lib/checkoutAnalyticsBoundary.js'
 import { openPurchaseReceipt } from '../../src/utils/purchaseReceipt.js'
-import { claimAttempt, consumeReceipt, eligibleReceiptDocument, validReceipt, startMeta, startGoogle, RECEIPT_URL, RECEIPT_KEY, choiceKey, attemptKey, GOOGLE_PURCHASE_ENABLED, GTM_ID, GOOGLE_PURCHASE_EVENT, GOOGLE_ADS_PURCHASE_EVENT } from '../../public/purchase-receipt.js'
-import { RECEIPT_HTML } from '../checkout/receipt-page.js'
+import { claimAttempt, consumeReceipt, eligibleReceiptDocument, validReceipt, startMeta, startOpenAI, startGoogle, RECEIPT_URL, RECEIPT_KEY, choiceKey, attemptKey, GOOGLE_PURCHASE_ENABLED, GTM_ID, GOOGLE_PURCHASE_EVENT, GOOGLE_ADS_PURCHASE_EVENT } from '../../public/purchase-receipt.js'
+import { RECEIPT_HTML, RECEIPT_CSP } from '../checkout/receipt-page.js'
 
 import { GOOGLE_CONSENT_KEY, ATTRIBUTION_TTL, googleCookieFlags } from '../../public/google-attribution.js'
 
@@ -131,6 +131,31 @@ test('Meta sends only minimal Purchase with stable eventID, no PageView, advance
   assert.deepEqual(f.win.fbq.queue, [['set', 'autoConfig', false, '1277103750989853'], ['consent', 'grant'], ['init', '1277103750989853'], ['trackSingle', '1277103750989853', 'Purchase', { value: 249, currency: 'THB' }, { eventID: p.eventId }]])
   assert.equal(f.scripts[0].referrerPolicy, 'no-referrer')
   granted = false; f.win.fbq('track', 'Purchase', { bad: true }); assert.equal(f.win.fbq.queue.length, 4)
+})
+
+test('OpenAI only sends a verified minimal purchase after its own consent and load', async () => {
+  const f = fixture(), p = fresh(); let allowed = false
+  assert.equal(startOpenAI(f.win, f.doc, p, () => allowed), false)
+  allowed = true; f.win.localStorage.setItem(choiceKey('openai'), 'granted')
+  assert.equal(await claimAttempt(f.win, 'openai', p), true)
+  assert.equal(await claimAttempt(f.win, 'openai', p), false)
+  assert.equal(startOpenAI(f.win, f.doc, p, () => allowed), true)
+  assert.deepEqual(f.win.oaiq.q, [['consent', false]])
+  assert.equal(f.scripts[0].referrerPolicy, 'no-referrer')
+  f.scripts[0].onload()
+  f.scripts[0].onload()
+  assert.deepEqual(f.win.oaiq.q.slice(1), [
+    ['init', { pixelId: 'QGaBG3DEsN1QQ4mvnw3Jdu' }],
+    ['consent', true],
+    ['measure', 'order_created', { type: 'contents', amount: 24900, currency: 'THB' }, { event_id: p.eventId, opt_out: true }],
+  ])
+  const denied = fixture(); allowed = true; startOpenAI(denied.win, denied.doc, p, () => allowed)
+  allowed = false; denied.scripts[0].onload()
+  assert.deepEqual(denied.win.oaiq.q, [['consent', false]])
+  assert.match(RECEIPT_HTML, /data-vendor="openai" data-choice="granted"/)
+  assert.match(RECEIPT_HTML, /data-vendor="openai" data-choice="denied"/)
+  assert.match(RECEIPT_CSP, /script-src[^;]*https:\/\/bzrcdn\.openai\.com/)
+  assert.match(RECEIPT_CSP, /connect-src[^;]*https:\/\/bzr\.openai\.com/)
 })
 
 test('Google uses only the dedicated GTM loader and preserves typed privacy commands before load', () => {

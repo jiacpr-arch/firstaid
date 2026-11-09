@@ -6,6 +6,7 @@ export const RECEIPT_KEY = 'firstaid_purchase_receipt_v1'
 export const RECEIPT_PATH = '/api/checkout/receipt-page'
 export const RECEIPT_URL = 'https://firstaid.morroo.com' + RECEIPT_PATH
 export const PIXEL_ID = '1277103750989853'
+export const OPENAI_PIXEL_ID = 'QGaBG3DEsN1QQ4mvnw3Jdu'
 export const GA4_ID = 'G-H10PHV2XNG'
 export const GTM_ID = 'GTM-54LV8DZ5'
 export const GOOGLE_PURCHASE_EVENT = 'firstaid_receipt_purchase'
@@ -24,7 +25,7 @@ function googleGrantSnapshot(win) {
 }
 
 export function eligibleReceiptDocument(win, doc) {
-  return win.location.href === RECEIPT_URL && !doc.referrer && !win.fbq && !win.gtag && !win.dataLayer
+  return win.location.href === RECEIPT_URL && !doc.referrer && !win.fbq && !win.gtag && !win.dataLayer && !win.oaiq
     && !win.__firstaidMarketingLoaded && !win.__firstaidPrivateDocument && !win.navigator.webdriver
 }
 
@@ -57,7 +58,7 @@ export async function consumeReceipt(win, request = win.fetch.bind(win)) {
 // At-most-once *attempt*, not a delivery receipt. Claim before initializing a
 // vendor and never retry uncertain sends. Unsupported locks/storage fail closed.
 export async function claimAttempt(win, vendor, receipt) {
-  if (!['meta', 'google'].includes(vendor) || !validReceipt(receipt) || !win.navigator.locks?.request) return false
+  if (!['meta', 'google', 'openai'].includes(vendor) || !validReceipt(receipt) || !win.navigator.locks?.request) return false
   const key = attemptKey(vendor, receipt.eventId)
   try {
     return await win.navigator.locks.request(key, { mode: 'exclusive' }, () => {
@@ -92,6 +93,22 @@ export function startMeta(win, doc, receipt, isAllowed) {
   fbq('init', PIXEL_ID)
   fbq('trackSingle', PIXEL_ID, 'Purchase', { value: receipt.value, currency: receipt.currency }, { eventID: receipt.eventId })
   script(doc, 'https://connect.facebook.net/en_US/fbevents.js')
+  return true
+}
+
+export function startOpenAI(win, doc, receipt, isAllowed) {
+  if (!isAllowed() || win.oaiq || !validReceipt(receipt)) return false
+  const queue = win.oaiq = function (...args) { queue.q.push(args) }
+  queue.q = []
+  queue('consent', false)
+  let emitted = false
+  script(doc, 'https://bzrcdn.openai.com/sdk/oaiq.min.js', () => {
+    if (emitted || !isAllowed() || !validReceipt(receipt)) return
+    emitted = true
+    win.oaiq('init', { pixelId: OPENAI_PIXEL_ID })
+    win.oaiq('consent', true)
+    win.oaiq('measure', 'order_created', { type: 'contents', amount: Math.round(receipt.value * 100), currency: receipt.currency }, { event_id: receipt.eventId, opt_out: true })
+  })
   return true
 }
 
@@ -157,9 +174,9 @@ export function startGoogle(win, doc, receipt, isAllowed, { enabled = GOOGLE_PUR
 export function bootReceipt(win, doc) {
   const status = doc.getElementById('status')
   const choices = doc.getElementById('choices')
-  const allowed = { meta: false, google: false }
-  const loaded = { meta: false, google: false }
-  const pending = { meta: false, google: false }
+  const allowed = { meta: false, google: false, openai: false }
+  const loaded = { meta: false, google: false, openai: false }
+  const pending = { meta: false, google: false, openai: false }
   let retired = false, receipt = null, googleMode = null, googleLandingGrant = null, expiryTimer
   const adsAvailable = () => readGoogleGrant(win)?.mode === 'ads' && remainingGoogleSeconds(win) > 0
   const eligible = eligibleReceiptDocument(win, doc)
@@ -171,13 +188,16 @@ export function bootReceipt(win, doc) {
   const revoke = () => {
     retired = true
     if (expiryTimer) win.clearTimeout?.(expiryTimer)
-    allowed.meta = false; allowed.google = false
+    allowed.meta = false; allowed.google = false; allowed.openai = false
     if (loaded.meta) {
       try { if (!win.fbq?.callMethod) win.fbq?.queue?.splice(0); win.fbq?.('consent', 'revoke') } catch { /* teardown still required */ }
     }
     if (loaded.google) {
       win[`ga-disable-${GA4_ID}`] = true
       try { win.dataLayer?.splice(0); win.gtag?.('consent', 'update', DENIED) } catch { /* teardown still required */ }
+    }
+    if (loaded.openai) {
+      try { if (win.oaiq?.q) win.oaiq.q.length = 0; win.oaiq?.('consent', false) } catch { /* teardown still required */ }
     }
     if (googleMode === 'ads' && adsAvailable()) retainGoogleAttribution(win, doc)
     else clearGoogleCookies(doc, ['firstaid_purchase'])
@@ -192,8 +212,8 @@ export function bootReceipt(win, doc) {
       if (googleMode === 'ads' && (loaded.google || pending.google)) { leave(RECEIPT_PATH); return }
       for (const button of doc.querySelectorAll('button[data-choice="ads"]')) button.disabled = true
     }
-    if ((event.key === null || event.key === choiceKey('meta') || event.key === choiceKey('google'))
-      && ((loaded.meta && !isAllowed('meta')) || (loaded.google && !isAllowed('google')))) leave(RECEIPT_PATH)
+    if ((event.key === null || event.key === choiceKey('meta') || event.key === choiceKey('google') || event.key === choiceKey('openai'))
+      && ((loaded.meta && !isAllowed('meta')) || (loaded.google && !isAllowed('google')) || (loaded.openai && !isAllowed('openai')))) leave(RECEIPT_PATH)
   })
   doc.addEventListener('click', event => {
     const anchor = event.target.closest?.('a[href]')
@@ -221,7 +241,7 @@ export function bootReceipt(win, doc) {
   })()
   for (const button of doc.querySelectorAll('button[data-vendor]')) button.addEventListener('click', async () => {
     const vendor = button.dataset.vendor, choice = button.dataset.choice
-    if (!receipt || retired || !['meta', 'google'].includes(vendor)) return
+    if (!receipt || retired || !['meta', 'google', 'openai'].includes(vendor)) return
     const notice = doc.getElementById(vendor + '-status')
     const granting = vendor === 'google' ? ['analytics', 'ads'].includes(choice) : choice === 'granted'
     if (granting && (loaded[vendor] || pending[vendor])) return
@@ -237,7 +257,7 @@ export function bootReceipt(win, doc) {
     if (!granting || !saved) {
       if (vendor === 'google') saveGoogleChoice(win, doc, 'denied')
       notice.textContent = 'ไม่ส่งข้อมูลการซื้อ คุณเรียนต่อได้ตามปกติ'
-      if (loaded.meta || loaded.google) leave(RECEIPT_PATH)
+      if (loaded.meta || loaded.google || loaded.openai) leave(RECEIPT_PATH)
       return
     }
     if (vendor === 'google') {
@@ -255,7 +275,7 @@ export function bootReceipt(win, doc) {
     }
     loaded[vendor] = true
     pending[vendor] = false
-    const started = vendor === 'meta' ? startMeta(win, doc, receipt, () => isAllowed(vendor)) : startGoogle(win, doc, receipt, () => isAllowed(vendor), { mode: googleMode })
+    const started = vendor === 'meta' ? startMeta(win, doc, receipt, () => isAllowed(vendor)) : vendor === 'openai' ? startOpenAI(win, doc, receipt, () => isAllowed(vendor)) : startGoogle(win, doc, receipt, () => isAllowed(vendor), { mode: googleMode })
     notice.textContent = started ? 'อนุญาตการวัดผลครั้งนี้แล้ว' : 'ไม่ได้ส่งข้อมูล คุณเรียนต่อได้ตามปกติ'
   })
   return { ready, revoke }
