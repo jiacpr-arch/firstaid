@@ -49,7 +49,8 @@ export default function ChapterUnlockCard({ chapter }) {
     setPaying(null)
     if (r.error === 'stripe_not_configured') setLineOnly(true)
     else if (r.error === 'login_required') loginThenPay(target)
-    else setPayError('เปิดหน้าชำระเงินไม่สำเร็จ กรุณาลองใหม่ หรือซื้อผ่าน LINE')
+    else if (r.error === 'account_not_linked') setPayError('บัญชีที่เข้าสู่ระบบอยู่ยังใช้ซื้อไม่ได้ — ออกจากระบบ แล้วเข้าใหม่ด้วย LINE จากนั้นกดซื้ออีกครั้ง')
+    else setPayError(`เปิดหน้าชำระเงินไม่สำเร็จ กรุณาลองใหม่ หรือซื้อผ่าน LINE (รหัส ${r.code})`)
   }
 
   const chapterInfo = chapter === CPR_CHAPTER ? { id: CPR_CHAPTER, title: CPR_CHAPTER_TITLE } : chapters.find((c) => c.id === chapter)

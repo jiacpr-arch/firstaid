@@ -75,7 +75,8 @@ export default function Buy() {
     setBusy(null)
     if (r.error === 'stripe_not_configured') setLineOnly(true)
     else if (r.error === 'login_required') setError('กรุณาเข้าสู่ระบบอีกครั้ง แล้วกดซื้อใหม่')
-    else setError('เปิดหน้าชำระเงินไม่สำเร็จ กรุณาลองใหม่ หรือสั่งซื้อทาง LINE')
+    else if (r.error === 'account_not_linked') setError('บัญชีที่เข้าสู่ระบบอยู่ยังใช้ซื้อไม่ได้ — ออกจากระบบ แล้วเข้าใหม่ด้วย LINE จากนั้นกดซื้ออีกครั้ง')
+    else setError(`เปิดหน้าชำระเงินไม่สำเร็จ กรุณาลองใหม่ หรือสั่งซื้อทาง LINE (รหัส ${r.code})`)
   }
 
   // ล็อกอินเสร็จกลับมาที่ /buy?chapter=N → ไปหน้าจ่ายต่อเลย ไม่ต้องกดซ้ำ
