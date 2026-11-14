@@ -87,3 +87,33 @@ export async function authorizeClass(req, res, admin, { cohortId = null, session
 export function authorizeInstructor(req, res, admin, sessionId) {
   return authorizeClass(req, res, admin, { sessionId })
 }
+
+// คลาสของรหัสผู้สอน — ผู้สอนภายนอกเปิดหน้า /class แล้วใส่รหัส 8 ตัวของคลาส (ไม่มีบัญชีแอดมิน)
+// คืน { cohortId, sessionId } หรือ null (รหัสผิดรูป / ไม่พบ / คลาสปิดแล้ว) — sessionId = รอบอบรมแรกที่ยังเปิด
+// ใช้สำหรับดูผลแบบอ่านอย่างเดียว (api/cohorts/summary.js) — ผู้เรียกต้องกันไล่เดารหัสเอง (rateLimited)
+export async function classByInstructorCode(admin, code) {
+  const c = normalizeCode(code)
+  if (c.length !== CODE_LENGTH || ![...c].every((ch) => ALPHABET.includes(ch))) return null
+  const { data: cohort, error } = await admin
+    .from('cohorts')
+    .select('id, instructor_code, deleted_at')
+    .eq('instructor_code', c)
+    .maybeSingle()
+  if (error) throw error
+  if (!cohort || cohort.deleted_at || !codesMatch(cohort.instructor_code, c)) return null
+  const { data: sessions, error: sErr } = await admin
+    .from('practical_sessions')
+    .select('id, closed_at, starts_at')
+    .eq('cohort_id', cohort.id)
+  if (sErr) throw sErr
+  const open = (sessions || [])
+    .filter((s) => !s.closed_at)
+    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))[0]
+  return { cohortId: cohort.id, sessionId: open?.id || null }
+}
+
+// เบอร์ผู้เรียนที่ผู้สอนภายนอกเห็น: 4 ตัวท้ายเท่านั้น (เหมือนหน้าผู้สอนของ cpr.morroo.com)
+export function maskPhone(phone) {
+  const d = String(phone || '').replace(/\D/g, '')
+  return d.length >= 4 ? `xxx-xxx-${d.slice(-4)}` : null
+}

@@ -13,7 +13,7 @@ const lineBtn = { background: '#06C755', color: '#fff', border: 'none', fontWeig
 
 const BENEFITS = [
   'นักเรียนเรียนออนไลน์และสอบ Pre-test มาก่อนวันอบรม — วันสอนใช้เวลากับการฝึกได้เต็มที่',
-  'เห็นว่าใครเรียนถึงไหน ใครสอบผ่านแล้ว และส่งข้อความเตือนคนที่ยังไม่พร้อมได้',
+  'เปิดหน้าผู้สอนด้วยรหัสของคลาส เห็นว่าใครเรียนถึงไหน ใครสอบผ่านแล้ว และ Export รายชื่อเป็น CSV ได้',
   'วันอบรมสแกน QR เช็คชื่อและให้คะแนนแต่ละสถานีในมือถือ ผู้ช่วยสอนใช้ได้โดยไม่ต้องมีบัญชี',
 ]
 
@@ -63,6 +63,7 @@ export default function Instructors() {
           <MessageCircle size={18} /> ขอเปิดคลาสทาง LINE @jiacpr
         </a>
         <p className="text-caption" style={{ marginTop: 6 }}>ทีม JIA สร้างคลาสให้ แล้วส่งรหัสคลาสและรหัสผู้สอนกลับทาง LINE</p>
+        <Link to="/class" className="text-caption" style={{ display: 'inline-block', marginTop: 6, fontWeight: 700 }} data-testid="instructors-open-class">มีรหัสผู้สอนแล้ว? เปิดหน้าผู้สอน →</Link>
       </section>
 
       <section className="card" style={{ marginTop: 12 }}>

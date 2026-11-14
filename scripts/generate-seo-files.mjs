@@ -47,6 +47,7 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 Disallow: /checkin
+Disallow: /class
 Disallow: /join
 Disallow: /redeem
 Disallow: /settings

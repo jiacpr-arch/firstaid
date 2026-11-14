@@ -111,3 +111,44 @@ test('verifyCohortCode: a closed class refuses even the right code', async () =>
   const db = cohortDb({ deleted_at: '2026-10-21T00:00:00Z' })
   assert.equal((await verifyCohortCode(db, 'c1', 'KLMN4567')).status, 410)
 })
+
+test('classByInstructorCode: the class of a live code, its first open session; nothing for a bad, unknown or closed class', async () => {
+  const { classByInstructorCode } = await import('./instructorAuth.js')
+  const db = fakeDb({
+    cohorts: [
+      { id: 'c1', instructor_code: 'ABCD2345', deleted_at: null },
+      { id: 'c2', instructor_code: 'WXYZ6789', deleted_at: '2026-11-01T00:00:00Z' },
+    ],
+    practical_sessions: [
+      { id: 's-closed', cohort_id: 'c1', closed_at: '2026-11-02T00:00:00Z', starts_at: '2026-11-01T00:00:00Z' },
+      { id: 's-late', cohort_id: 'c1', closed_at: null, starts_at: '2026-11-20T00:00:00Z' },
+      { id: 's-open', cohort_id: 'c1', closed_at: null, starts_at: '2026-11-10T00:00:00Z' },
+    ],
+  })
+  assert.deepEqual(await classByInstructorCode(db, ' abcd-2345 '), { cohortId: 'c1', sessionId: 's-open' })
+  assert.equal(await classByInstructorCode(db, 'WXYZ6789'), null) // class closed
+  assert.equal(await classByInstructorCode(db, 'ABCD2346'), null) // unknown
+  assert.equal(await classByInstructorCode(db, 'ABC'), null) // wrong length
+  assert.equal(await classByInstructorCode(db, 'ABCD234O'), null) // O is not in the alphabet
+  assert.equal(await classByInstructorCode(db, ''), null)
+})
+
+test('maskPhone keeps only the last 4 digits', async () => {
+  const { maskPhone } = await import('./instructorAuth.js')
+  assert.equal(maskPhone('081-234-5678'), 'xxx-xxx-5678')
+  assert.equal(maskPhone('+66812345678'), 'xxx-xxx-5678')
+  assert.equal(maskPhone('12'), null)
+  assert.equal(maskPhone(null), null)
+})
+
+test('summary for an instructor code: phones masked, learner ids replaced, nothing else changed', async () => {
+  const { forInstructor } = await import('../cohorts/summary.js')
+  const out = forInstructor({
+    cohort: { id: 'c1', name: 'คลาส A', code: 'K7M2QX' },
+    learners: [{ learnerId: 'uuid-1', name: 'สมชาย', phone: '0812345678', lessonsRead: 3, postTest: { score: 90, passed: true } }],
+    sessions: [{ id: 's1', title: 'รอบ 1' }],
+  })
+  assert.deepEqual(out.learners, [{ learnerId: 'row-1', name: 'สมชาย', phone: 'xxx-xxx-5678', lessonsRead: 3, postTest: { score: 90, passed: true } }])
+  assert.deepEqual(out.cohort, { id: 'c1', name: 'คลาส A', code: 'K7M2QX' })
+  assert.deepEqual(out.sessions, [{ id: 's1', title: 'รอบ 1' }])
+})

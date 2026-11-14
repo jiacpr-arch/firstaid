@@ -55,6 +55,8 @@ const CprGuide = lazy(() => import('./pages/CprGuide'))
 const Buy = lazy(() => import('./pages/Buy'))
 // หน้าขายสำหรับผู้สอน/องค์กร (ราคาแพ็กเกจรายคลาส + ปุ่ม LINE)
 const Instructors = lazy(() => import('./pages/Instructors'))
+// หน้าผู้สอนภายนอก: ใส่รหัสผู้สอนของคลาส แล้วดูความพร้อมของนักเรียนทั้งคลาส (อ่านอย่างเดียว)
+const InstructorClass = lazy(() => import('./pages/InstructorClass'))
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -225,6 +227,7 @@ export default function App() {
         <Route path="/redeem" element={<RedeemVoucher />} />
         <Route path="/redeem/:code" element={<RedeemVoucher />} />
         <Route path="/buy" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><Buy /></Suspense>} />
+        <Route path="/class" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><InstructorClass /></Suspense>} />
         <Route path="/instructors" element={<Suspense fallback={<div className="page-container text-caption">กำลังโหลด…</div>}><Instructors /></Suspense>} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/news" element={<News />} />
