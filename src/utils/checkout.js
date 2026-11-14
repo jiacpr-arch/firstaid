@@ -18,9 +18,12 @@ export async function startCheckout(chapter, source) {
       window.location.href = data.url
       return { ok: true }
     }
+    // เก็บสาเหตุที่เปิดหน้าจ่ายไม่สำเร็จ — ไม่งั้นเห็นแค่ checkout_start ซ้ำ ๆ โดยไม่รู้ว่าพังเพราะอะไร
+    track('checkout_error', { chapter, source, status: res.status, reason: String(data.error || 'no_url').slice(0, 60) })
     if (data.error === 'login_required' || data.error === 'stripe_not_configured') return { error: data.error }
     return { error: 'failed' }
   } catch {
+    track('checkout_error', { chapter, source, status: 0, reason: 'network' })
     return { error: 'failed' }
   }
 }
