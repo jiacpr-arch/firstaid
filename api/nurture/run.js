@@ -15,6 +15,7 @@ import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { pushLineMessage } from '../_lib/lineMessage.js'
 import { TOTAL_LESSONS } from '../../src/courses/firstaid/lessons.js'
 import { runScheduledClassReminders } from '../_lib/classReminder.js'
+import { BUY_NUDGE, buyNudgeEligible, buyNudgeMessage } from '../_lib/nurtureBuyNudge.js'
 
 // TOTAL_LESSONS is imported from the course content so it can never drift.
 const ALMOST_DONE_AT = TOTAL_LESSONS - 2 // อ่านครบเท่านี้ขึ้นไป = ใกล้จบ
@@ -26,6 +27,7 @@ const APP_URL = process.env.VITE_PUBLIC_BASE_URL || 'https://firstaid.morroo.com
 const FOOTER = '\n\n— พิมพ์ "หยุด" หากไม่ต้องการรับข้อความแบบนี้'
 
 function messageFor(campaign, { lessonsRead }) {
+  if (campaign === BUY_NUDGE) return buyNudgeMessage(APP_URL) + FOOTER
   if (campaign === 'completed') {
     return (
       '🎉 ยินดีด้วย! คุณเรียนจบหลักสูตรปฐมพยาบาลออนไลน์แล้ว 🙌\n\n' +
@@ -86,11 +88,17 @@ export default async function handler(req, res) {
   const learnerIds = [...new Set(identities.map((r) => r.learner_id).filter(Boolean))]
 
   // 2) ดึง progress + ประวัติส่ง แบบ bulk แล้วจัดกลุ่มใน JS (เลี่ยง N+1)
-  const [{ data: progress }, { data: exams }, { data: logs }] = await Promise.all([
+  const [{ data: progress }, { data: exams }, { data: logs }, { data: paid }, { data: enrolled }] = await Promise.all([
     admin.from('lesson_progress').select('learner_id, lesson_id, read_at').in('learner_id', learnerIds),
     admin.from('exam_attempts').select('learner_id, kind, passed').in('learner_id', learnerIds),
     admin.from('line_nurture_log').select('learner_id, campaign, sent_at').in('learner_id', learnerIds),
+    admin.from('lesson_entitlements').select('learner_id').in('learner_id', learnerIds),
+    admin.from('enrollments').select('learner_id').in('learner_id', learnerIds),
   ])
+  // buy_nudge: ถ้าอ่านสองตารางนี้ไม่ได้ (null) ถือว่า "ไม่รู้" → ไม่ส่งชวนซื้อรอบนี้ ดีกว่าส่งผิดคน
+  const canNudge = Array.isArray(paid) && Array.isArray(enrolled)
+  const paidIds = new Set((paid || []).map((r) => r.learner_id))
+  const enrolledIds = new Set((enrolled || []).map((r) => r.learner_id))
 
   const byLearner = new Map()
   const ensure = (id) => {
@@ -113,7 +121,7 @@ export default async function handler(req, res) {
   const sentCampaignSince = (e, c, ts) =>
     e.logs.some((l) => l.campaign === c && new Date(l.sent_at).getTime() >= ts)
 
-  // 3) เลือก campaign เดียวต่อคน (ลำดับความสำคัญ completed > almost_done > abandoned)
+  // 3) เลือก campaign เดียวต่อคน (ลำดับความสำคัญ completed > almost_done > buy_nudge > abandoned)
   const toSend = []
   for (const { line_user_id, learner_id } of identities) {
     if (!line_user_id || !learner_id) continue
@@ -127,6 +135,12 @@ export default async function handler(req, res) {
       if (!sentCampaign(e, 'completed')) campaign = 'completed'
     } else if (lessonsRead >= ALMOST_DONE_AT) {
       if (!sentCampaign(e, 'almost_done')) campaign = 'almost_done'
+    } else if (canNudge && buyNudgeEligible({
+      lessonsRead: e.lessons, lastReadAt: e.lastReadAt, now,
+      purchased: paidIds.has(learner_id), enrolled: enrolledIds.has(learner_id),
+      alreadySent: sentCampaign(e, BUY_NUDGE),
+    })) {
+      campaign = BUY_NUDGE
     } else if (
       e.lastReadAt &&
       new Date(e.lastReadAt).getTime() <= daysAgo(ABANDONED_AFTER_DAYS) &&
@@ -141,6 +155,20 @@ export default async function handler(req, res) {
   // 4) ส่ง + log (ส่งไม่สำเร็จไม่ log เพื่อให้รอบหน้าลองใหม่)
   let sent = 0
   for (const item of toSend) {
+    // ข้อความชวนซื้อ: จอง log ก่อนส่ง — บันทึกไม่ได้ (เช่นยังไม่รัน supabase/nurture-buy-nudge.sql) = ไม่ส่ง
+    // กันกรณีส่งสำเร็จแต่ไม่มี log แล้วลูกค้าได้ข้อความขายซ้ำทุกวัน; ส่งไม่ผ่านค่อยลบ log ให้รอบหน้าลองใหม่
+    if (item.campaign === BUY_NUDGE) {
+      const { data: row, error } = await admin
+        .from('line_nurture_log')
+        .insert({ learner_id: item.learner_id, line_user_id: item.line_user_id, campaign: item.campaign })
+        .select('id')
+        .single()
+      if (error || !row) continue
+      const pushed = await pushLineMessage(item.line_user_id, messageFor(item.campaign, item))
+      if (pushed.ok) sent += 1
+      else await admin.from('line_nurture_log').delete().eq('id', row.id).then(() => {}, () => {})
+      continue
+    }
     const result = await pushLineMessage(item.line_user_id, messageFor(item.campaign, item))
     if (result.ok) {
       sent += 1

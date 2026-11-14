@@ -9,7 +9,12 @@
   แต่ละคนแล้วส่งข้อความ 1 แบบ ตามลำดับความสำคัญ:
   1. `completed` — สอบ Post-test ผ่าน → ฉลอง + ชวนคลาส practical
   2. `almost_done` — เรียนเหลือ ≤2 บท แต่ยังไม่สอบ → "เหลืออีก N บท รับใบเซอร์"
-  3. `abandoned` — ไม่ได้เรียนมา ≥3 วัน (ยังไม่จบ) → "กลับมาเรียนต่อ"
+  3. `buy_nudge` — เรียนหมวดฟรีครบแล้ว ≥1 วัน ยังไม่ซื้อ และไม่ได้อยู่ในคลาส → ชวนปลดล็อกทั้งคอร์ส
+     (ครั้งเดียวต่อคน; ต้องรัน `supabase/nurture-buy-nudge.sql` ก่อน ไม่งั้นแคมเปญนี้จะไม่ส่ง)
+  4. `abandoned` — ไม่ได้เรียนมา ≥3 วัน (ยังไม่จบ) → "กลับมาเรียนต่อ"
+
+  > ถ้า log ขึ้น `LINE push failed 400 {"message":"Failed to send messages"}` ทุกคน = `LINE_CHANNEL_ACCESS_TOKEN`
+  > เป็นของ OA คนละ provider กับ LINE Login channel ที่ผู้เรียนใช้ล็อกอิน (ผ่าน class.jiacpr.com) — userId ไม่ตรงกัน
 - **`api/line/webhook.js`** — รับข้อความจากผู้ใช้ใน LINE: พิมพ์ "หยุด" = เลิกรับ, "เริ่ม" = รับต่อ
 - **`api/_lib/lineMessage.js`** — ฟังก์ชัน push/reply ผ่าน Messaging API
 
