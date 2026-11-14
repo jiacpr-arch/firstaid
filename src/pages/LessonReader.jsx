@@ -12,7 +12,7 @@ import { useProgressStore } from '../stores/progressStore'
 import { useEnsureProgress } from '../hooks/useProgress'
 import { useEntitlementStore, entitlementKey } from '../stores/entitlementStore'
 import { useEnsureEntitlements } from '../hooks/useEntitlements'
-import { isChapterUnlocked } from '../config/pricing'
+import { isChapterUnlocked, FREE_CHAPTER } from '../config/pricing'
 import ChapterUnlockCard from '../components/ChapterUnlockCard'
 import { markLessonRead, saveQuizAttempt, upsertLearner } from '../db/database'
 import { flushSync } from '../db/sync'
@@ -34,7 +34,7 @@ import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
 import { lessonJsonLd, breadcrumbJsonLd } from '../lib/seo'
 
-// ตั้งค่า LINE Login ครบ → ด่านล็อกอินจริง (LineLoginGate) หลังจบบทแรก และกั้นบทที่ 2 ขึ้นไป
+// ตั้งค่า LINE Login ครบ → ด่านล็อกอินจริง (LineLoginGate): ป๊อปอัพชวนหลังจบบทแรก (ข้ามได้) และกั้นหมวดเสียเงินที่เปิดสิทธิ์แล้ว
 // ยังไม่ตั้ง → ด่าน honor-system เดิม (LinePopup "ฉันแอดแล้ว"/ข้าม) — ดู docs/LINE_LOGIN_SETUP.md
 const REAL_LOGIN_GATE = isLineLoginConfigured && isSupabaseConfigured
 
@@ -193,7 +193,12 @@ export default function LessonReader() {
   // ด่านล็อกอินบังคับ: บทที่ 2 ขึ้นไปต้องล็อกอิน (LINE หรือบัญชี JIA) ก่อน — ครอบคลุมทุกทางเข้า
   // (ปุ่ม "บทถัดไป", list ในหน้า Learn, URL ตรง) เพราะวิ่งผ่าน route นี้หมด; ป๊อปอัพหลังจบบท 1
   // กด "ไว้ทีหลัง" ได้ แต่จะมาเจอด่านนี้อีกเมื่อเปิดบทถัดไป
-  if (needsLogin && lesson.order > 1) {
+  // ยกเว้น (1) หมวดฟรี — เรียนจบทั้งหมวดได้โดยไม่ต้องสมัคร (ป๊อปอัพหลังบท 1 ยังชวนล็อกอินแบบข้ามได้)
+  // และ (2) หมวดที่ยังไม่ได้ซื้อ — ให้เห็นหน้าราคา (ChapterUnlockCard) ก่อน แล้วค่อยล็อกอินตอนกดซื้อ
+  // เหลือกั้นเฉพาะหมวดเสียเงินที่เครื่องนี้เปิดสิทธิ์แล้ว (เช่นคลาส) ซึ่งต้องมีบัญชี+ชื่อจริงสำหรับใบประกาศ
+  const loginRequired = needsLogin && lesson.order > 1 && lesson.chapter !== FREE_CHAPTER
+    && isChapterUnlocked(lesson.chapter, unlockedChapters)
+  if (loginRequired) {
     const readFirst = readLessonIds.has(lessons[0].id)
     return (
       <div className="page-container">

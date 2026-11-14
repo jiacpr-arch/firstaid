@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Lock, MessageCircle, KeyRound, CheckCircle2, CreditCard, Loader2, ShieldCheck } from 'lucide-react'
+import { Lock, MessageCircle, KeyRound, CheckCircle2, CreditCard, Loader2, ShieldCheck, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { chapters } from '../courses/firstaid/lessons'
+import { chapters, lessons } from '../courses/firstaid/lessons'
 import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, COURSE_BUNDLE_CHAPTER, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
 import { startCheckout } from '../utils/checkout'
 import { useAuthStore } from '../stores/authStore'
@@ -12,6 +12,10 @@ import { startHubLogin } from '../utils/hubAuth'
 import { lineInterestUrl } from '../utils/lineLinks'
 import { authHeader } from '../utils/authHeader'
 import { track } from '../utils/analytics'
+
+// ราคารวมถ้าซื้อแยกทุกหมวด (โชว์ขีดฆ่าเทียบราคาทั้งคอร์ส) และจำนวนบทในหมวดเสียเงิน
+const SEPARATE_TOTAL = Object.values(CHAPTER_PRICES).reduce((sum, p) => sum + p, 0)
+const PAID_LESSON_COUNT = lessons.filter((l) => CHAPTER_PRICES[l.chapter]).length
 
 // Paywall shown in place of locked lesson content — rendered by LessonReader's
 // chapter-entitlement guard. Primary path: Stripe Checkout (card / PromptPay) → unlocks
@@ -29,14 +33,22 @@ export default function ChapterUnlockCard({ chapter }) {
   const [lineOnly, setLineOnly] = useState(false) // เซิร์ฟเวอร์ยังไม่ได้ตั้ง Stripe → ใช้ LINE
   const [payError, setPayError] = useState('')
 
+  // ยังไม่ล็อกอิน (หรือ token หมดอายุ) → ไปล็อกอินก่อน แล้วกลับมาที่ /buy?chapter=N ซึ่งเปิดหน้าจ่ายต่อให้เอง
+  const loginThenPay = (target) => {
+    track('checkout_login', { chapter: target, source: 'chapter_unlock' })
+    startHubLogin(learner?.id, `/buy?chapter=${target}`, { line: isLineLoginConfigured })
+  }
+
   const pay = async (target) => {
     if (paying != null) return
     setPayError('')
+    if (!session) { loginThenPay(target); return }
     setPaying(target)
     const r = await startCheckout(target, 'chapter_unlock')
     if (r.ok) return
     setPaying(null)
     if (r.error === 'stripe_not_configured') setLineOnly(true)
+    else if (r.error === 'login_required') loginThenPay(target)
     else setPayError('เปิดหน้าชำระเงินไม่สำเร็จ กรุณาลองใหม่ หรือซื้อผ่าน LINE')
   }
 
@@ -96,28 +108,71 @@ export default function ChapterUnlockCard({ chapter }) {
     )
   }
 
+  const isCpr = chapter === CPR_CHAPTER
+  const chapterLessons = isCpr ? 0 : lessons.filter((l) => l.chapter === chapter).length
+
   return (
     <div className="page-container">
-      <div className="card" style={{ textAlign: 'center', padding: 28 }}>
-        <Lock size={44} color="var(--color-text-secondary)" style={{ margin: '0 auto' }} />
-        <div className="text-title" style={{ marginTop: 12 }}>หมวดนี้ต้องปลดล็อกก่อน</div>
-        <div className="text-body" style={{ marginTop: 8 }}>
-          {chapterInfo?.title || `หมวด ${chapter}`} — ฿{price}
+      <div className="card" style={{ textAlign: 'center', padding: '22px 20px' }}>
+        <Lock size={36} color="var(--color-text-secondary)" style={{ margin: '0 auto' }} />
+        <div className="text-title" style={{ marginTop: 10 }}>หมวดนี้ต้องปลดล็อกก่อน</div>
+        <div className="text-body" style={{ marginTop: 6 }}>
+          หมวด {chapter}: {chapterInfo?.title}{chapterLessons ? ` · ${chapterLessons} บทเรียน` : ''}
         </div>
       </div>
 
+      {!lineOnly && (
+        <>
+          {/* ทั้งคอร์ส — ข้อเสนอหลัก เห็นได้ทั้งก่อนและหลังล็อกอิน */}
+          <div className="card" style={{ marginTop: 12, border: '2px solid var(--color-brand)' }}>
+            <span className="badge badge-brand"><Sparkles size={13} /> คุ้มที่สุด</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+              <span className="text-title">ปลดล็อกทั้งคอร์ส</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-brand)' }}>฿{COURSE_BUNDLE_PRICE}</span>
+              <span className="text-caption" style={{ textDecoration: 'line-through' }}>฿{SEPARATE_TOTAL}</span>
+            </div>
+            <ul className="text-body" style={{ margin: '8px 0 12px', paddingLeft: 20, lineHeight: 1.7 }}>
+              <li>บทเรียนครบทุกหมวด {PAID_LESSON_COUNT} บท + CPR &amp; AED ออนไลน์</li>
+              <li>เรียนครบแล้วสอบ Post-test <strong>รับใบประกาศ</strong></li>
+              <li>จ่ายครั้งเดียว เรียนได้ไม่จำกัดเวลา</li>
+            </ul>
+            <button type="button" className="btn btn-primary btn-block" style={{ fontWeight: 800 }}
+              disabled={paying != null} onClick={() => pay(COURSE_BUNDLE_CHAPTER)}>
+              {paying === COURSE_BUNDLE_CHAPTER ? <Loader2 size={16} className="spin" /> : <CreditCard size={16} />}
+              ซื้อทั้งคอร์ส ฿{COURSE_BUNDLE_PRICE}
+            </button>
+            <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }}
+              disabled={paying != null} onClick={() => pay(chapter)}>
+              {paying === chapter && <Loader2 size={16} className="spin" />}
+              ซื้อเฉพาะหมวดนี้ ฿{price}
+            </button>
+            {payError && <div className="callout callout-warning" style={{ marginTop: 10 }}>{payError}</div>}
+            <div className="text-caption" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ShieldCheck size={14} style={{ flexShrink: 0 }} />
+              <span>
+                บัตรเครดิต/เดบิต หรือ PromptPay ผ่าน Stripe — ปลดล็อกทันที
+                {!session && ' · กดซื้อแล้วเข้าสู่ระบบด้วย LINE ครั้งเดียวเพื่อผูกสิทธิ์กับบัญชี'}
+              </span>
+            </div>
+            <Link to={`/buy?chapter=${chapter}`} className="text-caption" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+              ดูราคาทุกหมวด
+            </Link>
+          </div>
+        </>
+      )}
+
       {!session ? (
         <div className="card" style={{ marginTop: 12 }}>
-          <div className="text-body-strong">เข้าสู่ระบบด้วย LINE แล้วจ่ายได้ทันที</div>
+          <div className="text-body-strong">ซื้อไว้แล้ว หรือมีโค้ดปลดล็อก?</div>
           <div className="text-caption" style={{ marginTop: 4 }}>
-            สิทธิ์ปลดล็อกผูกกับบัญชี LINE ของคุณ — ล็อกอินเครื่องไหนก็เรียนต่อได้
+            เข้าสู่ระบบเพื่อเรียนต่อ — สิทธิ์ผูกกับบัญชีของคุณ ล็อกอินเครื่องไหนก็เรียนได้
           </div>
           {isLineLoginConfigured ? (
             <button
               type="button"
-              onClick={() => startHubLogin(learner?.id, `/buy?chapter=${chapter}`, { line: true })}
+              onClick={() => startHubLogin(learner?.id, chapter === CPR_CHAPTER ? '/cpr' : '/learn', { line: true })}
               className="btn btn-block"
-              style={{ marginTop: 12, padding: '14px', borderRadius: 12, background: '#06C755', color: '#fff', fontWeight: 800, border: 'none' }}
+              style={{ marginTop: 12, padding: '12px', borderRadius: 12, background: '#06C755', color: '#fff', fontWeight: 800, border: 'none' }}
             >
               <MessageCircle size={18} /> เข้าสู่ระบบด้วย LINE
             </button>
@@ -129,29 +184,6 @@ export default function ChapterUnlockCard({ chapter }) {
         </div>
       ) : (
         <>
-          {!lineOnly && (
-            <div className="card" style={{ marginTop: 12 }}>
-              <div className="text-body-strong">ชำระเงินออนไลน์ — ปลดล็อกทันที</div>
-              <div className="text-caption" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ShieldCheck size={14} /> บัตรเครดิต/เดบิต หรือ PromptPay ผ่าน Stripe
-              </div>
-              <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 12, fontWeight: 800 }}
-                disabled={paying != null} onClick={() => pay(COURSE_BUNDLE_CHAPTER)}>
-                {paying === COURSE_BUNDLE_CHAPTER ? <Loader2 size={16} className="spin" /> : <CreditCard size={16} />}
-                ซื้อทั้งคอร์ส ฿{COURSE_BUNDLE_PRICE} (คุ้มกว่า)
-              </button>
-              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 8 }}
-                disabled={paying != null} onClick={() => pay(chapter)}>
-                {paying === chapter && <Loader2 size={16} className="spin" />}
-                ซื้อเฉพาะหมวดนี้ ฿{price}
-              </button>
-              {payError && <div className="callout callout-warning" style={{ marginTop: 10 }}>{payError}</div>}
-              <Link to={`/buy?chapter=${chapter}`} className="text-caption" style={{ display: 'block', textAlign: 'center', marginTop: 10 }}>
-                ดูราคาทุกหมวด
-              </Link>
-            </div>
-          )}
-
           <div className="card" style={{ marginTop: 12 }}>
             <div className="text-body-strong">{lineOnly ? 'ซื้อผ่าน LINE' : 'หรือซื้อผ่าน LINE'}</div>
             <div className="text-caption" style={{ marginTop: 4 }}>
