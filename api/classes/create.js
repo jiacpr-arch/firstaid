@@ -20,6 +20,8 @@ export default async function handler(req, res) {
   if (name.length < 2) { res.status(400).json({ error: 'กรุณาตั้งชื่อคลาส (อย่างน้อย 2 ตัวอักษร)' }); return }
   // คลาสรวม CPR + ปฐมพยาบาล (สร้างโค้ดเรียน CPR ออนไลน์ให้ด้วย — ดู api/_lib/classes.js)
   const includesCpr = req.body?.includesCpr === true
+  // ไม่ส่งมา = คลาสของ JIA (ค่าเดิม) — ผู้สอนภายนอกที่ยังไม่รับรอง แอดมินเอาติ๊กออก
+  const jiaCertified = req.body?.jiaCertified !== false
   const startsOn = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.startsOn || '') ? req.body.startsOn : null
   // จำนวนผู้เรียน (cohorts.max_students) — ใส่ได้ทุกคลาส; คลาส CPR ใช้ตั้งโควตาโค้ดด้วย
   const seatsNum = Number(req.body?.seats)
@@ -27,7 +29,7 @@ export default async function handler(req, res) {
 
   try {
     const cls = await createClass(admin, {
-      name, location: location || null, instructorName: req.body?.instructorName, includesCpr, startsOn, seats,
+      name, location: location || null, instructorName: req.body?.instructorName, includesCpr, startsOn, seats, jiaCertified,
     })
     res.setHeader('Cache-Control', 'no-store')
     res.status(200).json({ ok: true, ...cls })
