@@ -13,6 +13,8 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
   const [instructorName, setInstructorName] = useState('')
   // คลาสรวม CPR + ปฐมพยาบาล: สร้างโค้ดเรียน CPR ออนไลน์ (cpr.morroo.com) + เปิดทุกบทให้คนในคลาส
   const [includesCpr, setIncludesCpr] = useState(false)
+  // ใบภาคปฏิบัติชื่อ JIA: เฉพาะคลาสของ JIA / ผู้สอนที่ JIA รับรอง (ผู้สอนภายนอกที่ยังไม่รับรอง = เอาติ๊กออก)
+  const [jiaCertified, setJiaCertified] = useState(true)
   const [startsOn, setStartsOn] = useState('')
   const [seats, setSeats] = useState('')
   const [busy, setBusy] = useState(false)
@@ -44,7 +46,7 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
         method: 'POST',
         body: JSON.stringify({
           name: name.trim(), location: location.trim(), instructorName: instructorName.trim(),
-          includesCpr, startsOn: includesCpr ? startsOn || null : null, seats: Number(seats) || null,
+          includesCpr, startsOn: includesCpr ? startsOn || null : null, seats: Number(seats) || null, jiaCertified,
         }),
       })
       const data = await resp.json().catch(() => ({}))
@@ -138,6 +140,15 @@ export default function ClassGate({ mode: initialMode = 'create', onClose }) {
                 <span className="text-body-strong">คลาสรวม CPR + ปฐมพยาบาล</span>
                 <span className="text-caption" style={{ display: 'block' }}>
                   นักเรียนเรียน CPR & AED ต่อในเว็บนี้ได้เลยหลังจบปฐมพยาบาล (ระบบสร้างโค้ดคลาส CPR ให้อัตโนมัติ) และเปิดทุกบทปฐมพยาบาลให้คนในคลาส
+                </span>
+              </span>
+            </label>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, cursor: 'pointer' }}>
+              <input type="checkbox" checked={jiaCertified} onChange={(e) => setJiaCertified(e.target.checked)} style={{ marginTop: 3 }} data-testid="class-jia-certified" />
+              <span>
+                <span className="text-body-strong">ออกใบภาคปฏิบัติชื่อ JIA</span>
+                <span className="text-caption" style={{ display: 'block' }}>
+                  ติ๊กไว้เมื่อ JIA สอนเองหรือผู้สอนที่ JIA รับรองแล้ว · ผู้สอนภายนอกที่ยังไม่รับรองให้เอาติ๊กออก (นักเรียนยังได้ใบภาคทฤษฎีออนไลน์ตามปกติ)
                 </span>
               </span>
             </label>

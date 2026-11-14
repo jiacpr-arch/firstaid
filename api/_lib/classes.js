@@ -54,8 +54,9 @@ async function insertWithUniqueCode(admin, table, makeRow, select) {
   throw new Error(`could not generate a unique code for ${table}`)
 }
 
+// jiaCertified = คลาสของ JIA / ผู้สอนที่ JIA รับรอง → ออกใบภาคปฏิบัติชื่อ JIA ได้ (api/_lib/issuePractical.js)
 export async function createClass(admin, {
-  name, location = null, instructorName = null, includesCpr = false, startsOn = null, seats = null, now = new Date(),
+  name, location = null, instructorName = null, includesCpr = false, startsOn = null, seats = null, jiaCertified = true, now = new Date(),
 }) {
   const instructorCode = generateInstructorCode()
 
@@ -66,6 +67,7 @@ export async function createClass(admin, {
     instructor_code: instructorCode,
     created_via: 'app',
     max_students: seats || null,
+    jia_certified: jiaCertified !== false,
     ...(includesCpr ? { includes_cpr: true, unlock_lessons: true, starts_on: startsOn } : {}),
   }), 'id, name, code')
 

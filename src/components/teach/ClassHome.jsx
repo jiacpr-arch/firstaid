@@ -18,7 +18,7 @@ export default function ClassHome({ onNewClass, onPick }) {
   const [savedName, setSavedName] = useState(null) // null = loading
   const [nameNote, setNameNote] = useState('')
   // จำนวนผู้เรียนสูงสุด — ครบแล้วนักเรียนใหม่เข้าคลาสไม่ได้ (api/cohorts/join.js)
-  const [cap, setCap] = useState(null) // null = loading | { maxStudents, students }
+  const [cap, setCap] = useState(null) // null = loading | { maxStudents, students, jiaCertified }
   const [capInput, setCapInput] = useState('')
   const [capNote, setCapNote] = useState('')
 
@@ -54,6 +54,27 @@ export default function ClassHome({ onNewClass, onPick }) {
       .catch(() => {})
     return () => { cancelled = true }
   }, [cls.classId])
+
+  // ใบภาคปฏิบัติชื่อ JIA (cohorts.jia_certified) — สลับได้ทีหลัง; เปิดแล้วกด "ส่งใหม่" ในแท็บใบประกาศเพื่อออกย้อนหลัง
+  const toggleJiaCert = async () => {
+    if (!cap) return
+    const next = !cap.jiaCertified
+    if (!confirm(next
+      ? 'เปิดใบภาคปฏิบัติชื่อ JIA ให้คลาสนี้? ใช้กับคลาสที่ JIA สอนเองหรือผู้สอนที่ JIA รับรองแล้วเท่านั้น'
+      : 'ปิดใบภาคปฏิบัติชื่อ JIA ของคลาสนี้? นักเรียนยังได้ใบภาคทฤษฎีตามปกติ ใบที่ออกไปแล้วไม่ถูกยกเลิก')) return
+    setBusy(true)
+    setCapNote('')
+    try {
+      const resp = await adminFetch('/api/classes/capacity', { method: 'POST', body: JSON.stringify({ classId: cls.classId, jiaCertified: next }) })
+      const body = await resp.json().catch(() => ({}))
+      if (!resp.ok) { setCapNote(body.error || 'บันทึกไม่สำเร็จ'); return }
+      setCap(body)
+    } catch {
+      setCapNote('บันทึกไม่สำเร็จ')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const saveCapacity = async () => {
     setBusy(true)
@@ -195,6 +216,17 @@ export default function ClassHome({ onNewClass, onPick }) {
               onClick={saveCapacity}>บันทึก</button>
           </div>
           {capNote && <div className="text-caption" style={{ marginTop: 6 }}>{capNote}</div>}
+          {cap && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="text-body-strong">ใบภาคปฏิบัติชื่อ JIA: <span data-testid="class-jia-cert-status" style={{ color: cap.jiaCertified ? '#347053' : '#B91C1C' }}>{cap.jiaCertified ? 'ออกได้' : 'ไม่ออก'}</span></div>
+                <div className="text-caption">เฉพาะคลาสที่ JIA สอนเองหรือผู้สอนที่ JIA รับรอง · คลาสอื่นนักเรียนได้ใบภาคทฤษฎีตามปกติ</div>
+              </div>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={busy} onClick={toggleJiaCert} data-testid="class-jia-cert-toggle">
+                {cap.jiaCertified ? 'ปิดใบ JIA' : 'เปิดใบ JIA'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

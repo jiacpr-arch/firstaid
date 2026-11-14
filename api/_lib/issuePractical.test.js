@@ -5,10 +5,11 @@ import { fakeDb } from './fakeDb.js'
 
 const L = 'learner-1'
 
-function seed({ stations = [], checkins = [], theory = true } = {}) {
+function seed({ stations = [], checkins = [], theory = true, cohort = null } = {}) {
   return fakeDb({
+    cohorts: cohort ? [cohort] : [],
     attendance: [{ id: 'att-1', session_id: 'ses-1', learner_id: L, learner_name: 'สมชาย', status: 'approved', checked_in_at: '2026-10-20T03:00:00Z' }],
-    practical_sessions: [{ id: 'ses-1', title: 'คลาส', location: 'ห้อง A' }],
+    practical_sessions: [{ id: 'ses-1', title: 'คลาส', location: 'ห้อง A', cohort_id: cohort ? cohort.id : null }],
     certificates: theory ? [{ id: 'c-t', learner_id: L, kind: 'theory' }] : [],
     session_stations: stations,
     station_checkins: checkins,
@@ -57,4 +58,15 @@ test('a server-scored passed post-test counts as theory even without the app the
   const r = await retryPracticalForLearner(db, L)
   assert.equal(r.status, 200)
   assert.equal(practical(db).length, 1)
+})
+
+test('a class JIA has not certified never issues the JIA practical certificate; a certified one does', async () => {
+  const outside = seed({ cohort: { id: 'co-1', jia_certified: false } })
+  const r = await retryPracticalForLearner(outside, L)
+  assert.deepEqual([r.status, r.body.reason], [200, 'not_jia_certified'])
+  assert.equal(practical(outside).length, 0)
+
+  const certified = seed({ cohort: { id: 'co-1', jia_certified: true } })
+  assert.equal((await retryPracticalForLearner(certified, L)).status, 200)
+  assert.equal(practical(certified).length, 1)
 })

@@ -17,9 +17,16 @@ export async function issuePracticalCertificate(admin, attendanceId) {
 
   const { data: session } = await admin
     .from('practical_sessions')
-    .select('title, location, instructor_id')
+    .select('title, location, instructor_id, cohort_id')
     .eq('id', att.session_id)
     .single()
+
+  // ใบภาคปฏิบัติชื่อ JIA ออกได้เฉพาะคลาสของ JIA / ผู้สอนที่ JIA รับรอง (cohorts.jia_certified — owner decision
+  // 14 Nov 2026, supabase/class-jia-certified.sql) คลาสผู้สอนภายนอกที่ยังไม่รับรอง: เช็คชื่อ/ให้คะแนนได้ตามปกติ
+  // แต่ไม่ออกใบ — เปิดสิทธิ์ทีหลังแล้วกด "ส่งใหม่" ในแท็บใบประกาศ (grantPractical) ก็ออกให้ย้อนหลังได้
+  const certified = await classIssuesJiaCert(admin, session?.cohort_id)
+  if (certified === null) return { status: 503, body: { error: 'Could not read the class certificate setting' } }
+  if (!certified) return { status: 200, body: { ok: false, reason: 'not_jia_certified' } }
 
   // ต้องผ่านทฤษฎีก่อน: ใบทฤษฎีของแอป หรือ Post-test ที่เซิร์ฟเวอร์ตรวจแล้วว่าผ่าน
   // (ใบทฤษฎีของแอปออกเมื่อนักเรียนกรอกฟอร์มรับใบเอง — คนที่ผ่าน Post-test แต่ไม่ได้กรอกฟอร์ม
@@ -74,6 +81,15 @@ export async function issuePracticalCertificate(admin, attendanceId) {
   })
 
   return withHub(admin, data, att.learner_id)
+}
+
+// true = คลาสนี้ออกใบภาคปฏิบัติชื่อ JIA ได้, false = ไม่ได้, null = อ่านค่าไม่ได้ (ไม่ออก — ส่งใหม่ทีหลังได้)
+// รอบอบรมที่ไม่ผูกคลาส (รอบเก่าที่แอดมินสร้างเอง) = ของ JIA
+export async function classIssuesJiaCert(admin, cohortId) {
+  if (!cohortId) return true
+  const { data, error } = await admin.from('cohorts').select('jia_certified').eq('id', cohortId).maybeSingle()
+  if (error) return null
+  return data ? data.jia_certified !== false : true
 }
 
 // The learner is shown the Hub's practical certificate, not this row: report the pass there too.
