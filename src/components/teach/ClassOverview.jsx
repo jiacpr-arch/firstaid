@@ -41,7 +41,8 @@ function exportCsv(learners, opts, filename, includesCpr) {
 }
 
 // แท็บ "ภาพรวม": นักเรียนทุกคน + ความพร้อม (พร้อม = Post-test ผ่าน + คลาสรวม CPR: CPR จบ) + สิ่งที่ยังขาด แตะชื่อเพื่อดูรายคน
-export default function ClassOverview({ learners, classId, classCode, includesCpr = false }) {
+// readOnly — หน้า /class ของผู้สอนภายนอก (เข้าด้วยรหัสผู้สอน): ไม่มีปุ่มส่งเตือน LINE และไม่ลิงก์ไปหน้ารายคนของแอดมิน
+export default function ClassOverview({ learners, classId, classCode, includesCpr = false, readOnly = false }) {
   const [filter, setFilter] = useState('all')
   const opts = useMemo(() => ({ totalLessons: lessons.length, requireCpr: includesCpr }), [includesCpr])
   const summary = useMemo(() => summarizeReadiness(learners, opts), [learners, opts])
@@ -89,14 +90,16 @@ export default function ClassOverview({ learners, classId, classCode, includesCp
         </div>
       </div>
 
-      <ClassReminderCard cohortId={classId} notReady={summary.total - summary.ready} />
+      {!readOnly && <ClassReminderCard cohortId={classId} notReady={summary.total - summary.ready} />}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
         {shown.map((l) => {
           const r = classifyReadiness(l, opts)
           const m = READINESS[r.status]
+          const Row = readOnly ? 'div' : Link
+          const rowProps = readOnly ? {} : { to: `/admin/teach/learners/${l.learnerId}` }
           return (
-            <Link key={l.learnerId} to={`/admin/teach/learners/${l.learnerId}`} className="card" style={{ textDecoration: 'none' }}>
+            <Row key={l.learnerId} {...rowProps} className="card" style={{ textDecoration: 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <div className="text-body-strong">{l.name || '(ไม่ระบุชื่อ)'}</div>
@@ -112,7 +115,7 @@ export default function ClassOverview({ learners, classId, classCode, includesCp
                 return <div className="text-caption" style={{ marginTop: 2, color: c.done ? '#347053' : '#B91C1C' }}>CPR & AED ออนไลน์: {c.label}</div>
               })()}
               {r.missing.length > 0 && <div className="text-caption" style={{ marginTop: 2 }}>ขาด: {r.missing.join(' · ')}</div>}
-            </Link>
+            </Row>
           )
         })}
       </div>

@@ -27,6 +27,8 @@ export default function ClassHome({ onNewClass, onPick }) {
   const joinUrl = useMemo(() => (cls.classCode ? `${base}/join/${cls.classCode}?openExternalBrowser=1` : ''), [base, cls.classCode])
   const myQrUrl = `${base}/my-qr`
   const assistantUrl = cls.sessionId ? `${base}/scan/${cls.sessionId}` : ''
+  // ผู้สอนภายนอก (ไม่มีบัญชีแอดมิน) ดูผลทั้งคลาสที่หน้า /class ด้วยรหัสเดียวกันนี้
+  const instructorUrl = cls.instructorCode ? `${base}/class?code=${cls.instructorCode}` : ''
 
   useEffect(() => {
     if (!joinUrl) return
@@ -214,16 +216,21 @@ export default function ClassHome({ onNewClass, onPick }) {
       )}
 
       <div className="card" style={{ marginTop: 10, borderColor: '#E3C27A', background: '#FBF3DF' }}>
-        <div className="text-body-strong" style={{ color: '#7A5A1F' }}>รหัสผู้ช่วย — ให้เฉพาะคนที่ช่วยสแกน</div>
+        <div className="text-body-strong" style={{ color: '#7A5A1F' }}>รหัสผู้สอน — ให้เฉพาะผู้สอนและผู้ช่วยสอน</div>
         <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 4, color: '#7A5A1F', marginTop: 4 }}>
           {showCode ? cls.instructorCode : masked}
         </div>
         <div className="text-caption" style={{ color: '#7A5A1F', marginTop: 2 }}>
-          ผู้ช่วยเปิดลิงก์ด้านล่าง ใส่รหัสนี้ แล้วสแกน/เช็คชื่อ/ให้คะแนนได้โดยไม่ต้องล็อกอิน (ดูผลเรียนออนไลน์ของนักเรียนไม่ได้) ห้ามแจกนักเรียน
+          ใช้รหัสนี้ได้โดยไม่ต้องล็อกอิน: ดูความพร้อมของนักเรียนทั้งคลาส (เห็นเบอร์แค่ 4 ตัวท้าย) และสแกน/เช็คชื่อ/ให้คะแนนวันอบรม ห้ามแจกนักเรียน
         </div>
+        {instructorUrl && (
+          <div className="text-caption" style={{ color: '#7A5A1F', marginTop: 6, wordBreak: 'break-all' }}>
+            ลิงก์ผู้สอน (ดูผลคลาส): <code>{instructorUrl}</code>
+          </div>
+        )}
         {assistantUrl && (
           <div className="text-caption" style={{ color: '#7A5A1F', marginTop: 6, wordBreak: 'break-all' }}>
-            ลิงก์ผู้ช่วย: <code>{assistantUrl}</code>
+            ลิงก์ผู้ช่วย (สแกนวันอบรม): <code>{assistantUrl}</code>
           </div>
         )}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
@@ -233,9 +240,14 @@ export default function ClassHome({ onNewClass, onPick }) {
           <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => copy('inst', cls.instructorCode)}>
             {copied === 'inst' ? <Check size={14} /> : <Copy size={14} />} คัดลอกรหัส
           </button>
+          {instructorUrl && (
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => copy('teach', instructorUrl)} data-testid="copy-instructor-link">
+              {copied === 'teach' ? <Check size={14} /> : <Copy size={14} />} คัดลอกลิงก์ผู้สอน
+            </button>
+          )}
           {assistantUrl && (
             <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => copy('asst', assistantUrl)}>
-              {copied === 'asst' ? <Check size={14} /> : <Copy size={14} />} คัดลอกลิงก์
+              {copied === 'asst' ? <Check size={14} /> : <Copy size={14} />} คัดลอกลิงก์ผู้ช่วย
             </button>
           )}
           <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={busy} onClick={rotate}>
