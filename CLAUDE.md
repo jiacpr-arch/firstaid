@@ -23,6 +23,10 @@ jia-online แล้วต้องคัดลอกมาใหม่ ให�
 ราคามาจาก `src/config/pricing.js` เท่านั้น · env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (ไม่ตั้ง = ปุ่มกลับไปใช้ LINE + โค้ด)
 · SQL: `supabase/stripe-checkout.sql`
 
+**ขายให้ผู้สอน/องค์กร**: หน้า `/instructors` (สาธารณะ) — แพ็กเกจรายคลาส 129 ฿/ที่นั่ง (ราคาผู้ใช้รุ่นแรก 99 ฿ ถึง 31 ธ.ค. 2026,
+ขั้นต่ำ 10, คลาสแรกทดลองฟรี 10 ที่นั่ง) + สถาบันรายปีเริ่ม 9,900 ฿ — ไม่มีปุ่มซื้อ: ทุกปุ่มไป LINE @jiacpr แล้วแอดมินสร้างคลาสให้เอง
+ราคาอยู่ที่ `INSTRUCTOR_OFFER` ใน `src/config/pricing.js` (เลขชุดเดียวกับ `CLASS_SEAT_PLAN` ของ acls-emr — แก้ต้องแก้ทุกเว็บ)
+
 คำสั่งหลัก: `npm run dev` (รัน local), `npm run build` (build + ตรวจว่าโค้ดพัง), `npx eslint src/`
 
 มี Meta Pixel ติดอยู่ที่ `src/components/MetaPixel.jsx` (pixel ID ตั้งผ่าน `VITE_META_PIXEL_ID`,

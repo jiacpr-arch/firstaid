@@ -11,3 +11,8 @@ export function lineInterestUrl(sourceLabel) {
   const text = `สนใจเรียนปฐมพยาบาล / First Aid กับ Jia 🙏\nมาจากแอปเรียนออนไลน์ — ${sourceLabel}`
   return `https://line.me/R/oaMessage/${LINE_OA_ID}/?${encodeURIComponent(text)}`
 }
+
+// เปิดแชต @jiacpr พร้อมข้อความที่กำหนดเอง (ไม่ใช่ข้อความ "สนใจเรียน") — เช่น ผู้สอนขอเปิดคลาส / ขอใบเสนอราคา
+export function lineMessageUrl(text) {
+  return `https://line.me/R/oaMessage/${LINE_OA_ID}/?${encodeURIComponent(text)}`
+}

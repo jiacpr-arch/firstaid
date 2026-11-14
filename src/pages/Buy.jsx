@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, CreditCard, KeyRound, Loader2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import { CheckCircle2, CreditCard, KeyRound, Loader2, MessageCircle, ShieldCheck, Sparkles, Users } from 'lucide-react'
 import { chapters } from '../courses/firstaid/lessons'
 import { CHAPTER_PRICES, COURSE_BUNDLE_CHAPTER, COURSE_BUNDLE_PRICE, CPR_CHAPTER, CPR_CHAPTER_TITLE, FREE_CHAPTER } from '../config/pricing'
 import { useAuthStore } from '../stores/authStore'
@@ -272,6 +272,9 @@ export default function Buy() {
           className="text-body-strong" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <MessageCircle size={16} /> สอบถาม / ขอใบเสร็จ / ซื้อให้องค์กร ทาง LINE
         </a>
+        <Link to="/instructors" className="text-body-strong" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Users size={16} /> เป็นผู้สอน? ดูแพ็กเกจเปิดคลาสให้นักเรียน
+        </Link>
       </div>
     </div>
   )

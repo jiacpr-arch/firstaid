@@ -27,3 +27,26 @@ export function isChapterUnlocked(chapter, unlockedChapters) {
 // คอร์สอบรมภาคปฏิบัติปฐมพยาบาล (สอนสดที่ Jia Training Center) — ตรงกับ learning_hub.courses id 'firstaid'
 // ใน Hub (price 99900 สตางค์) ถ้าแก้ราคาที่ Hub ต้องแก้ตรงนี้ด้วย
 export const PRACTICAL_COURSE_PRICE = 999
+
+// ข้อเสนอสำหรับผู้สอน/องค์กรที่เปิดคลาสของตัวเอง (หน้า /instructors) — ตัวเลขชุดเดียวกับ acls-emr
+// (src/config/premiumPlans.js → CLASS_SEAT_PLAN) ทุกเว็บของ JIA แสดงราคาเดียวกัน แก้ที่หนึ่งต้องแก้อีกที่ด้วย
+// เว็บนี้ยังไม่มีหน้าจ่ายเงินรายคลาส: ผู้สอนทัก LINE แล้วแอดมินสร้างคลาสให้ (api/classes/create.js — เฉพาะแอดมิน)
+export const INSTRUCTOR_OFFER = {
+  seatPrice: 129,
+  // ราคาผู้ใช้รุ่นแรก — ใช้ได้ถึงก่อนเวลา foundingEndsAt (เวลาไทย)
+  foundingSeatPrice: 99,
+  foundingEndsAt: '2027-01-01T00:00:00+07:00',
+  foundingEndsLabel: '31 ธ.ค. 2026',
+  minSeats: 10,
+  trialSeats: 10, // คลาสแรกของผู้สอนแต่ละคน: ทดลองฟรี
+  institutionYearlyFrom: 9900,
+}
+
+export function isFoundingPriceActive(nowMs = Date.now()) {
+  return nowMs < Date.parse(INSTRUCTOR_OFFER.foundingEndsAt)
+}
+
+// ราคาต่อที่นั่ง ณ เวลานั้น (บาท)
+export function instructorSeatPrice(nowMs = Date.now()) {
+  return isFoundingPriceActive(nowMs) ? INSTRUCTOR_OFFER.foundingSeatPrice : INSTRUCTOR_OFFER.seatPrice
+}
