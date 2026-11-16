@@ -2,10 +2,10 @@ import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { applyCors } from '../_lib/cors.js'
 import { authFromToken } from '../_lib/authLearner.js'
 import { rateLimited } from '../_lib/rateLimit.js'
-import { checkoutItem, isStripeConfigured, parseBuyer, sessionParams, stripeApi } from '../_lib/stripeCheckout.js'
+import { checkoutAttribution, checkoutItem, isStripeConfigured, parseBuyer, sessionParams, stripeApi } from '../_lib/stripeCheckout.js'
 import { resolvePurchaseLearner } from '../_lib/guestClaim.js'
 
-// POST /api/checkout/create { chapter, name?, phone? } → { url } ของหน้าชำระเงิน Stripe (บัตร / PromptPay)
+// POST /api/checkout/create { chapter, name?, phone?, attribution? } → { url } ของหน้าชำระเงิน Stripe (บัตร / PromptPay)
 // ล็อกอินอยู่ — สิทธิ์ผูกกับ learner_id ถาวรของบัญชี (ย้ายเครื่องก็เรียนต่อได้) เหมือนเดิม
 // ไม่ได้ล็อกอิน — ซื้อแบบ guest ต้องมีชื่อ + เบอร์ (400 buyer_required) แล้วผูกกับบัญชีทีหลังที่ /api/checkout/claim
 // 503 stripe_not_configured = ยังไม่ได้ตั้ง STRIPE_SECRET_KEY → หน้าเว็บกลับไปใช้ทาง LINE
@@ -25,6 +25,9 @@ export default async function handler(req, res) {
   const item = checkoutItem(req.body?.chapter)
   if (!item) { fail(400, 'invalid_chapter'); return }
 
+  // ที่มาของผู้ซื้อ (utm / click id / _fbc) → metadata ของ Stripe เท่านั้น — ห้าม log
+  const attribution = checkoutAttribution(req.body, req.headers?.cookie)
+
   const admin = getSupabaseAdmin()
   if (!admin) { res.status(500).json({ error: 'Supabase not configured' }); return }
 
@@ -34,7 +37,7 @@ export default async function handler(req, res) {
     const buyer = parseBuyer(req.body)
     if (!buyer) { fail(400, 'buyer_required'); return }
     try {
-      const session = await stripeApi('checkout/sessions', sessionParams({ item, buyer }))
+      const session = await stripeApi('checkout/sessions', sessionParams({ item, buyer, attribution }))
       res.status(200).json({ url: session.url })
     } catch (err) {
       fail(502, err.message || 'stripe_error')
@@ -48,7 +51,7 @@ export default async function handler(req, res) {
   if (!learnerId) { fail(409, 'account_not_linked'); return }
 
   try {
-    const session = await stripeApi('checkout/sessions', sessionParams({ item, learnerId, userId: auth.userId }))
+    const session = await stripeApi('checkout/sessions', sessionParams({ item, learnerId, userId: auth.userId, attribution }))
     res.status(200).json({ url: session.url })
   } catch (err) {
     fail(502, err.message || 'stripe_error')

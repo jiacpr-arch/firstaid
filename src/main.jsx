@@ -1,5 +1,6 @@
 import { installGoogleExpiryGuard } from '../public/google-attribution.js'
 import { revokeTrainingGoogle } from './lib/trainingGoogleAds.js'
+import { captureAttribution } from './lib/checkoutAttribution.js'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -17,6 +18,9 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 // HTML ที่ prerender ไว้ฝังแท็ก meta/JSON-LD ของ <Seo> มาด้วย ([data-seo]) —
 // กวาดทิ้งก่อน mount ไม่งั้นจะซ้ำกับชุดใหม่ที่ React 19 hoist ขึ้น <head>
 document.querySelectorAll('[data-seo]').forEach((el) => el.remove())
+
+// จำที่มาของผู้ซื้อ (utm / click id จาก URL ที่เข้ามา) ไว้แนบ metadata ของ Stripe ตอนกดซื้อ — ไม่ส่งไปที่อื่น
+captureAttribution(window)
 
 installGoogleExpiryGuard(window, document, () => {
   if (window.__firstaidGoogleLoaded && !window.__firstaidGoogleRevoked) {
