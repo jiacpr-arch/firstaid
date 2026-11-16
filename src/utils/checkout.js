@@ -1,6 +1,7 @@
 import { authHeader } from './authHeader'
 import { track } from './analytics'
 import { useLearnerStore } from '../stores/learnerStore'
+import { readAttribution } from '../lib/checkoutAttribution.js'
 
 // ผู้ซื้อแบบ guest (ไม่ได้ล็อกอิน): ชื่อ 2–80 ตัว + เบอร์ไทย 0xxxxxxxx(x) — ตรงกับ parseBuyer ฝั่งเซิร์ฟเวอร์
 // → { name, phone } ที่ normalize แล้ว | null
@@ -27,6 +28,8 @@ export async function startCheckout(chapter, source, buyer = null) {
         chapter,
         learnerId: useLearnerStore.getState().learner?.id || undefined,
         ...(buyer ? { name: buyer.name, phone: buyer.phone } : {}),
+        // ที่มาของผู้ซื้อ (last touch) → metadata ของ Stripe เท่านั้น ไม่ส่งเข้า track()
+        attribution: readAttribution(window),
       }),
     })
     const data = await res.json().catch(() => ({}))

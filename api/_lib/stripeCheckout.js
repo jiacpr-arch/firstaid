@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, COURSE_BUNDLE_CHAPTER, CPR_CHAPTER_TITLE, CPR_CHAPTER } from '../../src/config/pricing.js'
+import { sanitizeAttribution, sanitizeAttributionValue } from '../../src/lib/checkoutAttribution.js'
 
 // ชำระเงินออนไลน์ผ่าน Stripe Checkout (บัตร + PromptPay) — ปลดล็อกหมวดทันทีหลังจ่าย
 // ไม่ต้องรอแอดมินส่งโค้ดทาง LINE แบบเดิม (LINE + โค้ดยังใช้ได้เป็นทางสำรอง)
@@ -52,7 +53,8 @@ export function parseBuyer(body) {
 // learnerId = ซื้อให้บัญชีที่ล็อกอินอยู่ (แบบเดิม) · ไม่มี learnerId + buyer = ซื้อแบบ guest:
 // metadata guest=1 + ชื่อ/เบอร์ (ไม่มี learner_id) และกลับมาที่ /api/checkout/return ซึ่งเก็บ session id ไว้ใน cookie
 // HttpOnly ให้ /api/checkout/claim ผูกกับบัญชีที่ล็อกอินทีหลัง — session id ไม่โผล่ใน URL ของแอป
-export function sessionParams({ item, learnerId, userId, buyer, base = siteUrl() }) {
+// attribution = ผลจาก checkoutAttribution() — เติมเข้า metadata โดยไม่ทับ key ที่ตั้งไว้แล้ว
+export function sessionParams({ item, learnerId, userId, buyer, attribution, base = siteUrl() }) {
   if (!learnerId && !buyer) throw new Error('buyer_required')
   const p = new URLSearchParams()
   p.set('mode', 'payment')
@@ -73,12 +75,26 @@ export function sessionParams({ item, learnerId, userId, buyer, base = siteUrl()
   p.set('metadata[chapter]', String(item.chapter))
   p.set('metadata[app]', 'firstaid')
   if (userId) p.set('metadata[user_id]', userId)
+  for (const [key, value] of Object.entries(sanitizeAttribution(attribution))) {
+    if (!p.has(`metadata[${key}]`)) p.set(`metadata[${key}]`, value)
+  }
   p.set('locale', 'th')
   p.set('success_url', learnerId
     ? `${base}/buy?session_id={CHECKOUT_SESSION_ID}`
     : `${base}/api/checkout/return?chapter=${item.chapter}&session_id={CHECKOUT_SESSION_ID}`)
   p.set('cancel_url', `${base}/buy?cancelled=${item.chapter}`)
   return p
+}
+
+// ที่มาของผู้ซื้อสำหรับ metadata (รายงานแอดแยกยอดขายตามแหล่ง) — body.attribution จากหน้าเว็บ (last touch ใน localStorage)
+// + cookie _fbc ถ้ามี (มีเฉพาะหลังยินยอม Meta pixel — ไม่สร้างขึ้นเองจาก fbclid) · ตรวจซ้ำทุกค่า key อื่นทิ้ง
+// ส่งไป Stripe ของเราเท่านั้น ไม่ส่งต่อ Meta/Google/analytics
+export function checkoutAttribution(body, cookieHeader) {
+  const out = sanitizeAttribution(body?.attribution)
+  delete out.fbc
+  const fbc = sanitizeAttributionValue('fbc', readCookie(cookieHeader, '_fbc') || '')
+  if (fbc) out.fbc = fbc
+  return out
 }
 
 export async function stripeApi(path, body) {
