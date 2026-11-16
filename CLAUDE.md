@@ -22,6 +22,17 @@ jia-online แล้วต้องคัดลอกมาใหม่ ให�
 ให้สิทธิ์ที่ `api/checkout/webhook.js` + `api/checkout/confirm.js` (upsert `lesson_entitlements` source `stripe`),
 ราคามาจาก `src/config/pricing.js` เท่านั้น · env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (ไม่ตั้ง = ปุ่มกลับไปใช้ LINE + โค้ด)
 · SQL: `supabase/stripe-checkout.sql`
+**จ่ายก่อน ล็อกอินทีหลัง (guest)**: ไม่ได้ล็อกอิน → `/buy` ขอแค่ชื่อ + เบอร์ (`parseBuyer`, ไม่มีช่องอีเมล — Stripe เก็บเอง) → session
+metadata `guest=1`, `buyer_name`, `buyer_phone` (ไม่มี `learner_id`) → Stripe กลับมาที่ `api/checkout/return.js` ซึ่งเก็บ session id ใน cookie
+HttpOnly `fa_checkout_claim` (30 วัน, Path `/api/checkout/claim` เท่านั้น ไม่อยู่ใน URL แอป) แล้วพาไป `/buy?guest_paid=N` → การ์ด
+"ชำระเงินสำเร็จ — เข้าสู่ระบบเพื่อเริ่มเรียน" (localStorage `firstaid_guest_paid_v1`) → ล็อกอินแล้ว `/buy` เรียก `api/checkout/claim.js`
+(`api/_lib/guestClaim.js`): อ่าน session จาก Stripe ใหม่ ต้อง paid + guest ของ firstaid + ยอดตรงราคา → upsert `lesson_entitlements` ให้ learner
+ของบัญชีนั้น ครั้งเดียวต่อการชำระ (`order_ref` เป็นของบัญชีอื่น = 409) · webhook รับทราบ guest เฉย ๆ ไม่ให้สิทธิ์ ·
+วัดผลการซื้อ guest: return ตั้ง cookie ที่สอง `fa_checkout_receipt` (15 นาที, Path `/api/checkout/guest-receipt`) → `/buy` ขอใบวัดผลจาก
+`api/checkout/guest-receipt.js` (ไม่ต้องล็อกอิน, `createPurchaseReceipt` รับ session guest ที่ paid/live/ราคาตรง) → ส่งต่อหน้า receipt-page
+ที่ถามความยินยอมเหมือนเดิม → ลิงก์ /learn พากลับ /buy ครั้งเดียว (App.jsx) · ตอน claim ไม่พาไปหน้า receipt ซ้ำ ·
+ผู้ซื้อที่ล็อกอินอีกเครื่อง/cookie หาย: หา session ใน Stripe ด้วย `buyer_phone` แล้วให้สิทธิ์เอง (insert `lesson_entitlements` source `stripe`,
+`order_ref` `stripe:<cs_…>`)
 
 **ขายให้ผู้สอน/องค์กร**: หน้า `/instructors` (สาธารณะ) — แพ็กเกจรายคลาส 129 ฿/ที่นั่ง (ราคาผู้ใช้รุ่นแรก 99 ฿ ถึง 31 ธ.ค. 2026,
 ขั้นต่ำ 10, คลาสแรกทดลองฟรี 10 ที่นั่ง) + สถาบันรายปีเริ่ม 9,900 ฿ — ไม่มีปุ่มซื้อ: ทุกปุ่มไป LINE @jiacpr แล้วแอดมินสร้างคลาสให้เอง

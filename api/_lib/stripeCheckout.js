@@ -38,8 +38,22 @@ export function isStripeConfigured() {
   return !!process.env.STRIPE_SECRET_KEY
 }
 
+// ผู้ซื้อแบบยังไม่ล็อกอิน (จ่ายก่อน ล็อกอินทีหลัง): ชื่อ 2–80 ตัว + เบอร์มือถือไทย 9–10 หลัก (0xx…, +66 แปลงเป็น 0)
+// → { name, phone } | null — อีเมลไม่ต้องกรอก Stripe เก็บเองเพื่อส่งใบเสร็จ
+export function parseBuyer(body) {
+  const name = String(body?.name ?? '').replace(/\s+/g, ' ').trim()
+  const phone = String(body?.phone ?? '').replace(/[\s-]/g, '').replace(/^\+66/, '0')
+  if (name.length < 2 || name.length > 80) return null
+  if (!/^0\d{8,9}$/.test(phone)) return null
+  return { name, phone }
+}
+
 // พารามิเตอร์ form-encoded สำหรับ POST /v1/checkout/sessions
-export function sessionParams({ item, learnerId, userId, base = siteUrl() }) {
+// learnerId = ซื้อให้บัญชีที่ล็อกอินอยู่ (แบบเดิม) · ไม่มี learnerId + buyer = ซื้อแบบ guest:
+// metadata guest=1 + ชื่อ/เบอร์ (ไม่มี learner_id) และกลับมาที่ /api/checkout/return ซึ่งเก็บ session id ไว้ใน cookie
+// HttpOnly ให้ /api/checkout/claim ผูกกับบัญชีที่ล็อกอินทีหลัง — session id ไม่โผล่ใน URL ของแอป
+export function sessionParams({ item, learnerId, userId, buyer, base = siteUrl() }) {
+  if (!learnerId && !buyer) throw new Error('buyer_required')
   const p = new URLSearchParams()
   p.set('mode', 'payment')
   p.append('payment_method_types[]', 'card')
@@ -48,13 +62,21 @@ export function sessionParams({ item, learnerId, userId, base = siteUrl() }) {
   p.set('line_items[0][price_data][currency]', 'thb')
   p.set('line_items[0][price_data][unit_amount]', String(item.price * 100)) // สตางค์
   p.set('line_items[0][price_data][product_data][name]', item.name)
-  p.set('client_reference_id', learnerId)
-  p.set('metadata[learner_id]', learnerId)
+  if (learnerId) {
+    p.set('client_reference_id', learnerId)
+    p.set('metadata[learner_id]', learnerId)
+  } else {
+    p.set('metadata[guest]', '1')
+    p.set('metadata[buyer_name]', buyer.name)
+    p.set('metadata[buyer_phone]', buyer.phone)
+  }
   p.set('metadata[chapter]', String(item.chapter))
   p.set('metadata[app]', 'firstaid')
   if (userId) p.set('metadata[user_id]', userId)
   p.set('locale', 'th')
-  p.set('success_url', `${base}/buy?session_id={CHECKOUT_SESSION_ID}`)
+  p.set('success_url', learnerId
+    ? `${base}/buy?session_id={CHECKOUT_SESSION_ID}`
+    : `${base}/api/checkout/return?chapter=${item.chapter}&session_id={CHECKOUT_SESSION_ID}`)
   p.set('cancel_url', `${base}/buy?cancelled=${item.chapter}`)
   return p
 }
@@ -119,4 +141,58 @@ export async function grantPaidSession(admin, session) {
     )
   if (error) throw error
   return grant
+}
+
+// ---- จ่ายก่อน ล็อกอินทีหลัง (guest checkout) ----
+
+export const SESSION_ID_RE = /^cs_[A-Za-z0-9_]{10,200}$/
+export const CLAIM_COOKIE = 'fa_checkout_claim'
+export const CLAIM_PATH = '/api/checkout/claim'
+const CLAIM_MAX_AGE_S = 30 * 86400
+
+// session ซื้อแบบ guest ของแอปนี้ (ยังไม่มีเจ้าของ) — webhook รับทราบเฉย ๆ ไม่ให้สิทธิ์ใคร
+export function isGuestSession(session) {
+  const md = session?.metadata || {}
+  return md.app === 'firstaid' && md.guest === '1' && !md.learner_id
+}
+
+// session guest ที่ claim ได้ → { chapter } | null — ตรวจทุกอย่างจากข้อมูลของ Stripe เอง เทียบกับราคาในระบบ
+// (ไม่เช็ค payment_status ที่นี่ — ผู้เรียกแยกกรณี PromptPay ที่ยังไม่ตัดเงินเป็น pending)
+export function guestClaimItem(session) {
+  if (!session || !isGuestSession(session) || session.mode !== 'payment') return null
+  const item = checkoutItem(session.metadata.chapter)
+  if (!item) return null
+  if (session.currency !== 'thb' || typeof session.amount_total !== 'number' || session.amount_total < item.price * 100) return null
+  return { chapter: item.chapter }
+}
+
+// GET /api/checkout/return?chapter=N&session_id=cs_… (Stripe success_url ของ guest) → redirect + cookie
+// cookie ส่งไปเฉพาะ /api/checkout/claim (Path) · HttpOnly · 30 วัน — ไม่มีใน URL ของแอป/analytics/referrer
+export function guestReturn(query = {}) {
+  const ch = Number(query.chapter)
+  const chapter = checkoutItem(ch) ? ch : 0
+  const id = String(query.session_id || '')
+  const valid = SESSION_ID_RE.test(id)
+  return {
+    location: `/buy?guest_paid=${chapter}`,
+    cookie: valid ? `${CLAIM_COOKIE}=${id}; Path=${CLAIM_PATH}; Max-Age=${CLAIM_MAX_AGE_S}; HttpOnly; Secure; SameSite=Lax` : null,
+    receiptCookie: valid ? `${RECEIPT_COOKIE}=${id}; Path=${RECEIPT_COOKIE_PATH}; Max-Age=${RECEIPT_COOKIE_MAX_AGE_S}; HttpOnly; Secure; SameSite=Lax` : null,
+  }
+}
+
+// คู่กับ cookie claim: cookie อายุสั้น (เท่าอายุใบวัดผล 15 นาที) ที่ส่งไปเฉพาะ /api/checkout/guest-receipt
+// ให้ผู้ซื้อ guest ได้ใบวัดผลการซื้อ (Purchase) ทันทีที่กลับจาก Stripe แม้ยังไม่ล็อกอิน — ใช้ได้ครั้งเดียว
+export const RECEIPT_COOKIE = 'fa_checkout_receipt'
+export const RECEIPT_COOKIE_PATH = '/api/checkout/guest-receipt'
+const RECEIPT_COOKIE_MAX_AGE_S = 15 * 60
+export const clearReceiptCookie = () => `${RECEIPT_COOKIE}=; Path=${RECEIPT_COOKIE_PATH}; Max-Age=0; HttpOnly; Secure; SameSite=Lax`
+
+export const clearClaimCookie = () => `${CLAIM_COOKIE}=; Path=${CLAIM_PATH}; Max-Age=0; HttpOnly; Secure; SameSite=Lax`
+
+export function readCookie(header, name) {
+  for (const part of String(header || '').split(';')) {
+    const i = part.indexOf('=')
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim()
+  }
+  return null
 }

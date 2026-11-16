@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Lock, MessageCircle, KeyRound, CheckCircle2, CreditCard, Loader2, ShieldCheck, Sparkles } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { chapters, lessons } from '../courses/firstaid/lessons'
 import { CHAPTER_PRICES, COURSE_BUNDLE_PRICE, COURSE_BUNDLE_CHAPTER, CPR_CHAPTER, CPR_CHAPTER_TITLE } from '../config/pricing'
 import { startCheckout } from '../utils/checkout'
@@ -24,6 +24,7 @@ export default function ChapterUnlockCard({ chapter }) {
   const session = useAuthStore((s) => s.session)
   const learner = useLearnerStore((s) => s.learner)
   const refreshEntitlements = useEntitlementStore((s) => s.refresh)
+  const navigate = useNavigate()
 
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -33,7 +34,7 @@ export default function ChapterUnlockCard({ chapter }) {
   const [lineOnly, setLineOnly] = useState(false) // เซิร์ฟเวอร์ยังไม่ได้ตั้ง Stripe → ใช้ LINE
   const [payError, setPayError] = useState('')
 
-  // ยังไม่ล็อกอิน (หรือ token หมดอายุ) → ไปล็อกอินก่อน แล้วกลับมาที่ /buy?chapter=N ซึ่งเปิดหน้าจ่ายต่อให้เอง
+  // token หมดอายุ → ล็อกอินใหม่ แล้วกลับมาที่ /buy?chapter=N ซึ่งเปิดหน้าจ่ายต่อให้เอง
   const loginThenPay = (target) => {
     track('checkout_login', { chapter: target, source: 'chapter_unlock' })
     startHubLogin(learner?.id, `/buy?chapter=${target}`, { line: isLineLoginConfigured })
@@ -42,7 +43,8 @@ export default function ChapterUnlockCard({ chapter }) {
   const pay = async (target) => {
     if (paying != null) return
     setPayError('')
-    if (!session) { loginThenPay(target); return }
+    // ยังไม่ล็อกอิน → ไปหน้า /buy กรอกชื่อ + เบอร์แล้วจ่ายได้เลย (จ่ายก่อน ล็อกอินทีหลัง)
+    if (!session) { navigate(`/buy?chapter=${target}`); return }
     setPaying(target)
     const r = await startCheckout(target, 'chapter_unlock')
     if (r.ok) return
@@ -152,7 +154,7 @@ export default function ChapterUnlockCard({ chapter }) {
               <ShieldCheck size={14} style={{ flexShrink: 0 }} />
               <span>
                 บัตรเครดิต/เดบิต หรือ PromptPay ผ่าน Stripe — ปลดล็อกทันที
-                {!session && ' · กดซื้อแล้วเข้าสู่ระบบด้วย LINE ครั้งเดียวเพื่อผูกสิทธิ์กับบัญชี'}
+                {!session && ' · กรอกแค่ชื่อ + เบอร์ จ่ายแล้วค่อยเข้าสู่ระบบด้วย LINE'}
               </span>
             </div>
             <Link to={`/buy?chapter=${chapter}`} className="text-caption" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
