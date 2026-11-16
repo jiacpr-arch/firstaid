@@ -172,13 +172,20 @@ export function guestReturn(query = {}) {
   const ch = Number(query.chapter)
   const chapter = checkoutItem(ch) ? ch : 0
   const id = String(query.session_id || '')
+  const valid = SESSION_ID_RE.test(id)
   return {
     location: `/buy?guest_paid=${chapter}`,
-    cookie: SESSION_ID_RE.test(id)
-      ? `${CLAIM_COOKIE}=${id}; Path=${CLAIM_PATH}; Max-Age=${CLAIM_MAX_AGE_S}; HttpOnly; Secure; SameSite=Lax`
-      : null,
+    cookie: valid ? `${CLAIM_COOKIE}=${id}; Path=${CLAIM_PATH}; Max-Age=${CLAIM_MAX_AGE_S}; HttpOnly; Secure; SameSite=Lax` : null,
+    receiptCookie: valid ? `${RECEIPT_COOKIE}=${id}; Path=${RECEIPT_COOKIE_PATH}; Max-Age=${RECEIPT_COOKIE_MAX_AGE_S}; HttpOnly; Secure; SameSite=Lax` : null,
   }
 }
+
+// คู่กับ cookie claim: cookie อายุสั้น (เท่าอายุใบวัดผล 15 นาที) ที่ส่งไปเฉพาะ /api/checkout/guest-receipt
+// ให้ผู้ซื้อ guest ได้ใบวัดผลการซื้อ (Purchase) ทันทีที่กลับจาก Stripe แม้ยังไม่ล็อกอิน — ใช้ได้ครั้งเดียว
+export const RECEIPT_COOKIE = 'fa_checkout_receipt'
+export const RECEIPT_COOKIE_PATH = '/api/checkout/guest-receipt'
+const RECEIPT_COOKIE_MAX_AGE_S = 15 * 60
+export const clearReceiptCookie = () => `${RECEIPT_COOKIE}=; Path=${RECEIPT_COOKIE_PATH}; Max-Age=0; HttpOnly; Secure; SameSite=Lax`
 
 export const clearClaimCookie = () => `${CLAIM_COOKIE}=; Path=${CLAIM_PATH}; Max-Age=0; HttpOnly; Secure; SameSite=Lax`
 

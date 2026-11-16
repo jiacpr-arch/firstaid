@@ -11,7 +11,10 @@ import { useEnsureEntitlements } from '../hooks/useEntitlements'
 import { isLineLoginConfigured } from '../utils/lineAuth'
 import { startHubLogin } from '../utils/hubAuth'
 import { lineInterestUrl } from '../utils/lineLinks'
-import { claimGuestCheckout, confirmCheckout, normalizeBuyer, readGuestPaid, startCheckout, writeGuestPaid } from '../utils/checkout'
+import {
+  GUEST_AFTER_RECEIPT_KEY, claimGuestCheckout, confirmCheckout, fetchGuestReceipt, normalizeBuyer, readGuestMeasured, readGuestPaid,
+  startCheckout, writeGuestMeasured, writeGuestPaid,
+} from '../utils/checkout'
 import { openPurchaseReceipt } from '../utils/purchaseReceipt'
 import { track } from '../utils/analytics'
 import Seo from '../components/Seo'
@@ -122,9 +125,37 @@ export default function Buy() {
   useEffect(() => {
     if (guestParam == null) return
     const ch = Number(guestParam)
-    if (Number.isInteger(ch) && ch >= 0) writeGuestPaid(ch)
+    if (Number.isInteger(ch) && ch >= 0) {
+      writeGuestPaid(ch)
+      writeGuestMeasured(false)
+    }
     setParams({}, { replace: true })
   }, [guestParam, setParams])
+
+  // ใบวัดผลการซื้อของผู้ซื้อ guest — ส่งต่อไปหน้า receipt-page (ถามความยินยอม Meta/Google/OpenAI เหมือนผู้ซื้อที่ล็อกอิน)
+  // ไม่มีคีย์ production / test mode → receipt เป็น null ก็อยู่หน้านี้ต่อ (การ์ดชำระสำเร็จ) ตามเดิม
+  // จำไว้ตั้งแต่ render แรก — พารามิเตอร์ถูกลบออกจาก URL ทันที แต่การขอใบต้องทำต่อจนจบ
+  const [returnedFromStripe] = useState(() => guestParam != null)
+  useEffect(() => {
+    if (!returnedFromStripe) return
+    let stop = false
+    const run = async () => {
+      for (let i = 0; i < 6 && !stop; i += 1) {
+        const r = await fetchGuestReceipt()
+        if (stop || r.error) return
+        if (r.status === 'paid') {
+          if (!r.receipt) return
+          writeGuestMeasured(true)
+          try { sessionStorage.setItem(GUEST_AFTER_RECEIPT_KEY, '1') } catch { /* ไม่พากลับ /buy ก็ยังเข้าเมนูได้ */ }
+          if (!openPurchaseReceipt(window, document, r.receipt)) writeGuestMeasured(false)
+          return
+        }
+        await new Promise((res) => setTimeout(res, 2500))
+      }
+    }
+    run()
+    return () => { stop = true }
+  }, [returnedFromStripe])
 
   // จ่ายแบบ guest แล้ว + ล็อกอินแล้ว → ผูกการซื้อกับบัญชีนี้อัตโนมัติ (PromptPay อาจยัง pending สักครู่ ลองซ้ำ)
   useEffect(() => {
@@ -136,10 +167,12 @@ export default function Buy() {
         const r = await claimGuestCheckout()
         if (stop) return
         if (r.status === 'paid') {
+          const measured = readGuestMeasured()
           done()
+          writeGuestMeasured(false)
           setResult(r)
           await refreshEntitlements(session)
-          if (!stop && r.receipt) openPurchaseReceipt(window, document, r.receipt)
+          if (!stop && r.receipt && !measured) openPurchaseReceipt(window, document, r.receipt)
           return
         }
         if (r.error === 'claimed') return done('การชำระเงินนี้ผูกกับบัญชี JIA อื่นแล้ว — เข้าสู่ระบบด้วยบัญชีที่ใช้ครั้งแรก หรือทักทีมงานทาง LINE')

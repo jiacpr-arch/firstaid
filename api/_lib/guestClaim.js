@@ -51,6 +51,24 @@ export async function claimGuestPurchase({ admin, auth, sessionId, learnerCandid
     )
   if (error) throw error
   // ใบวัดผลการซื้อ (ไม่มีข้อมูลบัญชี/เบอร์) — ใช้กติกาเดียวกับ confirm; ปิดอยู่ถ้าไม่ได้ตั้งคีย์ production
-  const receipt = createPurchaseReceipt({ ...session, metadata: { ...session.metadata, learner_id: learnerId } }, receiptSecret)
+  const receipt = createPurchaseReceipt(session, receiptSecret)
   return { status: 200, body: { status: 'paid', chapter: item.chapter, receipt }, clear: true }
+}
+
+// ใบวัดผลการซื้อของผู้ซื้อ guest ตอนกลับจาก Stripe (ยังไม่ล็อกอิน) — POST /api/checkout/guest-receipt
+// sessionId มาจาก cookie อายุสั้นที่ /api/checkout/return ตั้งไว้เท่านั้น อ่าน session จาก Stripe ใหม่แล้วออกใบด้วย
+// createPurchaseReceipt (paid + live + complete + guest ของ firstaid + ยอดตรงราคา + production key) ใบไม่มีข้อมูลผู้ซื้อ
+// การส่งให้ Meta/Google/OpenAI ยังผ่านหน้า /api/checkout/receipt-page ที่ถามความยินยอมเหมือนเดิมทุกอย่าง
+// → { status, body: { status: 'paid', receipt|null } | { status: 'pending' } | { error }, clear }
+export async function guestPurchaseReceipt({ sessionId, fetchSession, receiptSecret }) {
+  if (typeof sessionId !== 'string' || !SESSION_ID_RE.test(sessionId)) return { status: 404, body: { error: 'no_receipt' } }
+  let session
+  try {
+    session = await fetchSession(sessionId)
+  } catch {
+    return { status: 502, body: { error: 'stripe_error' } }
+  }
+  if (session?.id !== sessionId || !guestClaimItem(session)) return { status: 404, body: { error: 'no_receipt' }, clear: true }
+  if (session.payment_status !== 'paid') return { status: 200, body: { status: 'pending' } }
+  return { status: 200, body: { status: 'paid', receipt: createPurchaseReceipt(session, receiptSecret) }, clear: true }
 }

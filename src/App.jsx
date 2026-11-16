@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLearnerStore } from './stores/learnerStore'
@@ -45,6 +45,7 @@ import Schedule from './pages/Schedule'
 import LineCallback from './pages/LineCallback'
 import HubCallback from './pages/HubCallback'
 import NotFound from './pages/NotFound'
+import { GUEST_AFTER_RECEIPT_KEY, readGuestPaid } from './utils/checkout'
 
 // เกมโหมดโบนัส (FIRST AID HERO) — lazy เพื่อไม่ให้ chunk หลักโตจนชน PWA precache cap
 const FirstAidGame = lazy(() => import('./pages/FirstAidGame'))
@@ -94,6 +95,19 @@ export default function App() {
   const authSession = useAuthStore((s) => s.session)
 
   useEffect(() => { initPostHog() }, [])
+
+  // ผู้ซื้อ guest กลับจากหน้าวัดผลการซื้อ (ลิงก์ "ไปหน้าบทเรียน") ยังไม่ล็อกอิน → พากลับ /buy ครั้งเดียว
+  // ให้เห็นการ์ด "ชำระเงินสำเร็จ — เข้าสู่ระบบเพื่อเริ่มเรียน" (utils/checkout.js)
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (authLoading || location.pathname !== '/learn') return
+    let pending = false
+    try {
+      pending = sessionStorage.getItem(GUEST_AFTER_RECEIPT_KEY) === '1'
+      if (pending) sessionStorage.removeItem(GUEST_AFTER_RECEIPT_KEY)
+    } catch { /* ไม่มี storage ก็ไม่พากลับ */ }
+    if (pending && !authSession && readGuestPaid() != null) navigate('/buy', { replace: true })
+  }, [authLoading, authSession, location.pathname, navigate])
 
   // เวอร์ชันใหม่ deploy แล้วต้องถึงมือผู้ใช้เอง ไม่ต้องรอปิด-เปิดแท็บ (ดู utils/appUpdate)
   useEffect(() => { initAppUpdate() }, [])

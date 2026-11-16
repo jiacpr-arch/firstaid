@@ -200,3 +200,51 @@ test('claim: account with no learner adopts the device learner via the Hub rule,
   assert.equal(out2.body.error, 'account_not_linked')
   assert.equal(refused.calls.upserts.length, 0)
 })
+
+// ---- purchase measurement for guest purchases (receipt → consented receipt page) ----
+import { verifyPurchaseReceipt } from './purchaseReceipt.js'
+import { guestPurchaseReceipt } from './guestClaim.js'
+
+const SECRET = 'x'.repeat(40)
+const PROD = { environment: 'production' }
+const liveGuest = (over = {}) => guestSession({ livemode: true, status: 'complete', id: 'cs_live_guestSession123456', ...over })
+const receiptFor = (session, secret = SECRET) => guestPurchaseReceipt({
+  sessionId: 'cs_live_guestSession123456', fetchSession: async () => session, receiptSecret: secret,
+})
+
+test('guestReturn also sets a 15-minute HttpOnly receipt cookie scoped to the guest-receipt endpoint', () => {
+  const r = guestReturn({ chapter: '0', session_id: SID })
+  assert.equal(r.receiptCookie, `fa_checkout_receipt=${SID}; Path=/api/checkout/guest-receipt; Max-Age=900; HttpOnly; Secure; SameSite=Lax`)
+  assert.equal(guestReturn({ session_id: 'nope' }).receiptCookie, null)
+})
+
+test('guest receipt: paid live guest session → same minimal receipt as a logged-in purchase, no buyer data', async () => {
+  const prev = process.env.VERCEL_ENV
+  process.env.VERCEL_ENV = 'production'
+  try {
+    const out = await receiptFor(liveGuest())
+    assert.equal(out.status, 200)
+    assert.equal(out.body.status, 'paid')
+    assert.equal(out.clear, true)
+    const decoded = Buffer.from(out.body.receipt.split('.')[0], 'base64url').toString('utf8')
+    for (const secretish of ['0812345678', 'สมชาย', 'cs_live_guestSession123456', 'guest']) assert.ok(!decoded.includes(secretish), secretish)
+    const v = verifyPurchaseReceipt(out.body.receipt, SECRET, PROD)
+    assert.equal(v.value, COURSE_BUNDLE_PRICE)
+    assert.equal(v.currency, 'THB')
+    // logged-in purchase of the same session id would get the same opaque event id (dedup across both flows)
+    const pending = await receiptFor(liveGuest({ payment_status: 'unpaid' }))
+    assert.deepEqual(pending.body, { status: 'pending' })
+    assert.ok(!pending.clear)
+    // test-mode, underpaid, other app's or forged sessions → no receipt
+    assert.equal((await receiptFor(liveGuest({ livemode: false }))).body.receipt, null)
+    assert.equal((await receiptFor(liveGuest({ amount_total: 100 }))).status, 404)
+    assert.equal((await receiptFor(liveGuest({ metadata: { guest: '1', plan: 'bls_online365' } }))).status, 404)
+    assert.equal((await receiptFor(liveGuest({ id: 'cs_live_other00000000' }))).status, 404)
+    assert.equal((await guestPurchaseReceipt({ sessionId: null, fetchSession: async () => liveGuest(), receiptSecret: SECRET })).status, 404)
+    // no production key → paid but no receipt (measurement off, exactly as today)
+    assert.equal((await receiptFor(liveGuest(), '')).body.receipt, null)
+  } finally {
+    if (prev === undefined) delete process.env.VERCEL_ENV
+    else process.env.VERCEL_ENV = prev
+  }
+})

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import { paidGrant } from './stripeCheckout.js'
+import { guestClaimItem, paidGrant } from './stripeCheckout.js'
 
 const PURPOSE = 'firstaid-purchase-measurement-v1'
 const AUDIENCE = 'https://firstaid.morroo.com/api/checkout/receipt'
@@ -14,8 +14,12 @@ function signingKey(secret) {
 
 const configured = secret => typeof secret === 'string' && secret.length >= 32 && secret.length <= 256
 
+// A paid FirstAid purchase: bought while logged in (learner metadata) or as a guest
+// (pay first, log in later — guest=1, no learner yet). Same product/price checks either way.
+const paidPurchase = session => !!(paidGrant(session) || (session?.payment_status === 'paid' && guestClaimItem(session)))
+
 export function createPurchaseReceipt(session, secret, { now = Math.floor(Date.now() / 1000), environment = process.env.VERCEL_ENV } = {}) {
-  if (environment !== 'production' || !configured(secret) || !paidGrant(session) || session.livemode !== true || session.mode !== 'payment' || session.status !== 'complete'
+  if (environment !== 'production' || !configured(secret) || !paidPurchase(session) || session.livemode !== true || session.mode !== 'payment' || session.status !== 'complete'
     || session.currency !== 'thb' || !Number.isSafeInteger(session.amount_total) || session.amount_total <= 0
     || !/^cs_[A-Za-z0-9_]{10,200}$/.test(session.id || '')) return null
   const payload = {

@@ -95,3 +95,29 @@ export async function claimGuestCheckout() {
     return { error: 'failed' }
   }
 }
+
+// ใบวัดผลการซื้อของผู้ซื้อ guest (ยังไม่ล็อกอิน) — cookie อายุ 15 นาทีจาก /api/checkout/return
+// → { status: 'paid', receipt } | { status: 'pending' } | { error }
+// ใบนี้ให้สิทธิ์ไม่ได้และไม่มีข้อมูลผู้ซื้อ ส่งต่อด้วย openPurchaseReceipt → หน้า receipt-page ถามความยินยอมเหมือนเดิม
+export async function fetchGuestReceipt() {
+  try {
+    const res = await fetch('/api/checkout/guest-receipt', { method: 'POST', credentials: 'same-origin' })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok && (data.status === 'paid' || data.status === 'pending')) return data
+    return { error: data.error || 'failed' }
+  } catch {
+    return { error: 'failed' }
+  }
+}
+
+// ส่งใบวัดผลของการซื้อ guest นี้ไปแล้ว → ตอน claim หลังล็อกอินไม่ต้องพาไปหน้า receipt ซ้ำ
+const GUEST_MEASURED_KEY = 'firstaid_guest_measured_v1'
+export function readGuestMeasured() {
+  try { return localStorage.getItem(GUEST_MEASURED_KEY) === '1' } catch { return false }
+}
+export function writeGuestMeasured(on) {
+  try { if (on) localStorage.setItem(GUEST_MEASURED_KEY, '1'); else localStorage.removeItem(GUEST_MEASURED_KEY) } catch { /* private mode */ }
+}
+// หน้า receipt-page มีลิงก์ "ไปหน้าบทเรียน" (/learn) — ผู้ซื้อ guest ที่ยังไม่ล็อกอินถูกพากลับ /buy ครั้งเดียว
+// เพื่อเห็นการ์ด "ชำระเงินสำเร็จ — เข้าสู่ระบบเพื่อเริ่มเรียน"
+export const GUEST_AFTER_RECEIPT_KEY = 'firstaid_guest_after_receipt'
