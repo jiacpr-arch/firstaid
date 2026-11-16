@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
-import { grantPaidSession, verifyStripeSignature } from '../_lib/stripeCheckout.js'
+import { grantPaidSession, isGuestSession, verifyStripeSignature } from '../_lib/stripeCheckout.js'
 
 // Stripe webhook → ให้สิทธิ์หมวดที่ซื้อ
 // ลงทะเบียนใน Stripe Dashboard: https://firstaid.morroo.com/api/checkout/webhook
@@ -27,6 +27,12 @@ export default async function handler(req, res) {
 
   if (event.type !== 'checkout.session.completed' && event.type !== 'checkout.session.async_payment_succeeded') {
     res.status(200).json({ received: true, ignored: event.type })
+    return
+  }
+
+  // ซื้อแบบ guest (จ่ายก่อน ล็อกอินทีหลัง): ยังไม่มีบัญชีให้ผูก — รับทราบเฉย ๆ ผู้ซื้อ claim เองหลังล็อกอิน (api/checkout/claim.js)
+  if (isGuestSession(event.data?.object)) {
+    res.status(200).json({ received: true, guest: true })
     return
   }
 
