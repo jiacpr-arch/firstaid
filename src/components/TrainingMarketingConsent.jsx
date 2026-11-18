@@ -49,8 +49,8 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
 
   const panel = {
     position: 'fixed', zIndex: 1000, bottom: 78, left: 12, right: 12, maxWidth: 440, margin: '0 auto',
-    maxHeight: '45vh', overflowY: 'auto', padding: '10px 12px', color: '#17212b', background: 'white',
-    border: '1px solid #ccc', borderRadius: 12, boxShadow: '0 4px 20px #0002',
+    maxHeight: '45vh', overflowY: 'auto', padding: '12px 14px', color: '#17212b', background: 'white',
+    border: 0, borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,.22)',
     display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, lineHeight: 1.45,
   }
   const link = { background: 'none', border: 0, padding: 0, color: '#4b5563', textDecoration: 'underline', fontSize: 12, cursor: 'pointer' }
@@ -60,7 +60,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
     <div style={panelOpen ? panel : { display: 'none' }} data-testid="marketing-consent">
       {pending && <>
         <p style={{ margin: 0 }}>
-          ขออนุญาตให้ <b>Meta, Google และ OpenAI</b> วัดการเข้าชมหน้านี้เพื่อดูผลโฆษณา
+          <span aria-hidden="true">🍪 </span>ขออนุญาตให้ <b>Meta, Google และ OpenAI</b> วัดการเข้าชมหน้านี้เพื่อดูผลโฆษณา
           ไม่ส่งชื่อ เบอร์โทร คำตอบ หรือผลการเรียน · เรียนได้ตามปกติแม้ไม่อนุญาต
         </p>
         <div style={consentButtons}>
