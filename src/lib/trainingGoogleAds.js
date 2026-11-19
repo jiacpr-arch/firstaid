@@ -49,7 +49,9 @@ export function loadTrainingGoogle(win, doc, { enabled = GOOGLE_TRAINING_ENABLED
   if (entitlementLookupPending(win) || !enabled || !publicLanding || !eligibleLanding(win.location, doc.referrer)
     || !readGoogleGrant(win) || win.__firstaidPrivateDocument
     || win.__firstaidMarketingRevoked || win.__firstaidGoogleRevoked
-    || win.__firstaidGoogleLoaded || win.gtag || win.dataLayer) return false
+    || win.__firstaidGoogleLoaded
+    || (win.gtag && win.gtag !== win.jiaConsentOnlyGtag)
+    || (win.dataLayer && (win.dataLayer !== win.jiaConsentEmptyLayer || win.dataLayer.length !== 0))) return false
   if (!prepareMarketingResourceTimings(win)) return false
   installMarketingNavigationBoundary(win, doc, (currentWindow, currentDocument) => {
     currentWindow.__firstaidMarketingRevoked = true
@@ -71,6 +73,7 @@ export function loadTrainingGoogle(win, doc, { enabled = GOOGLE_TRAINING_ENABLED
     const internalDenial = arguments.length === 3 && arguments[0] === 'consent'
       && arguments[1] === 'update' && arguments[2] === DENIED
     if (revoked && !internalDenial) return
+    if (arguments[0] === 'consent' && arguments[2]?.ad_personalization === 'granted') return
     win.dataLayer.push(arguments)
   }
   win.__firstaidGoogleGrant = JSON.stringify(grant)

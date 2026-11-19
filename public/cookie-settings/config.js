@@ -5,8 +5,10 @@ window.JIA_CONSENT = {
   storageKey: 'jia_consent_' + location.hostname.replace(/[^a-z0-9]/gi, '_'),
   historyKey: 'jia_consent_history_' + location.hostname,
 };
-window.dataLayer = window.dataLayer || [];
-window.gtag = function(command, action, settings) {
-  if (command === 'consent' && settings) settings.ad_personalization = 'denied';
-  window.dataLayer.push(arguments);
-};
+// The course asks separately for each Google purpose. Keep the shared bar's
+// Google signals out of the isolated training tag's queue.
+if (!window.gtag && !window.dataLayer) {
+  window.jiaConsentOnlyGtag = function () {};
+  window.gtag = window.jiaConsentOnlyGtag;
+  window.jiaConsentEmptyLayer = window.dataLayer = [];
+}
