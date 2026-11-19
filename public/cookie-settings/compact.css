@@ -1,0 +1,12 @@
+:root { --jia-consent-bottom: 85px; }
+/* Leave space for the site's mobile navigation and the device safe area. */
+#jc-root .jc-banner.sm, #jc-root .jc-fab { bottom: calc(var(--jia-consent-bottom) + env(safe-area-inset-bottom, 0px)); }
+#jc-root .jc-menu { bottom: calc(var(--jia-consent-bottom) + 50px + env(safe-area-inset-bottom, 0px)); }
+#jc-root .jc-banner.sm { background: #c8212d; color: white; }
+#jc-root .jc-banner.sm button { color: white; }
+#jc-root .jc-banner.sm button.pri { background: white; color: #a51924; }
+@media (max-width: 360px) {
+  #jc-root .jc-banner.sm { gap: 2px; padding-inline: 8px; font-size: 12px; }
+  #jc-root .jc-banner.sm button { padding-inline: 5px; }
+  #jc-root .jc-banner.sm button.pri { padding-inline: 8px; }
+}
