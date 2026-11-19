@@ -60,7 +60,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
   </>
 
   const panel = {
-    position: 'fixed', zIndex: 1000, bottom: 78, left: 12, right: 12, maxWidth: 440, margin: '0 auto',
+    position: 'fixed', zIndex: 1000, bottom: 140, left: 12, right: 12, maxWidth: 440, margin: '0 auto',
     maxHeight: '45vh', overflowY: 'auto', padding: '10px 12px', color: '#17212b', background: 'white',
     border: '1px solid #ccc', borderRadius: 12, boxShadow: '0 4px 20px #0002',
     display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, lineHeight: 1.45,

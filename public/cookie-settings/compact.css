@@ -1,4 +1,4 @@
-:root { --jia-consent-bottom: 85px; }
+:root { --jia-consent-bottom: 138px; }
 /* Leave space for the site's mobile navigation and the device safe area. */
 #jc-root .jc-banner.sm, #jc-root .jc-fab { bottom: calc(var(--jia-consent-bottom) + env(safe-area-inset-bottom, 0px)); }
 #jc-root .jc-menu { bottom: calc(var(--jia-consent-bottom) + 50px + env(safe-area-inset-bottom, 0px)); }
@@ -10,3 +10,4 @@
   #jc-root .jc-banner.sm button { padding-inline: 5px; }
   #jc-root .jc-banner.sm button.pri { padding-inline: 8px; }
 }
+#jc-root .jc-banner.sm button { min-height: 0; width: auto; margin: 0; line-height: 1.4; }
