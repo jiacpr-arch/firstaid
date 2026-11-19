@@ -11,3 +11,4 @@
   #jc-root .jc-banner.sm button.pri { padding-inline: 8px; }
 }
 #jc-root .jc-banner.sm button { min-height: 0; width: auto; margin: 0; line-height: 1.4; }
+#jc-root .jc-menu:not(.show) { visibility: hidden; }
