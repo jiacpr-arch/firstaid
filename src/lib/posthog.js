@@ -9,7 +9,7 @@ let initialised = false
 
 export function initPostHog() {
   // ไม่ init ใน browser อัตโนมัติ (prerender ตอน build) — กัน pageview ปลอม
-  if (isAutomated || !KEY || initialised || checkoutAnalyticsBlocked(window.location, document.referrer)) return
+  if (!window.jiaConsent?.analytics || isAutomated || !KEY || initialised || checkoutAnalyticsBlocked(window.location, document.referrer)) return
   posthog.init(KEY, {
     api_host: HOST,
     person_profiles: 'identified_only',
@@ -24,7 +24,7 @@ export function initPostHog() {
 }
 
 export function identifyLearner({ learnerId, lineUserId, displayName } = {}) {
-  if (!KEY || !initialised || checkoutAnalyticsBlocked(window.location, document.referrer)) return
+  if (!window.jiaConsent?.analytics || !KEY || !initialised || checkoutAnalyticsBlocked(window.location, document.referrer)) return
   if (learnerId) {
     posthog.identify(learnerId, {
       ...(lineUserId ? { lineUserId } : {}),
@@ -34,6 +34,13 @@ export function identifyLearner({ learnerId, lineUserId, displayName } = {}) {
 }
 
 export function phCapture(event, props) {
-  if (!KEY || !initialised || checkoutAnalyticsBlocked(window.location, document.referrer)) return
+  if (!window.jiaConsent?.analytics || !KEY || !initialised || checkoutAnalyticsBlocked(window.location, document.referrer)) return
   posthog.capture(event, props)
 }
+
+window.addEventListener('jia-consent', function(event) {
+  if (event.detail?.analytics) {
+    if (initialised) posthog.opt_in_capturing()
+    else initPostHog()
+  } else if (initialised) posthog.opt_out_capturing()
+})

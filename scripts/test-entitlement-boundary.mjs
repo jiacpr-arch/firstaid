@@ -150,6 +150,8 @@ async function fixture(options = {}) {
     Object.defineProperty(navigator, 'webdriver', { get: () => false })
     window.__entitlementDocumentId = crypto.randomUUID()
     if (!sessionStorage.getItem('__entitlementSeeded')) {
+      // These tests exercise the separate per-vendor choices after the site-level choice.
+      localStorage.setItem('jia_consent_firstaid_morroo_com', JSON.stringify({v:1,necessary:true,analytics:true,marketing:true}))
       sessionStorage.setItem('__entitlementSeeded', '1')
       localStorage.setItem('firstaid.learner', JSON.stringify({ state: { learner: { id: 'synthetic-learner-a', name: '' } }, version: 0 }))
       if (savedGrants) for (const key of Object.values(consent)) localStorage.setItem(key, key.includes('_google_') ? JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000}) : 'granted')

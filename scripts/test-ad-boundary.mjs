@@ -98,6 +98,8 @@ async function fixture(options = {}) {
       if (options.consent) localStorage.setItem(key, options.consent)
       if (options.googleConsent) localStorage.setItem(googleKey, options.googleConsent === 'granted' ? JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000}) : options.googleConsent)
       if (options.openaiConsent) localStorage.setItem(openaiKey, options.openaiConsent)
+      // These tests exercise the separate per-vendor choices after the site-level choice.
+      localStorage.setItem('jia_consent_firstaid_morroo_com', JSON.stringify({v:1,necessary:true,analytics:true,marketing:true}))
       sessionStorage.setItem('__boundarySeeded', '1')
     }
     window.__storageFailures = options.storageFailures || []
@@ -472,7 +474,7 @@ try {
 
   await test('Google consent is separate; clean GA4 pageview and contact-only Ads conversion', {}, async f => {
     await f.open(); await f.page.getByRole('dialog', { name: 'การวัดผล Google' }).waitFor(); f.noAds()
-    assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.dataLayer), false)
+    assert.equal(await f.page.evaluate(() => window.gtag === window.jiaConsentOnlyGtag && window.dataLayer === window.jiaConsentEmptyLayer && window.dataLayer.length === 0), true)
     await f.grantGoogle()
     assert.equal(f.googleRequests.length, 1)
     assert.equal(f.sdkRequests.length, 0, 'Google consent never authorizes Meta')
@@ -540,7 +542,7 @@ try {
       assert.equal(new URL(f.page.url()).pathname, new URL(path, ORIGIN).pathname)
       assert.equal(f.googleRequests.length, 1)
       assert.equal(f.sdkRequests.length, 0)
-      assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
+      assert.equal(await f.page.evaluate(() => (!!window.gtag && window.gtag !== window.jiaConsentOnlyGtag) || !!window.fbq), false)
       assert.ok(f.googleObservations.some(item => item.reason === method), 'SDK history wrapper must observe the attempted navigation')
       assert.ok(f.googleHistoryArguments.some(item => item.documentId === oldDocument && item.method === method && item.target === path), 'Later wrappers can observe synthetic arguments before our guard; only actual location and DOM are protected')
       f.googleStayedPublic()
@@ -568,7 +570,7 @@ try {
       assert.equal(new URL(f.page.url()).pathname, target.pathname)
       assert.equal(f.sdkRequests.length, 1)
       assert.equal(f.googleRequests.length, 1)
-      assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
+      assert.equal(await f.page.evaluate(() => (!!window.gtag && window.gtag !== window.jiaConsentOnlyGtag) || !!window.fbq), false)
       assert.deepEqual(f.mounts, [])
       assert.deepEqual(f.googleHistoryArguments.slice(previousArguments).filter(item => item.documentId === oldDocument), [], 'Captured public links never pass target arguments through an SDK history wrapper')
       f.googleStayedPublic()
@@ -582,7 +584,7 @@ try {
       await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
       await f.page.waitForTimeout(500)
       assert.equal(f.googleRequests.length, 1)
-      assert.equal(await f.page.evaluate(() => !!window.gtag), false)
+      assert.equal(await f.page.evaluate(() => !!window.gtag && window.gtag !== window.jiaConsentOnlyGtag), false)
       assert.ok(f.googleCalls.some(c => c.args[0] === 'consent' && c.args[1] === 'update' && c.args[2].analytics_storage === 'denied'))
       if (storageFailures.length === 2) assert.equal(new URL(f.page.url()).searchParams.get('marketing_consent'), 'denied')
       await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500)
@@ -619,7 +621,7 @@ try {
     await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
     await f.page.waitForTimeout(500)
     assert.equal(f.googleRequests.length, 1)
-    assert.equal(await f.page.evaluate(() => !!window.gtag), false)
+    assert.equal(await f.page.evaluate(() => !!window.gtag && window.gtag !== window.jiaConsentOnlyGtag), false)
     f.googleStayedPublic()
     await other.close()
   })
@@ -635,7 +637,7 @@ try {
       const key = vendor === 'google' ? GOOGLE_CONSENT_KEY : CONSENT_KEY
       assert.equal(await f.page.evaluate(key => localStorage.getItem(key)?.startsWith('{') ? JSON.parse(localStorage.getItem(key)).mode : localStorage.getItem(key), key), vendor === 'google' ? 'ads' : 'granted', 'Verify the surviving partial grant, not an accidentally successful rollback')
       f.noAds()
-      assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
+      assert.equal(await f.page.evaluate(() => (!!window.gtag && window.gtag !== window.jiaConsentOnlyGtag) || !!window.fbq), false)
       await f.page.reload({ waitUntil: 'load' }); await f.page.waitForTimeout(500)
       f.noAds()
     })
@@ -724,7 +726,7 @@ try {
       f.releaseNavigation()
       await f.page.waitForFunction(id => window.__documentId !== id, oldDocument)
       await f.page.waitForTimeout(500)
-      assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.fbq), false)
+      assert.equal(await f.page.evaluate(() => (!!window.gtag && window.gtag !== window.jiaConsentOnlyGtag) || !!window.fbq), false)
       assert.equal(f.googleRequests.length, google ? 1 : 0)
       assert.equal(f.sdkRequests.length, meta ? 1 : 0)
     })
