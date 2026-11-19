@@ -82,7 +82,18 @@ const AdminFallback = () => (
   <div className="page-container py-12 text-center text-caption">กำลังโหลด admin…</div>
 )
 
+function useCookieAnalytics() {
+  const [allowed, setAllowed] = useState(() => !!window.jiaConsent?.analytics)
+  useEffect(() => {
+    const sync = event => setAllowed(!!event.detail?.analytics)
+    window.addEventListener("jia-consent", sync)
+    return () => window.removeEventListener("jia-consent", sync)
+  }, [])
+  return allowed
+}
+
 export default function App() {
+  const analyticsAllowed = useCookieAnalytics()
   const theme = useSettingsStore((s) => s.theme)
   const location = useLocation()
 
@@ -296,7 +307,7 @@ export default function App() {
         {!isAdmin && !isGame && <HouseAdStrip />}
         {!isAdmin && !isGame && <BottomTabBar />}
       </div>
-      {!isAutomated && <Analytics />}
+      {analyticsAllowed && !isAutomated && <Analytics />}
       <TrainingMarketingConsent publicLanding={publicLanding} />
     </div>
   )

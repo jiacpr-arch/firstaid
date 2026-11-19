@@ -1,6 +1,6 @@
 import { installGoogleExpiryGuard } from '../public/google-attribution.js'
 import { revokeTrainingGoogle } from './lib/trainingGoogleAds.js'
-import { captureAttribution } from './lib/checkoutAttribution.js'
+import { ATTRIBUTION_STORAGE_KEY, captureAttribution } from './lib/checkoutAttribution.js'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -20,7 +20,12 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 document.querySelectorAll('[data-seo]').forEach((el) => el.remove())
 
 // จำที่มาของผู้ซื้อ (utm / click id จาก URL ที่เข้ามา) ไว้แนบ metadata ของ Stripe ตอนกดซื้อ — ไม่ส่งไปที่อื่น
-captureAttribution(window)
+function syncAttribution() {
+  if (window.jiaConsent?.marketing) captureAttribution(window)
+  else { try { window.localStorage.removeItem(ATTRIBUTION_STORAGE_KEY) } catch { /* Storage unavailable. */ } }
+}
+syncAttribution()
+window.addEventListener('jia-consent', syncAttribution)
 
 installGoogleExpiryGuard(window, document, () => {
   if (window.__firstaidGoogleLoaded && !window.__firstaidGoogleRevoked) {

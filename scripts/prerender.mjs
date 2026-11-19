@@ -57,6 +57,7 @@ const context = await browser.newContext()
 // ห้าม service worker ลงทะเบียน + บล็อก domain ภายนอก
 await context.route('**/*', (route) => {
   const url = route.request().url()
+  if (new URL(url).pathname === '/cookie-settings/jia-consent.js') return route.abort()
   if (url.endsWith('/sw.js') || url.endsWith('/registerSW.js')) return route.abort()
   if (BLOCKED.some((d) => new URL(url).hostname.endsWith(d))) return route.abort()
   return route.continue()
