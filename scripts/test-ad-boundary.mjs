@@ -98,6 +98,8 @@ async function fixture(options = {}) {
       if (options.consent) localStorage.setItem(key, options.consent)
       if (options.googleConsent) localStorage.setItem(googleKey, options.googleConsent === 'granted' ? JSON.stringify({version:2,mode:'ads',issuedAt:Date.now(),expiresAt:Date.now()+86400000}) : options.googleConsent)
       if (options.openaiConsent) localStorage.setItem(openaiKey, options.openaiConsent)
+      // These tests exercise the separate per-vendor choices after the site-level choice.
+      localStorage.setItem('jia_consent_firstaid_morroo_com', JSON.stringify({v:1,necessary:true,analytics:true,marketing:true}))
       sessionStorage.setItem('__boundarySeeded', '1')
     }
     window.__storageFailures = options.storageFailures || []
@@ -472,7 +474,7 @@ try {
 
   await test('Google consent is separate; clean GA4 pageview and contact-only Ads conversion', {}, async f => {
     await f.open(); await f.page.getByRole('dialog', { name: 'การวัดผล Google' }).waitFor(); f.noAds()
-    assert.equal(await f.page.evaluate(() => !!window.gtag || !!window.dataLayer), false)
+    assert.equal(await f.page.evaluate(() => window.gtag === window.jiaConsentOnlyGtag && window.dataLayer === window.jiaConsentEmptyLayer && window.dataLayer.length === 0), true)
     await f.grantGoogle()
     assert.equal(f.googleRequests.length, 1)
     assert.equal(f.sdkRequests.length, 0, 'Google consent never authorizes Meta')

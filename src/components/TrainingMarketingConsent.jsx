@@ -60,14 +60,14 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
   </>
 
   const panel = {
-    position: 'fixed', zIndex: 1000, bottom: 140, left: 12, right: 12, maxWidth: 440, margin: '0 auto',
+    maxWidth: 440, margin: '12px auto 150px',
     maxHeight: '45vh', overflowY: 'auto', padding: '10px 12px', color: '#17212b', background: 'white',
     border: '1px solid #ccc', borderRadius: 12, boxShadow: '0 4px 20px #0002',
     display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, lineHeight: 1.45,
   }
   const link = { background: 'none', border: 0, padding: 0, color: '#4b5563', textDecoration: 'underline', fontSize: 12, cursor: 'pointer' }
   // โครงเดียวตลอด (ไม่สลับ element ครอบ) — ไม่ให้ component ของแต่ละเจ้า remount ตอนเปลี่ยนสถานะ
-  const panelOpen = shared && manageOpen && (pending || decided)
+  const panelOpen = shared && (pending || (decided && manageOpen))
   return <>
     <div style={panelOpen ? panel : { display: 'none' }} data-testid="marketing-consent">
       {pending && <>
@@ -98,7 +98,7 @@ export default function TrainingMarketingConsent({ publicLanding = false }) {
       {vendors}
     </div>
     {/* เลือกแล้วไม่ลอยทับเนื้อหา — เหลือแค่ลิงก์เล็กท้ายหน้า (อยู่ใน flow ปกติ) ไว้ถอน/เปลี่ยนใจ */}
-    {shared && (pending || decided) && !manageOpen && <div style={{ textAlign: 'center', padding: '8px 16px 140px' }}>
+    {shared && !pending && decided && !manageOpen && <div style={{ textAlign: 'center', padding: '8px 16px 140px' }}>
       <button type="button" aria-expanded="false" onClick={() => setManageOpen(true)} style={{
         background: 'none', border: 0, padding: 4, fontSize: 12, color: '#6b7280', textDecoration: 'underline',
         display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
