@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useLayoutEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useSettingsStore } from './stores/settingsStore'
